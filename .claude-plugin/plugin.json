@@ -1,0 +1,7 @@
+{
+  "name": "agent-led-swe",
+  "version": "0.1.0",
+  "description": "Agent-led software engineering with human decisions, project conventions, and traceable delivery evidence.",
+  "author": { "name": "LKCY23" },
+  "skills": ["./"]
+}

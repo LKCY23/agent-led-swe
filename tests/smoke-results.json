@@ -1,0 +1,75 @@
+{
+  "scope": "Development smoke; forced target use; no baseline comparison",
+  "target_version": "0.1.0",
+  "target_digest": "f1045727e248cf53dcb4c0e266fce389c827eaa49a1c4d5108eeee014117461b",
+  "target_files": {
+    "SKILL.md": "ca7a7b781471fa825e6a2d4e74aa5d1899c230ab2917c35d3f3f99efce454393",
+    "agents/openai.yaml": "1358a7197bb8260e2f5be1c228f7a188e7c6f60b9e812dfccf916593baea45e8",
+    ".claude-plugin/plugin.json": "23685010214b976012c9ad68ddf0bbd952fa58b7aaf0dad4a9704e20d81bc07b",
+    "references/workflow.md": "4262f2f771124f0f3e9913c9b593794a8fbf96e6f669c821110129cbfd7a9419",
+    "references/mechanisms/engineering-baseline.md": "c1081b2ac8489cc84cd06644c11d2de0b4580ed7e2c0265a82ee011559628db1",
+    "references/mechanisms/human-collaboration.md": "0a2adc06d5a69c9e7620309ca5619ab1e6778a3489deb187fd78c051f868cf1a",
+    "references/mechanisms/documentation-and-traceability.md": "75b4d60087d273d7dec2ffb4a76549619513b9e5d515f25d36d77f3cc88e3f84",
+    "references/phases/implementation.md": "cd964b11a2e1bf56b31ff199b1c7ea2d56bc2689d93b200fabfdb3be48622cd5",
+    "references/phases/problem-framing.md": "7626158c8725b2d76bfca04446cc4e9688abf4f6e0b989f1fed64a956256cc77",
+    "references/phases/requirements.md": "e3be9ba1ca4cf8fe56cae9afe01c77078c228371a9a6f018ee7ff67fc585059f",
+    "references/phases/verification.md": "39290654282aa1b1f85ff943a0fe5d1964d0a4da7ddfe802d93de4b015832681",
+    "references/phases/delivery-and-evolution.md": "1bfc0f5fa026eb37ee3ddc0c74facff4534ff5efdbe204d2ae5e45194f181d80",
+    "references/phases/design.md": "7679ac69f509437dc1ae14ee0dcca72bea5f6ffe51b13da954cc0a698b9547c1",
+    "references/practices/catalog.md": "5391fd9e5fbacf0befd5c01d29d2454a43e769b75ca9b16d81978003a375ad96",
+    "assets/templates/requirements.md": "23323b9bd4cec1f3e10f06883e758d68f03f02ea5a402c6d80f8b0cfd1556e7a",
+    "assets/templates/architecture.md": "bb272b698c8b4b9d8b327da8cc294eb5c5661f2529b7382c9d8a8b50b2115d18",
+    "assets/templates/decision-log.md": "390f266268a16266b4800015e76af2e39b57909a2074479e7e0c02a5b55e0a36",
+    "assets/templates/glossary.md": "c86efda830ab7d0eed693524e19cbce2f8e7548b4c58bc4ab22dc310ab8028f1",
+    "assets/templates/engineering-baseline.md": "d8fb8d8e8d26cf04b1aa9ce6753d4772fcac1ebd20810dedf84ecc9c5b59ba72",
+    "assets/templates/implementation-plan.md": "56486425262e655d18a3abf0badd1bcd5d70f11ba19e36db31103237c3469c8e",
+    "assets/templates/module-design.md": "00572504f4eb5614692135601c2c7e8e77421cb1b450706cd645c84fc19e6e17",
+    "assets/templates/verification-record.md": "adc2f2b16a961125dab62193d079343c30d355dc6ffd5ef0864c4e8af3023393",
+    "assets/templates/decision-detail.md": "e7079b02fab541b3c764747ccbdba199d9732501eefa8ec8877bfdbcd71ab852",
+    "assets/templates/project-index.md": "8f670dad664b90712a34f66e15f1d0a01488ef05b0f2026d81d70f67e2cb2e55",
+    "assets/templates/delivery-checklist.md": "e86090039f6d1929199febf94ebafe3a1dfca58e8ef92fde016d4e2e8ca79b6c",
+    "assets/templates/interface-contract.md": "e694bd2d2c5f6632ea15f869ca1a4ef7daced9cb56bf766889dc5966d52f5fb5"
+  },
+  "cli": "codex-cli 0.154.0",
+  "settings": {
+    "model": "gpt-6.1-sol",
+    "model_reasoning_effort": "high"
+  },
+  "planned_cases": [
+    "D1",
+    "D4",
+    "D7"
+  ],
+  "attempted_cases": 1,
+  "cases": [
+    {
+      "case": "D1",
+      "status": "execution_error",
+      "behavior": "not evaluated",
+      "process_exit_code": 1,
+      "timed_out": false,
+      "elapsed_seconds": 6.965894,
+      "reason": "Provider rejected gpt-6.1-sol: model is not supported when using Codex with a ChatGPT account.",
+      "fixture_unchanged": true,
+      "entrypoint_read_observed": false,
+      "local_raw_evidence": "tests/runs/D1-20261003T055106169376Z"
+    },
+    {
+      "case": "D4",
+      "status": "not_run",
+      "reason": "Stopped after smoke runtime model rejection"
+    },
+    {
+      "case": "D7",
+      "status": "not_run",
+      "reason": "Stopped after smoke runtime model rejection"
+    }
+  ],
+  "routing": "not evaluated",
+  "incremental_value": "not evaluated",
+  "limitations": [
+    "No successful model behavior trial.",
+    "No isolated baseline or independent behavioral grading.",
+    "No Claude behavior trial."
+  ]
+}
