@@ -16,4 +16,6 @@ These cases come from the agreed user requirements. They are development cases, 
 
 Initial smoke budget: at most three fresh target-present CLI cases, one attempt each, 180 seconds per case. Cases D1, D4 and D7 cover discussion scope, historical attribution and honest delivery. Other cases remain planned unless actual evidence is recorded. Use the configured model rather than silently selecting another; record the observed model/runtime and full completion state. Sandbox boundaries and installed competing instructions limit the interpretation of results.
 
+When selecting a particular installed client, pass `--codex-bin /path/to/codex` to `tests/run_smoke.py`; PATH can differ between interactive terminals and automated processes. The runner records the entrypoint/resolved path and version, disables multi-agent tools for these single-agent cases, and propagates the capture process's failure/timeout status. A client/model repair retry is a separate attempt, not a rewrite of the original result.
+
 After a justified revision, rerun only affected cases as a separate attempt and keep earlier outcomes. Routing, Claude behavior, incremental benefit and statistical reliability need separate evidence.

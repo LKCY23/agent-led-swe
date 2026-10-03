@@ -51,15 +51,19 @@ def hashes(root):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('case', choices=CASES)
+    parser.add_argument('--codex-bin', type=Path,
+                        help='Use this exact CLI entrypoint instead of resolving codex through PATH')
     parser.add_argument('--capture', type=Path,
                         default=Path.home() / '.codex/skills/skill-evaluator/scripts/capture.py')
     args = parser.parse_args()
     capture = args.capture.resolve()
     if not capture.is_file():
         parser.error('Provide installed skill-evaluator capture.py with --capture')
-    binary = shutil.which('codex')
+    binary = str(args.codex_bin.expanduser().absolute()) if args.codex_bin else shutil.which('codex')
     if not binary:
         parser.error('codex is required')
+    if not Path(binary).is_file() or not os.access(binary, os.X_OK):
+        parser.error('Selected codex CLI is not an executable file')
     config_path = Path(os.environ.get('CODEX_HOME', str(Path.home() / '.codex'))) / 'config.toml'
     config = tomllib.loads(config_path.read_text()) if config_path.exists() else {}
     if config.get('model_provider') not in (None, 'openai'):
@@ -87,11 +91,12 @@ def main():
         before = hashes(fixture)
         shutil.copytree(fixture, evidence / 'before')
         argv = [binary, 'exec', '--ignore-user-config', '--ephemeral', '--json',
-                '--sandbox', 'workspace-write', '--skip-git-repo-check', '-C', str(fixture)]
+                '--sandbox', 'workspace-write', '--skip-git-repo-check',
+                '-c', 'agents.enabled=false', '-C', str(fixture)]
         for key, value in settings.items():
             argv += ['-c', key + '=' + json.dumps(value)]
         argv += ['-']
-        subprocess.run([shutil.which('python3'), str(capture), '--cwd', str(fixture),
+        captured = subprocess.run([shutil.which('python3'), str(capture), '--cwd', str(fixture),
                         '--out', str(evidence / 'capture'), '--timeout', '180',
                         '--stdin-file', str(evidence / 'prompt.txt'), '--'] + argv,
                        check=False, timeout=195, capture_output=True, text=True)
@@ -99,13 +104,16 @@ def main():
         shutil.copytree(fixture, evidence / 'after')
         manifest = {'case': args.case, 'target': str(ROOT), 'target_files': target_hashes,
                     'cli': subprocess.check_output([binary, '--version'], text=True).strip(),
+                    'cli_path': binary, 'cli_resolved_path': str(Path(binary).resolve()),
+                    'execution_overrides': {'agents.enabled': False},
                     'settings': settings, 'sandbox': 'workspace-write',
                     'fixture_before': before, 'fixture_after': after,
                     'baseline': 'not run', 'routing': 'forced target use; not measured',
                     'isolation': 'temporary writable fixture; no claim of uncontaminated baseline'}
         (evidence / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
     print(evidence)
+    return captured.returncode
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())

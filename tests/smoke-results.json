@@ -71,5 +71,46 @@
     "No successful model behavior trial.",
     "No isolated baseline or independent behavioral grading.",
     "No Claude behavior trial."
-  ]
+  ],
+  "runtime_repair": {
+    "date": "2026-10-03",
+    "latest_status": "D1 runtime blockage resolved; D4/D7 not rerun",
+    "cli": "codex-cli 0.160.0",
+    "cli_path": "/Users/liyao/.nvm/versions/node/v22.19.0/bin/codex",
+    "cli_resolved_path": "/Users/liyao/.nvm/versions/node/v22.19.0/lib/node_modules/@openai/codex/bin/codex.js",
+    "settings": {
+      "model": "gpt-6.1-sol",
+      "model_reasoning_effort": "high"
+    },
+    "execution_overrides": {
+      "agents.enabled": false
+    },
+    "attempts": [
+      {
+        "case": "D1",
+        "run_status": "completed",
+        "process_exit_code": 0,
+        "timed_out": false,
+        "elapsed_seconds": 61.358458,
+        "entrypoint_read_observed": true,
+        "fixture_unchanged": true,
+        "subagent_dispatches_observed": 0,
+        "persistent_session_file_created": false,
+        "local_raw_evidence": "tests/runs/D1-20261003T061523476183Z",
+        "behavior_grading": "author observed discussion output; no independent model grading"
+      }
+    ],
+    "remaining_cases": [
+      "D4",
+      "D7"
+    ],
+    "silent_model_fallback": false,
+    "original_failure_retained": true,
+    "runner_failure_propagation_check": "passed with synthetic failing CLI; no model invocation",
+    "limitations": [
+      "One affected runtime retry only; not full skill evaluation",
+      "Competing discovery contexts not proven absent",
+      "No baseline, natural routing or independent behavioral grading"
+    ]
+  }
 }
