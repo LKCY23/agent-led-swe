@@ -45,11 +45,32 @@ def freeze_skill(root, destination):
             for p in sorted(destination.rglob('*')) if p.is_file()}
 
 
+def skill_source(root):
+    """Git aids provenance; frozen file hashes identify the actual tested content."""
+    result = {'path': str(root), 'git_commit': None, 'git_status': None}
+    head = subprocess.run(['git', '-C', str(root), 'rev-parse', 'HEAD'], capture_output=True, text=True)
+    if head.returncode == 0:
+        result['git_commit'] = head.stdout.strip()
+        result['git_status'] = subprocess.check_output(
+            ['git', '-C', str(root), 'status', '--porcelain'], text=True).splitlines()
+    return result
+
+
 def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
-             model_profile=None, credentials=DEFAULT_CREDENTIALS):
+             model_profile=None, credentials=DEFAULT_CREDENTIALS, skill_path=None,
+             reference_skill_path=None, reverse_order=False):
     positive_seconds(timeout)
     if type(repetitions) is not int or repetitions <= 0:
         raise ValueError('repetitions must be a positive integer')
+    skill_path = Path(skill_path or ROOT).resolve()
+    reference_skill_path = Path(reference_skill_path).resolve() if reference_skill_path else None
+    for source in (skill_path, reference_skill_path):
+        if source is not None and not (source / 'SKILL.md').is_file():
+            raise ValueError(f'Skill entrypoint not found: {source}')
+        if source is not None and (output.resolve() == source or source in output.resolve().parents):
+            # Existing default runs under tests/runs are excluded by freeze_skill.
+            if not output.resolve().is_relative_to(source / 'tests/runs'):
+                raise ValueError('Output must be outside the skill source or under its tests/runs')
     adapter = get_adapter(cli.get('agent', 'codex'))
     if model_profile:
         validate_compatibility(adapter.name, model_profile, effort)
@@ -69,10 +90,16 @@ def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
             case['environment'], cli['version'].split()[-1], output / 'worker-build', adapter.name)
     write_json(output / 'case.json', case)
     shutil.copyfile(ROOT / 'tests/rubrics.md', output / 'rubrics.md')
-    target = freeze_skill(ROOT, output / 'skill')
+    target = freeze_skill(skill_path, output / 'skill')
+    variants = ['baseline', 'current', 'candidate'] if reference_skill_path else ['baseline', 'skill']
+    targets = {variants[-1]: {'directory': 'skill', 'files': target, 'source': skill_source(skill_path)}}
+    if reference_skill_path:
+        targets['current'] = {'directory': 'reference-skill',
+                              'files': freeze_skill(reference_skill_path, output / 'reference-skill'),
+                              'source': skill_source(reference_skill_path)}
     helpers = freeze_helpers(evaluator, output / 'helpers')
     schedule = [(repetition, variant) for repetition in range(1, repetitions + 1)
-                for variant in (('baseline', 'skill') if repetition % 2 else ('skill', 'baseline'))]
+                for variant in (variants if bool(repetition % 2) != reverse_order else list(reversed(variants)))]
     trials = [{'id': f'{case["id"]}-{repetition}-{variant}',
                'case_id': case['id'], 'variant': variant, 'repetition': repetition}
               for repetition, variant in schedule]
@@ -81,7 +108,7 @@ def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
         'case_sha256': digest(output / 'case.json'),
         'input_sha256': case_input_hash(original_case) if 'files' in original_case else digest(output / 'case.json'),
         'task_files': file_hashes(output / 'task'),
-        'target_files': target, 'rubric_sha256': digest(output / 'rubrics.md'),
+        'target_files': target, 'skill_targets': targets, 'rubric_sha256': digest(output / 'rubrics.md'),
         'helpers': helpers, 'adapter_files': adapter_hashes(),
         'cli': cli, 'agent': adapter.name, 'model': model, 'model_profile': model_profile, 'effort': effort,
         'timeout_seconds': timeout, 'max_executor_calls': len(trials),
@@ -104,7 +131,7 @@ def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
             before = None
             result = {**trial, 'run_status': 'error', 'usage': None, 'elapsed_seconds': None}
             try:
-                treatment = output / 'skill' if trial['variant'] == 'skill' else None
+                treatment = output / targets[trial['variant']]['directory'] if trial['variant'] in targets else None
                 with execution_environment(case, workspace, evidence, cli, treatment,
                         model_profile=model_profile, credentials=credentials) as runtime:
                     binary, runtime_cwd, sandbox, skill_path = runtime
@@ -151,6 +178,10 @@ def main():
     parser.add_argument('--effort', required=True, choices=['low', 'medium', 'high', 'xhigh', 'max'])
     parser.add_argument('--timeout', type=positive_seconds, required=True, help='Seconds per executor')
     parser.add_argument('--repetitions', type=int, default=1)
+    parser.add_argument('--skill-path', type=Path, default=ROOT, help='Candidate/target skill source to freeze')
+    parser.add_argument('--reference-skill-path', type=Path, help='Add a current-version arm alongside baseline and candidate')
+    parser.add_argument('--reverse-order', action='store_true', help='Reverse the first repetition order')
+    parser.add_argument('--output-root', type=Path, default=ROOT / 'tests/runs', help='Parent for a fresh evidence directory')
     parser.add_argument('--evaluator', type=Path, default=DEFAULT_EVALUATOR)
     args = parser.parse_args()
     if args.repetitions <= 0:
@@ -177,9 +208,10 @@ def main():
                 raise ValueError('--agent-version applies to containers; local behavior tests use the installed CLI')
             cli = resolve_codex()
         stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
-        output = ROOT / 'tests/runs' / f'pair-{args.case}-{stamp}'
+        output = args.output_root.resolve() / f'pair-{args.case}-{stamp}'
         plan = run_pair(case, output, cli, profile['model'], args.effort, args.timeout,
-                        args.repetitions, args.evaluator.resolve(), profile, args.credentials)
+                        args.repetitions, args.evaluator.resolve(), profile, args.credentials,
+                        args.skill_path, args.reference_skill_path, args.reverse_order)
     except (ValueError, OSError) as exc:
         parser.error(str(exc))
     print(output)

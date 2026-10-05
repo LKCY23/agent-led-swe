@@ -50,7 +50,8 @@ def main():
     front = yaml.safe_load(text.split('---', 2)[1])
     manifest = json.loads((ROOT / '.claude-plugin/plugin.json').read_text())
     ui = yaml.safe_load((ROOT / 'agents/openai.yaml').read_text())
-    assert front['name'] == ROOT.name == manifest['name'] == 'agent-led-swe'
+    # A Git worktree may have a different directory name; package identity is metadata.
+    assert front['name'] == manifest['name'] == 'agent-led-swe'
     assert re.fullmatch(r'\d+\.\d+\.\d+', manifest['version'])
     assert manifest['skills'] == ['./']
     assert ui['policy']['allow_implicit_invocation'] is True

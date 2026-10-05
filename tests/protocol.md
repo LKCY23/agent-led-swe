@@ -94,3 +94,21 @@ uv run --locked python tests/evaluate_results.py '<运行目录>' \
 Docker 基础链路可用 `check_swe_pipeline.py --inputs tests/runs/swe-preflight-20261005 --output '<新目录>'` 验证。它使用未修复／参考产物，并模拟替换评分测试与新增文档，不调用模型；其结果不得当作 skill 的收益。
 
 CC 适配可用 `check_claude_worker.py --base-image '<任务依赖镜像 ID>' --output '<新目录>'` 检查：真实容器 CLI 对接本地模拟 API，执行文件读取和 tool-result 回传，分别检查 baseline／skill。该检查不需要密钥，不调用 DeepSeek，也不能证明真实模型表现。
+
+## 5. 隔离候选版本
+
+按仓库 `AGENTS.md`，先固定包含实际修改的基准提交，再从该提交建立候选 worktree。评测器与被测 skill 独立选择：
+
+```sh
+# 在候选 worktree 中运行同一套评测器；路径替换为本轮实际位置
+uv run --locked python tests/run_evaluation.py pytest \
+  --swe-inputs '<冻结的 benchmark 输入目录>' \
+  --agent claude-code --model-profile tests/configs/models/deepseek-v4.1-flash.json \
+  --credentials '<主工作区本地凭据文件>' \
+  --skill-path '<候选 worktree>' --reference-skill-path '<基准工作区>' \
+  --output-root '<独立证据目录>' --effort high --timeout 300
+```
+
+只传 `--skill-path` 时仍为 baseline／skill 两组；同时传 `--reference-skill-path` 时为 baseline／current／candidate 三组，每组一份新工作区和会话。两种 skill 均冻结完整文件、哈希及源路径／Git 状态。原始文件后续变化不影响已冻结实验；评审拒绝被改动的冻结副本。相同容器路径 `/opt/target-skill` 不暴露新旧版本标签给执行者。
+
+默认首轮按上述顺序，后续 repetition 反序；`--reverse-order` 可反转首轮。顺序记录在 plan 中，不声称单轮已经消除了顺序或服务波动。证据写入全新的输出目录，凭据与原始历史运行不复制进 worktree 或 Git。评测工具和候选内容分开提交，审阅接受前不合并候选。

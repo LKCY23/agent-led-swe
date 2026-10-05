@@ -53,9 +53,13 @@ def check_bundle(bundle, plan):
             raise ValueError(f'Frozen input changed: {name}')
     if 'task_files' in plan and file_hashes(bundle / 'task') != plan['task_files']:
         raise ValueError('Prepared task or trusted validation materials changed')
+    for target in plan.get('skill_targets', {}).values():
+        if file_hashes(bundle / target['directory']) != target['files']:
+            raise ValueError('Frozen skill snapshot changed')
 
 
 def compare(plan, results):
+    variants = list(dict.fromkeys(t['variant'] for t in plan['trials']))
     indexed = {row['id']: row for row in results}
     baseline = [r for r in results if r['variant'] == 'baseline']
     isolation = {'status': 'verified-discovery' if baseline and all(
@@ -72,11 +76,11 @@ def compare(plan, results):
                       'usage': {v: r.get('usage') for v, r in rows.items()},
                       'elapsed_seconds': {v: r.get('elapsed_seconds') for v, r in rows.items()},
                       'fixtures_match': rows['baseline'].get('fixture_before') is not None
-                      and rows['baseline'].get('fixture_before') == rows['skill'].get('fixture_before')})
+                      and all(r.get('fixture_before') == rows['baseline']['fixture_before'] for r in rows.values())})
     return {'planned_trials': len(plan['trials']),
             'execution_counts': dict(Counter(r['run_status'] for r in results)),
             'task_counts': {v: dict(Counter(r['task_status'] for r in results if r['variant'] == v))
-                            for v in ('baseline', 'skill')},
+                            for v in variants},
             'baseline_isolation': isolation,
             'incremental_value_conclusion': 'inconclusive',
             'discovery_checks': {r['id']: r.get('isolation', {}).get('status', 'unknown') for r in results},

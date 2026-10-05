@@ -141,6 +141,37 @@ print(json.dumps({'type':'result','subtype':'success','is_error':False,
                                                'synthetic', 'low', 5, runtime.DEFAULT_EVALUATOR)
         self.assertTrue(all(r['task_status'] == 'pass' for r in results))
 
+    def test_explicit_versions_are_frozen_and_reviewed_with_one_baseline(self):
+        candidate = self.root / 'candidate'
+        candidate.mkdir()
+        (candidate / 'SKILL.md').write_text('Candidate guidance')
+        reference = self.root / 'reference'
+        reference.mkdir()
+        (reference / 'SKILL.md').write_text('Current guidance')
+        with patch.object(run_evaluation, 'ROOT', self.target):
+            plan = run_evaluation.run_pair(self.case, self.bundle, self.cli, 'synthetic', 'low',
+                5, 1, runtime.DEFAULT_EVALUATOR, skill_path=candidate,
+                reference_skill_path=reference, reverse_order=True)
+        self.assertEqual([t['variant'] for t in plan['trials']], ['candidate', 'current', 'baseline'])
+        self.assertEqual((self.bundle / 'skill/SKILL.md').read_text(), 'Candidate guidance')
+        self.assertEqual((self.bundle / 'reference-skill/SKILL.md').read_text(), 'Current guidance')
+        (candidate / 'SKILL.md').write_text('Unrelated later edit')
+        results = evaluate_results.review_pair(self.bundle, self.bundle / 'review', self.cli,
+                                               'synthetic', 'low', 5, runtime.DEFAULT_EVALUATOR)
+        summary = json.loads((self.bundle / 'review/summary.json').read_text())
+        self.assertEqual(set(summary['task_counts']), {'baseline', 'current', 'candidate'})
+        self.assertTrue(summary['pairs'][0]['fixtures_match'])
+        self.assertTrue(all(r['task_status'] == 'pass' for r in results))
+        (self.bundle / 'reference-skill/SKILL.md').write_text('Tampered snapshot')
+        with self.assertRaisesRegex(ValueError, 'Frozen skill snapshot changed'):
+            evaluate_results.check_bundle(self.bundle, plan)
+
+    def test_invalid_skill_path_stops_before_task_preparation(self):
+        with self.assertRaisesRegex(ValueError, 'entrypoint not found'):
+            run_evaluation.run_pair(self.case, self.bundle, self.cli, 'synthetic', 'low',
+                5, 1, runtime.DEFAULT_EVALUATOR, skill_path=self.root / 'missing')
+        self.assertFalse(self.bundle.exists())
+
     def test_timeout_and_zero_exit_without_completion_are_not_passes(self):
         helpers = self.root / 'helpers'
         runtime.freeze_helpers(runtime.DEFAULT_EVALUATOR, helpers)
