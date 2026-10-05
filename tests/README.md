@@ -1,7 +1,9 @@
 # agent-led-swe 测试机制与改造方案
 
 日期：2026-10-05  
-状态：已实现统一任务适配、配对执行、独立功能验收和定性评审，约定见 [统一协议](protocol.md)。[pytest 首轮真实对照](reports/pytest-pilot-2026-10-05.md)已完成：两组功能通过，skill 组漏读贡献规范，工程要求未通过。packaging 尚未做真实对照。SDK 暂缓，DSPy 的本机回归尚不稳定，见 [预检报告](reports/swe-preflight-2026-10-05.md)。
+候选 worktree 本轮状态：已完成隔离版本比较；候选未证明改进，不合并。packaging 的容器暴露了其他版本实现，迁移验证暂停；原始结果与后续建议见 [候选报告](reports/requirements-coverage-results-2026-10-05.md)。
+
+基准版本历史状态（本轮前）：已实现统一任务适配、配对执行、独立功能验收和定性评审，约定见 [统一协议](protocol.md)。[pytest 首轮真实对照](reports/pytest-pilot-2026-10-05.md)已完成：两组功能通过，skill 组漏读贡献规范，工程要求未通过。SDK 暂缓，DSPy 的本机回归尚不稳定，见 [预检报告](reports/swe-preflight-2026-10-05.md)。
 
 ## 本地测试环境
 

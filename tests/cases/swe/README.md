@@ -1,6 +1,6 @@
 # 真实 SWE 任务：候选与环境预检
 
-pytest 和 packaging 已接入 [统一执行与评价入口](../../protocol.md)，并通过受控链路检查。[pytest 首轮真实对照](../../reports/pytest-pilot-2026-10-05.md)已完成；packaging 尚未试跑。DSPy 和 SDK 保留为未启用候选。
+pytest 和 packaging 已接入 [统一执行与评价入口](../../protocol.md)，并通过受控链路检查。[pytest 首轮真实对照](../../reports/pytest-pilot-2026-10-05.md)已完成。候选 worktree 的后续比较发现 packaging 环境仍可读取其他版本完整实现，迁移验证暂停，需重新审查环境资格；详见 [候选报告](../../reports/requirements-coverage-results-2026-10-05.md)。DSPy 和 SDK 保留为未启用候选。
 
 | 定义 | 来源与任务 | 当前判断 |
 | --- | --- | --- |

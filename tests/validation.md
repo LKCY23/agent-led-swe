@@ -1,3 +1,13 @@
+# Isolated requirements-coverage candidate — 2026-10-05
+
+Froze baseline 1c65c00 and created an independent candidate worktree. Tooling commit 462e38a supports explicit target/reference paths, immutable skill snapshots, three-arm execution/review and snapshot-integrity checks. Candidate 8b706d2 changes four skill documents only; local tests (44), package checks and skill metadata checks passed. Main remains unchanged and the candidate is not merged.
+
+All three fresh pytest executions completed and passed 1 target plus 15 regression tests. Original judges returned baseline pass, current fail (overstated baseline-failure diagnosis), candidate fail (applicable contributing guidance not read, placeholder changelog number). Author inspection found no reliable evidence of improvement and identified judgment-calibration concerns; original scores were preserved.
+
+Packaging candidate timed out at 300 seconds. Current was stopped at about 289 seconds after traces showed both started agents reading alternate installed implementations; baseline was not launched. A read-only audit confirmed packaging 26.2 and setuptools-vendored 24.2 source in both the dependency and worker images. No hidden reference patch was mounted, but source masking did not remove these alternative implementations. Packaging outcomes remain unknown pending environment eligibility review; no additional judge calls or retries were made. Five of six planned executor calls and three of six possible judge calls ran. [Full report](reports/requirements-coverage-results-2026-10-05.md) preserves raw evidence, interruption details and recommendations.
+
+---
+
 # First real SWE pair: pytest — 2026-10-05
 
 Completed one baseline/skill pair with Claude Code 2.1.278 and DeepSeek Flash/high, 300 seconds per executor, followed by independent trusted functional tests and fresh Codex/gpt-6.1-sol/high judges (180 seconds each). Both executions completed, fixture hashes matched, and both passed 1 target test plus 15 regression tests. Both passed the documentation/handoff criterion. The skill variant failed the explicit contributing-guidance requirement: its complete tool trace did not read CONTRIBUTING.rst; author inspection confirmed the judge's finding. The baseline passed both qualitative checks.
