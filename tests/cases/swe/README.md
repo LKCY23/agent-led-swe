@@ -1,11 +1,11 @@
 # 真实 SWE 任务：候选与环境预检
 
-pytest 和 packaging 已接入 [统一执行与评价入口](../../protocol.md)，并通过受控链路检查。[pytest 首轮真实对照](../../reports/pytest-pilot-2026-10-05.md)已完成。候选 worktree 的后续比较发现 packaging 环境仍可读取其他版本完整实现，迁移验证暂停，需重新审查环境资格；详见 [候选报告](../../reports/requirements-coverage-results-2026-10-05.md)。DSPy 和 SDK 保留为未启用候选。
+pytest 和 packaging 已接入 [统一执行与评价入口](../../protocol.md)。packaging 的本地实现副本已清理，重复 control/reference 检查及 Codex／CC worker 审计通过，资格由 [执行环境记录](../../reports/packaging-execution-environment-2026-10-06.json)锁定；真实 Agent 在清理后的 packaging 任务上尚未重新试跑。pytest 已完成新版原生调用＋verifier-only 对照，见 [修复报告](../../reports/verifier-environment-results-2026-10-06.md)。DSPy 和 SDK 保留为未启用候选。
 
 | 定义 | 来源与任务 | 当前判断 |
 | --- | --- | --- |
 | [pytest.json](pytest.json) | SWE-bench Verified，日志清空后的状态一致性 | 两轮环境与指定测试预检通过。 |
-| [packaging.json](packaging.json) | FeatureBench fast / Level 1，包元数据与依赖解析 | 两轮环境与指定测试预检通过。 |
+| [packaging.json](packaging.json) | FeatureBench fast / Level 1，包元数据与依赖解析 | 精简执行镜像两轮预检通过，worker 启动前后审计本地副本；完整 verifier 镜像独立保留。 |
 | [dspy.json](dspy.json) | 社区 FeatBench-Verified，异步 ReAct 与同步工具兼容 | 用户选定的替代候选。目标测试可区分起始／参考状态，但本机回归出现服务启动与耗时断言波动，尚未通过稳定性预检。 |
 | [agents-sdk.json](agents-sdk.json) | 社区 FeatBench-Verified，extra_args 跨后端透传 | 用户决定暂缓。保留其需求／参考行为冲突的证据，不进入首批对照。 |
 

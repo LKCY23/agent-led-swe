@@ -3,6 +3,9 @@ import argparse
 import json
 from pathlib import Path
 import subprocess
+import shutil
+import tarfile
+import tempfile
 
 from evaluation_runtime import DEFAULT_EVALUATOR, digest, load_helper, write_json
 
@@ -83,14 +86,81 @@ def build_executor(base, output):
     return report
 
 
+def qualify_executor(report, inputs, output):
+    """Reproduce qualification from frozen data, with no Agent/model calls."""
+    from task_adapters import ROOT, prepare_variants, test_items
+    from functional_checks import run_test_groups, functional_status
+    from evaluation_runtime import build_worker_image, execution_environment
+    from model_config import CONFIGS, load_profile
+    output = output.resolve()
+    spec = json.loads((ROOT / 'tests/cases/swe/packaging.json').read_text())
+    old = next(c for c in json.loads((ROOT / 'tests/reports/swe-preflight-2026-10-05.json').read_text())['cases']
+               if c['name'] == 'packaging')
+    if old['spec'] != spec or old['image_id'] != report['base_verifier_image']:
+        raise ValueError('Base image or task differs from the qualified verifier')
+    row = inputs / (spec['instance_id'] + '.json')
+    archive = inputs / spec['instance_id'] / 'source.tar.gz'
+    if digest(row) != spec['metadata_sha256'] or digest(archive) != spec['source_sha256']:
+        raise ValueError('Frozen source data changed')
+    metadata = json.loads(row.read_text())
+    with tarfile.open(archive) as tar:
+        tar.extractall(output / 'source', filter='data')
+    variants = output / 'variants'
+    variants.mkdir()
+    control, reference = prepare_variants(next((output / 'source').iterdir()), metadata, variants, True)
+    groups = {g: test_items(metadata[g]) for g in ('FAIL_TO_PASS', 'PASS_TO_PASS')}
+    report.update(spec=spec, runs=[], worker_checks=[], evidence=str(output), qualified=False)
+    for label, template in [('control', control), ('reference', reference)]:
+        for repetition in (1, 2):
+            workspace = output / f'{label}-{repetition}'
+            shutil.copytree(template, workspace)
+            rows = run_test_groups(workspace, output / f'{label}-{repetition}-results',
+                                   {'image': report['executor_image'], 'network': 'none'}, groups)
+            report['runs'] += [{'variant': label, 'repetition': repetition, **r} for r in rows]
+            write_json(output / 'report.json', report)
+            expected = ['fail', 'pass'] if label == 'control' else ['pass', 'pass']
+            if [functional_status(r) for r in rows] != expected:
+                raise RuntimeError('Control/reference qualification failed; inspect retained test logs')
+            for r in rows:
+                original = [x for x in old['runs'] if x['variant'] == label and x['group'] == r['group']]
+                if not original or any(x['outcome_sha256'] != r['outcome_sha256'] for x in original):
+                    raise RuntimeError('Verifier outcomes differ from original qualification')
+            print(label, repetition, expected, flush=True)
+    versions = json.loads((CONFIGS / 'agents.json').read_text())
+    for agent in ('codex', 'claude-code'):
+        evidence = output / agent
+        evidence.mkdir()
+        environment = {'kind': 'docker', 'image': report['base_verifier_image'],
+                       'execution_image': report['executor_image'], 'audit_packaging_sources': True}
+        environment['worker_image'] = build_worker_image(environment, versions[agent]['version'], evidence / 'worker-build', agent)
+        profile = load_profile(CONFIGS / 'models/deepseek-v4.1-flash.json') if agent == 'claude-code' else None
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp).resolve()
+            shutil.copytree(variants / 'learner', workspace, dirs_exist_ok=True)
+            with execution_environment({'environment': environment}, workspace, evidence,
+                    {'agent': agent, 'version': versions[agent]['version']}, authenticate=False, model_profile=profile) as runtime:
+                binary, _, _, _ = runtime
+                version = subprocess.check_output(binary[:-1] + ['python', '-m', 'pytest', '--version'], text=True, timeout=30)
+        report['worker_checks'].append({'agent': agent, 'version': versions[agent]['version'],
+            'worker_image': environment['worker_image'], 'status': 'passed', 'pytest_version': version.strip()})
+        write_json(output / 'report.json', report)
+    report.update(qualified=True, reason='Repeated control/reference checks and both worker audits passed',
+                  scope='Local installed/vendored/archive/cache source audit; not network egress isolation')
+    write_json(output / 'report.json', report)
+    return report
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--base-image', required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--inputs', type=Path, help='Frozen source data; also run complete control/reference and worker qualification')
     args = parser.parse_args()
     report = build_executor(args.base_image, args.output)
+    if args.inputs and report['local_source_audit_passed']:
+        report = qualify_executor(report, args.inputs.resolve(), args.output)
     print(json.dumps(report, ensure_ascii=False))
-    return 0 if report['local_source_audit_passed'] else 1
+    return 0 if (report['qualified'] if args.inputs else report['local_source_audit_passed']) else 1
 
 
 if __name__ == '__main__':

@@ -120,6 +120,16 @@ CC 适配可用 `check_claude_worker.py --base-image '<任务依赖镜像 ID>' -
 
 检查覆盖本轮发现的本地可读实现来源，不是完整网络安全边界。模型连接沿用现有网络；不声称阻止一切远端获取或恶意绕过。任何新的来源暴露都应保留证据并重新审查任务资格，不能通过提示词或补分掩盖。
 
+可用以下命令重建并完成资格检查（不调用模型）：
+
+```sh
+uv run --locked python tests/packaging_environment.py \
+  --base-image '<原 verifier 镜像 ID>' --inputs '<冻结任务输入目录>' \
+  --output '<新预检目录>'
+```
+
+只有生成报告的 qualified 为 true 时，才将它登记为 `tests/reports/packaging-execution-environment-2026-10-06.json`；任务准备会核对数据版本与 verifier 镜像。Agent 安装层只复制对应 Agent 的 npm namespace，避免把 npm/node-gyp 的 Python 实现再次带入环境。
+
 ## 5. 隔离候选版本
 
 按仓库 `AGENTS.md`，先固定包含实际修改的基准提交，再从该提交建立候选 worktree。评测器与被测 skill 独立选择：

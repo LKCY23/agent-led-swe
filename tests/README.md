@@ -35,7 +35,11 @@ uv run --locked python tests/check_hosts.py
 开始前固定任务、版本、模型、预算和比较组。下面的执行命令调用模型，验证命令不调用模型：
 
 ```sh
-uv run --locked python tests/run_evaluation.py pytest   --swe-inputs '<冻结任务输入目录>'   --agent claude-code --model-profile tests/configs/models/deepseek-v4.1-flash.json   --credentials '<本地凭据文件>' --skill-path '<被测 skill 路径>'   --output-root '<独立运行目录>' --effort high --timeout 300
+uv run --locked python tests/run_evaluation.py pytest \
+  --swe-inputs '<冻结任务输入目录>' \
+  --agent claude-code --model-profile tests/configs/models/deepseek-v4.1-flash.json \
+  --credentials '<本地凭据文件>' --skill-path '<被测 skill 路径>' \
+  --output-root '<独立运行目录>' --effort high --timeout 300
 uv run --locked python tests/evaluate_results.py '<上一步运行目录>'
 ```
 

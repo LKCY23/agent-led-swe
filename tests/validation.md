@@ -1,3 +1,13 @@
+# Verifier-only outcomes and clean packaging executor — 2026-10-06
+
+Removed automatic model judging from the evaluation entrypoint. Task outcomes derive only from frozen verifier checks; execution state and native-comparison validity are separate, historical judge fields cannot alter scores, and no-verifier cases remain unknown. Process/skill analysis is an optional later reading of complete history, documented separately without a new automated analysis service.
+
+Built and qualified a distinct packaging executor image while retaining the verifier image. Removed installed/vendored/archive/cache copies; actual worker auditing also caught npm/node-gyp's copy, fixed by copying only the agent namespace. Two control/reference repetitions matched original test fingerprints, then both Codex and CC workers passed installation, pytest startup and source audits. Added a repeatable no-model qualification command and ran it successfully. This addresses local source exposure, not unrestricted network retrieval.
+
+Forty-nine local tests passed. A fresh native CC/DeepSeek Flash-high pytest pair completed within 300 seconds per arm; each passed 1 target and 15 regression tests, with matching starting artifacts and verified native activation/absence. Zero judge calls were made. Historical three-arm pytest artifacts were separately reverified without overwriting original outcomes. [Report](reports/verifier-environment-results-2026-10-06.md) contains provenance, evidence, limits and the retained environment failure. Main and skill contents remain unchanged.
+
+---
+
 # Native skill invocation correction — 2026-10-06
 
 Corrected both adapters to install the frozen skill under each agent's native user skill directory and prefix the prompt with `$agent-led-swe` (Codex) or `/agent-led-swe` (CC). Baselines keep the same CLI mode without the target installed. Native activation is checked from Codex session injection or CC discovery and command replay; ordinary file reads are insufficient. Native evidence is hashed and verified before review.
