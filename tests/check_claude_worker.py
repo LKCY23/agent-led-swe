@@ -15,6 +15,8 @@ from agent_adapters import get_adapter
 from evaluation_runtime import (DEFAULT_EVALUATOR, build_worker_image, execute,
                                 execution_environment, freeze_helpers, write_json)
 from model_config import CONFIGS, load_profile
+from native_skills import verify_activation
+from run_evaluation import freeze_skill
 
 
 def main():
@@ -22,6 +24,7 @@ def main():
     parser.add_argument('--base-image', required=True)
     parser.add_argument('--version', default='2.1.278')
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--skill-path', type=Path, help='Test an actual skill package instead of a synthetic marker')
     args = parser.parse_args()
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
@@ -37,7 +40,7 @@ def main():
         evidence = output / variant
         evidence.mkdir()
         requests = []
-        target = '/opt/target-skill/SKILL.md' if variant == 'skill' else '/testbed/fixture.txt'
+        target = '/testbed/fixture.txt'
 
         class Handler(BaseHTTPRequestHandler):
             def log_message(self, *unused):
@@ -97,28 +100,37 @@ def main():
                 (work / 'fixture.txt').write_text('PUBLIC_FIXTURE_MARKER\n')
                 skill = output / 'skill-input'
                 if variant == 'skill':
-                    skill.mkdir()
-                    (skill / 'SKILL.md').write_text('TREATMENT_SKILL_MARKER\n')
+                    if args.skill_path:
+                        freeze_skill(args.skill_path.resolve(), skill)
+                    else:
+                        skill.mkdir()
+                        (skill / 'SKILL.md').write_text('---\nname: agent-led-swe\ndescription: Native loading probe\n---\nTREATMENT_SKILL_MARKER\n')
                 with execution_environment(task, work, evidence, cli,
                         skill if variant == 'skill' else None, authenticate=False, model_profile=profile) as runtime:
                     binary, cwd, sandbox, skill_path = runtime
                     # Override ONLY this disposable process with a synthetic endpoint/key.
                     binary[2:2] = ['-e', f'ANTHROPIC_BASE_URL=http://host.docker.internal:{server.server_port}',
                                    '-e', 'ANTHROPIC_API_KEY=synthetic-key']
-                    context = adapter.prepare_context(binary, cwd, evidence, profile['model'], 'high', sandbox)
+                    context = adapter.prepare_context(binary, cwd, evidence, profile['model'], 'high', sandbox, skill_path)
                     prompt = evidence / 'prompt.txt'
-                    prompt.write_text(f'Read {skill_path or "/testbed/fixture.txt"}, then say MOCK_WORKER_OK.')
+                    prompt.write_text((adapter.invocation() if skill_path else '') + 'Read /testbed/fixture.txt, then say MOCK_WORKER_OK.')
                     command = adapter.command(binary, cwd, profile['model'], 'high', sandbox, context)
                     result = execute(helpers, work, evidence / 'capture', command, 60, prompt, adapter)
                     write_json(evidence / 'result.json', result)
                 trace = json.loads((evidence / 'capture/trace.json').read_text())
-                assert result['run_status'] == 'completed', result
+                activation = verify_activation('claude-code', evidence, skill if variant == 'skill' else None, skill_path)
+                assert activation['status'] == 'verified', activation
                 assert trace['isolation_status'] == 'verified-discovery', trace
+                assert result['run_status'] == 'completed', result
                 assert trace['models_observed'] == ['deepseek-flash'], trace
                 assert requests and all(r.get('model') == 'deepseek-flash' for r in requests)
                 captured = json.dumps(requests)
-                assert ('TREATMENT_SKILL_MARKER' in captured) == (variant == 'skill')
-                assert ('PUBLIC_FIXTURE_MARKER' in captured) == (variant == 'baseline')
+                if variant == 'skill':
+                    body = (skill / 'SKILL.md').read_text().split('---', 2)[2].strip()
+                    assert json.dumps(body)[1:-1] in json.dumps(requests[0]), 'Native expansion must precede the first model request'
+                else:
+                    assert 'Base directory for this skill:' not in json.dumps(requests[0])
+                assert 'PUBLIC_FIXTURE_MARKER' in captured
                 reports.append({'variant': variant, 'cli_version': args.version, 'image': image,
                                 'status': 'passed', 'requests': len(requests),
                                 'scope': 'Real Claude CLI with synthetic API; no provider call'})

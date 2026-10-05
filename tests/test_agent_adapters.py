@@ -49,9 +49,10 @@ class AgentAdapterTest(unittest.TestCase):
     def test_command_disables_extra_tools_and_implicit_configuration(self):
         command = self.adapter.command(['docker', 'exec', 'container', 'claude'],
                                        Path('/testbed'), 'deepseek-flash', 'high', 'danger-full-access', {})
-        self.assertIn('--bare', command)
-        self.assertIn('--disable-slash-commands', command)
-        self.assertEqual(command[command.index('--setting-sources') + 1], '')
+        self.assertNotIn('--bare', command)
+        self.assertNotIn('--disable-slash-commands', command)
+        self.assertIn('--replay-user-messages', command)
+        self.assertEqual(command[command.index('--setting-sources') + 1], 'user')
         self.assertNotIn('--fallback-model', command)
 
     def test_model_and_agent_compatibility(self):

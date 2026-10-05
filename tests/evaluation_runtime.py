@@ -25,7 +25,7 @@ def adapter_hashes():
     root = Path(__file__).parent
     names = [
         'evaluation_runtime.py', 'run_evaluation.py', 'evaluate_results.py', 'run_smoke.py',
-        'task_adapters.py', 'functional_checks.py', 'model_config.py']
+        'task_adapters.py', 'functional_checks.py', 'model_config.py', 'native_skills.py']
     names += [str(p.relative_to(root)) for p in sorted((root / 'agent_adapters').glob('*.py'))]
     return {name: digest(root / name) for name in names}
 
@@ -117,7 +117,27 @@ def execution_environment(task, workspace, evidence, cli, skill=None, authentica
     if task['environment']['kind'] == 'local':
         if agent != 'codex':
             raise ValueError('Claude Code currently requires a Docker task')
-        yield cli['path'], workspace, 'workspace-write', str(skill / 'SKILL.md') if skill else None
+        with tempfile.TemporaryDirectory(prefix='swe-codex-home-') as tmp:
+            home = Path(tmp).resolve()
+            codex_home = home / '.codex'
+            codex_home.mkdir()
+            auth = Path(os.environ.get('CODEX_HOME', str(Path.home() / '.codex'))) / 'auth.json'
+            if authenticate and auth.is_file():
+                shutil.copyfile(auth, codex_home / 'auth.json')
+                (codex_home / 'auth.json').chmod(0o600)
+            installed = home / '.agents/skills/agent-led-swe'
+            if skill:
+                installed.parent.mkdir(parents=True)
+                shutil.copytree(skill, installed, ignore=shutil.ignore_patterns('.claude-plugin'))
+            binary = ['env', f'HOME={home}', f'CODEX_HOME={codex_home}', cli['path']]
+            write_json(evidence / 'skill-installation.json', {'mode': 'native', 'agent': agent,
+                       'installed': bool(skill), 'entrypoint': str(installed / 'SKILL.md') if skill else None,
+                       'files': file_hashes(installed) if skill else {}})
+            try:
+                yield binary, workspace, 'workspace-write', str(installed / 'SKILL.md') if skill else None
+            finally:
+                if (codex_home / 'sessions').exists():
+                    shutil.copytree(codex_home / 'sessions', evidence / 'native-codex-session')
         return
     image = task['environment'].get('worker_image')
     if not image:
@@ -126,8 +146,13 @@ def execution_environment(task, workspace, evidence, cli, skill=None, authentica
     argv = ['docker', 'run', '-d', '--init', '--name', name, '--cpus', '2', '--memory', '3g',
             '--network', 'bridge', '-v', f'{workspace}:/testbed', '-w', '/testbed',
             '-e', 'SETUPTOOLS_SCM_PRETEND_VERSION=7.2.0.dev0']
+    installed = ('/root/.agents/skills/agent-led-swe' if agent == 'codex'
+                 else '/tmp/agent-home/.claude/skills/agent-led-swe')
     if skill:
-        argv += ['-v', f'{skill}:/opt/target-skill:ro']
+        # Install the skill payload, not its separate plugin packaging metadata.
+        payload = evidence / 'installed-skill'
+        shutil.copytree(skill, payload, ignore=shutil.ignore_patterns('.claude-plugin'))
+        argv += ['-v', f'{payload}:{installed}:ro']
     if authenticate and agent == 'codex':
         auth = Path(os.environ.get('CODEX_HOME', str(Path.home() / '.codex'))) / 'auth.json'
         if not auth.is_file():
@@ -168,16 +193,24 @@ def execution_environment(task, workspace, evidence, cli, skill=None, authentica
             uid, gid = os.getuid(), os.getgid()
             if uid == 0:
                 raise ValueError('Claude Docker worker requires a non-root workspace owner')
-            subprocess.run(['docker', 'exec', name, 'mkdir', '-p', '/tmp/agent-home'], check=True)
-            subprocess.run(['docker', 'exec', name, 'chown', '-R', f'{uid}:{gid}', '/tmp/agent-home'], check=True)
+            subprocess.run(['docker', 'exec', name, 'mkdir', '-p', '/tmp/agent-home/.claude'], check=True)
+            subprocess.run(['docker', 'exec', name, 'chown', f'{uid}:{gid}',
+                            '/tmp/agent-home', '/tmp/agent-home/.claude'], check=True)
             prefix += ['--user', f'{uid}:{gid}']
         write_json(evidence / 'environment.json', {'image': image, 'cli': actual, 'agent': agent,
                    'boundary': 'Docker container; no evaluator materials or Docker socket mounted',
                    'inner_sandbox': 'danger-full-access', 'skill_mounted': bool(skill)})
+        write_json(evidence / 'skill-installation.json', {
+            'mode': 'native', 'agent': agent, 'installed': bool(skill),
+            'entrypoint': installed + '/SKILL.md' if skill else None,
+            'files': file_hashes(payload) if skill else {}})
         # Docker enforces isolation. No elevated caps or host daemon socket are granted.
         yield prefix + [name, adapter.executable], Path('/testbed'), 'danger-full-access', (
-            '/opt/target-skill/SKILL.md' if skill else None)
+            installed + '/SKILL.md' if skill else None)
     finally:
+        if agent == 'codex':
+            subprocess.run(['docker', 'cp', f'{name}:/root/.codex/sessions',
+                            str(evidence / 'native-codex-session')], capture_output=True)
         subprocess.run(['docker', 'rm', '-f', name], capture_output=True)
 
 
@@ -190,9 +223,15 @@ def resolve_codex():
 
 
 def execute(helpers, workspace, evidence, command, timeout, prompt, adapter=None):
+    adapter = adapter or get_adapter('codex')
+    stdin = prompt
+    if adapter.name == 'claude-code':
+        stdin = prompt.with_suffix('.jsonl')
+        stdin.write_text(json.dumps({'type': 'user', 'message': {'role': 'user',
+                          'content': prompt.read_text()}}, ensure_ascii=False) + '\n')
     record = load_helper(helpers / 'capture.py').capture(
-        workspace, evidence, command, timeout, prompt)
-    trace = (adapter or get_adapter('codex')).inspect_trace(
+        workspace, evidence, command, timeout, stdin)
+    trace = adapter.inspect_trace(
         (evidence / 'stdout.log').read_text(errors='replace'), helpers)
     write_json(evidence / 'trace.json', trace)
     status = ('timeout' if record['timed_out'] else

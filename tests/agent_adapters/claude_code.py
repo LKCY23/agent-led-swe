@@ -1,6 +1,13 @@
 """Claude Code headless execution inside a disposable Docker worker."""
 from collections import Counter
 import json
+import re
+
+
+# Bundled commands in the pinned 2.1.278 CLI, present in both comparison arms.
+BUNDLED_SKILLS = {'deep-research', 'dataviz', 'update-config', 'verify', 'debug',
+                  'code-review', 'simplify', 'batch', 'fewer-permission-prompts', 'doctor',
+                  'loop', 'claude-api', 'workflow-authoring', 'run', 'run-skill-generator'}
 
 
 class ClaudeCodeAdapter:
@@ -9,28 +16,33 @@ class ClaudeCodeAdapter:
     npm_package = '@anthropic-ai/claude-code'
     cli_entrypoint = '@anthropic-ai/claude-code/bin/claude.exe'
 
-    def prepare_context(self, binary, workspace, evidence, model, effort, sandbox):
+    def invocation(self):
+        return '/agent-led-swe\n\n'
+
+    def prepare_context(self, binary, workspace, evidence, model, effort, sandbox, skill_path=None):
         from evaluation_runtime import write_json
         if sandbox != 'danger-full-access' or not isinstance(binary, list) or binary[0] != 'docker':
             raise ValueError('Claude Code execution requires the disposable Docker runtime')
         # No equivalent of Codex prompt-input exists here. Verify actual init events
         # after launch; do not report configuration alone as proven isolation.
-        receipt = {'status': 'pending-trace-check', 'scope': 'Fresh container/home; explicit '
-                   'settings, bare mode, skills disabled, strict empty MCP configuration. '
-                   'Built-in file reads still permit the explicitly supplied skill.'}
+        receipt = {'status': 'pending-trace-check', 'expected_skill': 'agent-led-swe' if skill_path else None,
+                   'scope': 'Fresh container/home; native skill installation and slash invocation; '
+                   'strict empty MCP configuration. Verify native events after execution.'}
         write_json(evidence / 'isolation.json', receipt)
         return receipt
 
     def command(self, binary, workspace, model, effort, sandbox, context):
-        return list(binary) + ['--print', '--bare', '--no-session-persistence',
+        return list(binary) + ['--print', '--no-session-persistence',
+            '--input-format', 'stream-json', '--replay-user-messages',
             '--output-format', 'stream-json', '--verbose', '--model', model + '[1m]', '--effort', effort,
-            '--setting-sources', '', '--settings', '{}', '--strict-mcp-config',
-            '--mcp-config', '{"mcpServers":{}}', '--disable-slash-commands', '--no-chrome',
+            '--setting-sources', 'user', '--settings', '{"disableAllHooks":true,"autoMemoryEnabled":false}', '--strict-mcp-config',
+            '--mcp-config', '{"mcpServers":{}}', '--no-chrome',
             '--tools', 'Bash,Read,Write,Edit,Glob,Grep', '--permission-mode', 'bypassPermissions']
 
     def inspect_trace(self, text, helpers=None):
         counts, malformed, results, models, init = Counter(), [], [], set(), []
         commands = []
+        invocations = []
         failures = 0
         for number, line in enumerate(text.splitlines(), 1):
             if not line.strip():
@@ -46,6 +58,10 @@ class ClaudeCodeAdapter:
                 if kind == 'result':
                     results.append(event)
                     models.update((event.get('modelUsage') or {}).keys())
+                if kind == 'user' and event.get('isReplay') is True:
+                    content = event.get('message', {}).get('content', '')
+                    if isinstance(content, str):
+                        invocations.extend(re.findall(r'<command-name>/([^<]+)</command-name>', content))
                 if kind == 'assistant':
                     message = event.get('message') or {}
                     if message.get('model'):
@@ -72,8 +88,9 @@ class ClaudeCodeAdapter:
                       'cached_input_tokens': cached if type(cached) is int and cached >= 0 else None,
                       'output_tokens': output if type(output) is int and output >= 0 else None}
         allowed_tools = {'Bash', 'Read', 'Write', 'Edit', 'Glob', 'Grep'}
-        verified = len(init) == 1 and all(
-            init[0].get(key) == [] for key in ('skills', 'plugins', 'mcp_servers'))
+        verified = len(init) == 1 and all(init[0].get(key) == [] for key in ('plugins', 'mcp_servers'))
+        verified = verified and isinstance(init[0].get('skills'), list) and set(init[0]['skills']) <= BUNDLED_SKILLS | {'agent-led-swe'}
+        verified = verified and set(invocations) <= {'agent-led-swe'}
         verified = verified and isinstance(init[0].get('tools'), list) and set(init[0]['tools']) <= allowed_tools
         # 2.1.278 reports built-in agent names even with no Agent/Task tool.
         # Reject custom agents; catalog presence does not enable delegation.
@@ -85,6 +102,7 @@ class ClaudeCodeAdapter:
                 'native_usage': usage, 'native_model_labels': sorted(models),
                 'models_observed': sorted({m.removesuffix('[1m]') for m in models}), 'tool_calls': commands,
                 'init_context': init,
+                'native_skill_invocations': invocations,
                 'isolation_status': 'verified-discovery' if verified else 'unknown',
                 'client_cost_estimate_usd': final.get('total_cost_usd'),
                 'task_status': 'unknown'}

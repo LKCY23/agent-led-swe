@@ -1,3 +1,13 @@
+# Native skill invocation correction — 2026-10-06
+
+Corrected both adapters to install the frozen skill under each agent's native user skill directory and prefix the prompt with `$agent-led-swe` (Codex) or `/agent-led-swe` (CC). Baselines keep the same CLI mode without the target installed. Native activation is checked from Codex session injection or CC discovery and command replay; ordinary file reads are insufficient. Native evidence is hashed and verified before review.
+
+Forty-seven local tests passed. Real CLI/mock API checks for local Codex, Docker Codex and Docker CC confirmed full native instruction expansion before the first model request and target absence in baselines. Two bounded real-model smoke calls confirmed native activation and unchanged workspaces; the Codex final-answer check needed manual correction because it concatenated progress commentary with the final message. Original results were preserved. [Detailed report](reports/native-skill-invocation-2026-10-06.md) records evidence and limitations.
+
+All earlier path-prompt evaluations are document-reading mode, not native-skill acceptance evidence. No benchmark was rerun and no skill-content change or merge occurred in this correction.
+
+---
+
 # Isolated requirements-coverage candidate — 2026-10-05
 
 Froze baseline 1c65c00 and created an independent candidate worktree. Tooling commit 462e38a supports explicit target/reference paths, immutable skill snapshots, three-arm execution/review and snapshot-integrity checks. Candidate 8b706d2 changes four skill documents only; local tests (44), package checks and skill metadata checks passed. Main remains unchanged and the candidate is not merged.

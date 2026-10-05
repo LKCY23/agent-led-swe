@@ -37,7 +37,22 @@ FeatureBench 的遮蔽、隐藏测试恢复与其他 benchmark 的正向修复�
 
 模型 profile 与 Agent 分开选择，运行前验证组合和 effort。Codex 沿用只读挂载的 auth.json；CC 从显式环境变量或被 Git 忽略的 `configs/credentials.local.json` 取密钥，通过临时 env 文件注入容器，容器启动后立即删除该临时文件。凭据不写入镜像、命令参数或证据；也不读取本机 CC／CC Switch 设置。
 
-CC 禁用自动 skills、插件、MCP 和委派工具；skill 组通过普通 Read 工具读取提供的指导。init 事件可以列出 CC 内置 Agent 名称，但不得加载自定义 Agent 或暴露委派工具。每次保存原生 init、工具事件、完成事件和 usage；未完成、模型标识不一致或隔离检查未通过的运行不会被当作有效提交。`[1m]` 是 CC 的上下文设置后缀，规范化模型标识时去除，同时保留原始名称。CC usage 中普通输入与缓存读写合计为 input_tokens，并保留原始 usage；客户端费用估算不作为真实账单，cost 保留 null。
+skill 组安装原生 skill 并显式调用，baseline 不安装。CC 禁用插件、MCP 和委派工具；固定 CLI 自带的 skills／命令在两组一致保留，额外用户 skill 只允许目标项。init 可以列出内置 Agent 名称，但不得加载自定义 Agent 或暴露委派工具。每次保存原生 init、工具事件、完成事件和 usage；未完成、模型标识不一致、隔离或原生调用未验证的运行不作为有效提交。`[1m]` 是 CC 的上下文设置后缀，规范化模型标识时去除，同时保留原始名称。CC usage 中普通输入与缓存读写合计为 input_tokens，并保留原始 usage；客户端费用估算不作为真实账单，cost 保留 null。
+
+### 原生 skill 安装与调用
+
+| Agent | 隔离环境中的安装位置 | 提示词首行 | 加载证据 |
+| --- | --- | --- | --- |
+| Codex | `$HOME/.agents/skills/agent-led-swe/` | `$agent-led-swe` | 发现目录中保留目标；原生 session 的 user input 包含匹配名称、路径和完整冻结正文的 `<skill>` 注入。 |
+| Claude Code | `$HOME/.claude/skills/agent-led-swe/` | `/agent-led-swe` | init 识别目标，CLI replay 输出已解析的 `<command-name>/agent-led-swe</command-name>`；真实 CLI + 模拟 API 检查另验证首次请求已包含完整正文。 |
+
+依据：[Codex 原生 skills](https://learn.chatgpt.com/docs/build-skills)、[CC skills](https://code.claude.com/docs/en/skills)。原生命令按原始字符串写入提示词，不经过 shell 展开；CC 再编码为 stream-json 输入，以保留 CLI 的命令解析回放。
+
+安装复制完整 skill 正文和资源，不把独立的 `.claude-plugin` 包装元数据当作用户 skill 插件再次加载。容器将该 payload 只读挂到原生目录；本地 Codex 使用临时 HOME／CODEX_HOME，不修改本机安装。Codex executor 的原生 session 在清理环境前导出用于验证；judge 仍使用 ephemeral 模式。CC 不使用会阻止该安装方式的 bare／disable-slash-commands。
+
+`skill-installation.json` 和 `skill-activation.json` 分别记录安装与原生调用；缺少调用证据不能以“Agent 读过 SKILL.md”替代。原生证据文件的哈希写入 result，评审前检查。baseline 同样需要证据证明没有目标注入。
+
+此前 `Use the skill at …` 的记录属于 **document-reading** 模式，仍保留，但不能作为 native skill 效果验收或与新模式混合比较；新计划显式记录 `skill_loading_mode: native`。
 
 执行结束或超时后先停止容器，再保存完整工作区快照、文件变化清单、原始事件及资源用量。新增文档、未跟踪文件和删除操作都必须保留，不能仅收集代码 patch。Git 内部状态不作为交付产物。
 

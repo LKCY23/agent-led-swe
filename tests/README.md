@@ -1,7 +1,7 @@
 # agent-led-swe 测试机制与改造方案
 
 日期：2026-10-05  
-候选 worktree 本轮状态：已完成隔离版本比较；候选未证明改进，不合并。packaging 的容器暴露了其他版本实现，迁移验证暂停；原始结果与后续建议见 [候选报告](reports/requirements-coverage-results-2026-10-05.md)。
+当前 worktree 状态：Codex／CC 原生 skill 安装和主动调用已修复并验证，见 [接入报告](reports/native-skill-invocation-2026-10-06.md)。此前对照使用文档读取模式，不能作为 native skill 效果验收；原始结果与候选保留，不合并。原生模式约定见 [协议](protocol.md#原生-skill-安装与调用)。packaging 另有环境暴露问题，迁移验证仍暂停。
 
 基准版本历史状态（本轮前）：已实现统一任务适配、配对执行、独立功能验收和定性评审，约定见 [统一协议](protocol.md)。[pytest 首轮真实对照](reports/pytest-pilot-2026-10-05.md)已完成：两组功能通过，skill 组漏读贡献规范，工程要求未通过。SDK 暂缓，DSPy 的本机回归尚不稳定，见 [预检报告](reports/swe-preflight-2026-10-05.md)。
 
@@ -80,7 +80,7 @@ uv run --locked python tests/evaluate_results.py '<上一步输出的运行目�
 
 运行成功与任务通过分开：缺失运行保留为 `not_started`；超时、无完成事件、无效或缺项的评分不会成为通过。已有失败判据仍保留，即使执行未完成。评价前核对已采集文件和日志的哈希；重评创建新目录，不覆盖旧记录。所有原始材料保留在忽略的 `tests/runs/` 中。
 
-**当前隔离边界：** Codex 在执行前导出上下文核查。CC 使用全新容器和 HOME、bare 模式、空配置和受限工具集合，并从原生 init 事件核查没有加载 skills／plugins／MCP 或自定义 Agent；发现异常则不接受该运行。覆盖项不修改全局配置，项目规范仍是双方共同输入。行为任务沿用本地 `workspace-write`，judge 使用 `read-only`，仍需审阅工作区外读取。真实任务的边界是 Docker，不挂载评分材料或 Docker socket；认证约定见 [统一协议](protocol.md#2-执行与产物约定)。两种 Agent 的上下文验证手段不同，整体增益结论仍为 `inconclusive`。
+**当前隔离边界：** Codex 使用临时 HOME 或独立容器，执行前核查目录，执行后核对原生 skill 注入；CC 使用全新容器和 HOME、受限设置来源与工具，从 init 和命令回放核查原生调用。两组保留一致的 CC 内置命令，额外用户 skill 仅目标组安装。覆盖项不修改全局配置，项目规范仍是双方共同输入。行为任务沿用本地 `workspace-write`，judge 使用 `read-only`；真实任务边界是 Docker，不挂载评分材料或 Docker socket。详见 [统一协议](protocol.md#2-执行与产物约定)。
 
 `test_evaluation.py` 使用本地假 CLI 和真实采集／解析工具检查链路，不调用模型。它能证明测试工具的行为，不能证明 Codex 实际遵循指导或 skill 带来收益。
 

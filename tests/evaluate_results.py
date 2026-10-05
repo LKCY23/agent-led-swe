@@ -125,6 +125,9 @@ def review_pair(bundle, output, cli, model, effort, timeout, evaluator, judge=Tr
             for name, expected in trial_result.get('capture_files', {}).items():
                 if digest(source / 'capture' / name) != expected:
                     raise ValueError(f'Captured log changed: {trial["id"]}/{name}')
+            for name, expected in trial_result.get('native_files', {}).items():
+                if digest(source / name) != expected:
+                    raise ValueError(f'Native invocation evidence changed: {trial["id"]}/{name}')
             with tempfile.TemporaryDirectory(prefix='swe-review-') as tmp:
                 workspace = Path(tmp).resolve()
                 write_json(workspace / 'task.json', {'request': case['request'], 'checks': criteria})

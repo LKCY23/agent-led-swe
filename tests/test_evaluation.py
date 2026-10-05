@@ -28,11 +28,16 @@ class EvaluationTest(unittest.TestCase):
 import json
 from pathlib import Path
 import sys
+import os
 args = sys.argv[1:]
 workspace = Path(args[args.index('-C') + 1])
 prompt = sys.stdin.read()
 if 'debug' in args:
-    print('[]')
+    skill = Path(os.environ['HOME']) / '.agents/skills/agent-led-swe/SKILL.md'
+    text = '- `r0` = "unused"'
+    if skill.exists():
+        text = '- `r0` = `' + str(skill.parent.parent) + '`\\n- agent-led-swe (file: r0/agent-led-swe/SKILL.md)'
+    print(json.dumps([{'content':[{'text':text}]}]) if skill.exists() else '[]')
     sys.exit(0)
 print(json.dumps({'type': 'turn.started'}), flush=True)
 if '--output-schema' in args:
@@ -47,6 +52,11 @@ else:
     assert 'GRADER_ONLY' not in prompt
     assert sorted(p.name for p in workspace.iterdir()) == ['input.txt']
     (workspace / 'result.txt').write_text('done')
+    session = Path(os.environ['CODEX_HOME']) / 'sessions/probe.jsonl'
+    session.parent.mkdir(exist_ok=True)
+    skill = Path(os.environ['HOME']) / '.agents/skills/agent-led-swe/SKILL.md'
+    text = ('<skill>\\n<name>agent-led-swe</name>\\n<path>' + str(skill) + '</path>\\n' + skill.read_text() + '\\n</skill>') if skill.exists() else prompt
+    session.write_text(json.dumps({'type':'response_item','payload':{'type':'message','role':'user','content':[{'text':text}]}})+'\\n')
 print(json.dumps({'type': 'turn.completed', 'usage': {
     'input_tokens': 8, 'cached_input_tokens': 0, 'output_tokens': 3}}))
 ''')
@@ -73,7 +83,7 @@ print(json.dumps({'type': 'turn.completed', 'usage': {
             self.assertEqual(result['usage']['input_tokens'], 8)
             self.assertEqual(result['fixture_before'], {'input.txt': runtime.digest(evidence / 'before/input.txt')})
             prompt = (evidence / 'prompt.txt').read_text()
-            self.assertEqual('Use the skill at' in prompt, trial['variant'] == 'skill')
+            self.assertEqual(prompt.startswith('$agent-led-swe\n'), trial['variant'] == 'skill')
         self.assertNotEqual(*commands)
         (self.target / 'SKILL.md').write_text('Later edit')
         self.assertEqual((self.bundle / 'skill/SKILL.md').read_text(), 'Frozen skill guidance')
@@ -99,7 +109,9 @@ prompt = sys.stdin.read()
 assert 'GRADER_ONLY' not in prompt
 Path('result.txt').write_text('done')
 print(json.dumps({'type':'system','subtype':'init','tools':['Read'],
-                  'skills':[],'plugins':[],'mcp_servers':[],'agents':[]}))
+                  'skills':['agent-led-swe'] if '/agent-led-swe' in prompt else [],'plugins':[],'mcp_servers':[],'agents':[]}))
+if '/agent-led-swe' in prompt:
+    print(json.dumps({'type':'user','isReplay':True,'message':{'content':'<command-name>/agent-led-swe</command-name>'}}))
 print(json.dumps({'type':'result','subtype':'success','is_error':False,
                   'modelUsage':{'deepseek-flash[1m]':{}},
                   'usage':{'input_tokens':8,'cache_read_input_tokens':0,
@@ -119,7 +131,7 @@ print(json.dumps({'type':'result','subtype':'success','is_error':False,
                 '/opt/target-skill/SKILL.md' if skill else None)
 
         def execute(helpers, workspace, evidence, command, timeout, prompt, adapter):
-            self.assertIn('--bare', command)
+            self.assertNotIn('--bare', command)
             self.assertIn('deepseek-flash[1m]', command)
             return runtime.execute(helpers, workspace, evidence, [str(fake)], timeout, prompt, adapter)
 

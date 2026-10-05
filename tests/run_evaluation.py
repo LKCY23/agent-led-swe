@@ -22,6 +22,7 @@ from run_smoke import ROOT, case_ids, case_input_hash
 from task_adapters import prepare_task, load_task, SWE_NAMES
 from agent_adapters import get_adapter
 from model_config import CONFIGS, DEFAULT_CREDENTIALS, load_profile, validate_compatibility, credential
+from native_skills import verify_activation
 
 
 COMMON_PROMPT = (
@@ -113,7 +114,8 @@ def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
         'cli': cli, 'agent': adapter.name, 'model': model, 'model_profile': model_profile, 'effort': effort,
         'timeout_seconds': timeout, 'max_executor_calls': len(trials),
         'token_limit': None, 'cost_limit': None,
-        'environment': case['environment'], 'routing': 'forced skill use; not a routing test',
+        'environment': case['environment'], 'routing': 'native explicit invocation; not an implicit routing test',
+        'skill_loading_mode': 'native',
         'baseline_isolation': {
             'status': 'unknown',
             'reason': 'Per-trial discovery preflight pending; see each isolation.json and execution trace.'},
@@ -136,11 +138,10 @@ def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
                         model_profile=model_profile, credentials=credentials) as runtime:
                     binary, runtime_cwd, sandbox, skill_path = runtime
                     before = snapshot(workspace, evidence / 'before')
-                    guidance = (f'Use the skill at {skill_path}. Read its entrypoint and relevant references.\n\n'
-                                if skill_path else '')
+                    guidance = adapter.invocation() if skill_path else ''
                     prompt = evidence / 'prompt.txt'
                     prompt.write_text(guidance + COMMON_PROMPT + case['request'])
-                    result['isolation'] = adapter.prepare_context(binary, runtime_cwd, evidence, model, effort, sandbox)
+                    result['isolation'] = adapter.prepare_context(binary, runtime_cwd, evidence, model, effort, sandbox, skill_path)
                     command = adapter.command(binary, runtime_cwd, model, effort, sandbox, result['isolation'])
                     result.update(execute(output / 'helpers', workspace, evidence / 'capture',
                                           command, timeout, prompt, adapter))
@@ -151,6 +152,13 @@ def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
                             result.update(run_status='error', error='Claude discovery isolation was not verified')
                         if result.get('models_observed') != [model]:
                             result.update(run_status='error', error='Observed model differs or is unavailable')
+                result['skill_activation'] = verify_activation(adapter.name, evidence, treatment, skill_path)
+                write_json(evidence / 'skill-activation.json', result['skill_activation'])
+                native_paths = [evidence / 'skill-installation.json', evidence / 'skill-activation.json', prompt]
+                native_paths += list((evidence / 'native-codex-session').rglob('*.jsonl'))
+                result['native_files'] = {str(p.relative_to(evidence)): digest(p) for p in native_paths if p.is_file()}
+                if result['skill_activation']['status'] != 'verified' and result['run_status'] == 'completed':
+                    result.update(run_status='error', error='Native skill activation/absence was not verified')
             except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
                 result['error'] = str(exc)
             finally:

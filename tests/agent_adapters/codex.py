@@ -19,7 +19,7 @@ def skill_paths(items):
                   for root, tail in re.findall(r'\(file: (r\d+)/([^\n]+)\)', text)]
 
 
-def isolated_context(binary, workspace, evidence, model, effort, sandbox):
+def isolated_context(binary, workspace, evidence, model, effort, sandbox, skill_path=None):
     """Inventory and disable skill discovery using invocation-only overrides.
 
     Debug rendering does not support --ignore-user-config. Explicit overrides
@@ -34,7 +34,7 @@ def isolated_context(binary, workspace, evidence, model, effort, sandbox):
                    '-c', 'approval_policy="never"', '-c', 'model=' + json.dumps(model),
                    '-c', 'model_reasoning_effort=' + json.dumps(effort)]
         command += [part for value in overrides for part in ('-c', value)]
-        command += ['debug', 'prompt-input', 'LOCAL_CONTEXT_CHECK']
+        command += ['debug', 'prompt-input', '$agent-led-swe\nLOCAL_CONTEXT_CHECK' if skill_path else 'LOCAL_CONTEXT_CHECK']
         try:
             rendered = subprocess.run(command, capture_output=True, text=True, timeout=40)
         except subprocess.TimeoutExpired as exc:
@@ -44,19 +44,25 @@ def isolated_context(binary, workspace, evidence, model, effort, sandbox):
         if rendered.returncode:
             raise ValueError('Context preflight failed; see saved stderr')
         text, paths = skill_paths(json.loads(rendered.stdout))
-        if not paths:
-            if ('<skills_instructions>' in text or 'agent-led-swe' in text.lower()
+        unexpected = set(paths) - ({str(skill_path)} if skill_path else set())
+        if not unexpected:
+            if ((not skill_path and ('<skills_instructions>' in text or 'agent-led-swe' in text.lower()))
                     or '# AGENTS.md instructions' in text):
                 raise ValueError('Unexpected inherited instructions remain in rendered context')
+            if skill_path and str(skill_path) not in paths:
+                raise ValueError('Target skill was not discovered by Codex')
             receipt = {'status': 'verified-discovery', 'disabled_paths': sorted(disabled),
+                       'expected_skill': 'agent-led-swe' if skill_path else None,
+                       'entrypoint': str(skill_path) if skill_path else None,
                        'overrides': overrides, 'context_sha256': digest(evidence / f'context-{attempt}.json'),
-                       'scope': 'No automatic skills or inherited project/developer guidance in '
-                                'preflight; fresh ephemeral execution. Not filesystem read isolation.'}
+                       'scope': 'Only the requested installed skill (if any) remains in discovery; '
+                                'no inherited project/developer guidance. Fresh isolated execution; '
+                                'native input injection is checked in the saved session.'}
             write_json(evidence / 'isolation.json', receipt)
             return receipt
-        if set(paths) <= disabled:
+        if unexpected <= disabled:
             raise ValueError('Skill disabling did not take effect')
-        disabled.update(paths)
+        disabled.update(unexpected)
     raise ValueError('Skill catalog did not clear within bounded preflight')
 
 
@@ -76,11 +82,18 @@ class CodexAdapter:
     npm_package = '@openai/codex'
     cli_entrypoint = '@openai/codex/bin/codex.js'
 
-    def prepare_context(self, binary, workspace, evidence, model, effort, sandbox):
-        return isolated_context(binary, workspace, evidence, model, effort, sandbox)
+    def invocation(self):
+        return '$agent-led-swe\n\n'
+
+    def prepare_context(self, binary, workspace, evidence, model, effort, sandbox, skill_path=None):
+        return isolated_context(binary, workspace, evidence, model, effort, sandbox, skill_path)
 
     def command(self, binary, workspace, model, effort, sandbox, context):
-        return codex_command(binary, workspace, model, effort, sandbox, context['overrides']) + ['-']
+        command = codex_command(binary, workspace, model, effort, sandbox, context['overrides'])
+        # Fresh isolated HOME/container; retain native input injection evidence
+        # before the runtime removes it. Judges still use --ephemeral.
+        command.remove('--ephemeral')
+        return command + ['-']
 
     def inspect_trace(self, text, helpers):
         return load_helper(helpers / 'inspect_codex_trace.py').inspect_trace(text)
