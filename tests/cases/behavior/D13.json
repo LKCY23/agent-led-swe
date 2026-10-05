@@ -1,0 +1,12 @@
+{
+  "id": "D13",
+  "description": "A recovery feature has a delivery goal, existing JSON consumers, and unresolved semantics; request only a process plan.",
+  "files": {
+    "README.md": "# Experiment runner\nThe project currently runs independent experiment tasks through a CLI and writes one final JSON result per task. It cannot resume interrupted work.\n",
+    "docs/goal.md": "# Agreed goal\nDeliver resumable experiments, including implementation and verification. Existing final JSON results must remain readable by current consumers.\nThe human has not chosen recovery granularity or duplicate execution semantics. No module or interface design for recovery exists yet.\n"
+  },
+  "request": "请先为已有的实验恢复需求写一份 process 计划，保存在 docs/changes/resume/plan.md。目标和现状在已有文件里；这次只写计划，不实现功能，也不要替我确定还没讨论的恢复语义。需要让我看清楚接下来怎么推进，以及这轮结束后整个需求处于什么状态。",
+  "acceptance": [
+    "Produces the requested plan with clarification/design before dependent coding, outputs/dependencies/checks, compatibility and verification work. Keeps human choices open, creates no code, and distinguishes plan delivery from feature/process completion."
+  ]
+}

@@ -1,0 +1,12 @@
+[project]
+name = "agent-led-swe"
+version = "0.2.0"
+description = "Local validation environment for the agent-led-swe skill"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = ["pyyaml>=6,<7"]
+
+[tool.uv]
+package = false

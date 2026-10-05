@@ -1,16 +1,20 @@
-# Delivery and acceptance: work item
+# Delivery Checklist｜交付清单
 
-Scope and governing requirement/design/baseline references. Establish commitments before implementation and populate actual results as evidence becomes available.
+注明本次交付范围，关联对应的需求、设计、工程基线和计划。按 [交付指导](../../references/phases/delivery-and-maintenance.md)维护：实现前明确承诺和验收条件，取得实际成果与证据后更新状态。
 
-| Deliverable | Governing requirement / decision | Acceptance condition | Verification method / reference | Actual state | Evidence / remaining issue |
+| 交付内容 | 依据的要求／决定 | 验收条件 | 验证方式／引用 | 实际状态 | 证据／剩余问题 |
 | --- | --- | --- | --- | --- | --- |
 
-Use met, partial, unmet or unverified (or existing equivalent project states). Link detailed plans/results rather than reproducing them. Include necessary code, configuration, tests and usage/maintenance material only where the work requires them.
+实际状态使用已满足、部分满足、未满足或未验证，并说明依据。计划中的验证方式与实际结果分开；涉及代码、配置、测试或使用维护材料时，分别关联所需产物。
 
-## Commitment changes
+整体交付引用各 process 的局部清单，并记录共同目标所需的集成与整体证据；详细执行结果保留在 [验证记录](verification-record.md)中。
 
-References to decisions changing scope or standards. Preserve the reason and relationship to the previous commitment; do not delete difficult items to obtain a clean checklist.
+## Commitment changes｜承诺变化
 
-## Delivery conclusion
+引用改变范围或标准的实际决定，保留变化理由及与原承诺的关系。仍未满足的承诺不能通过删除清单项消失。
 
-What can be accepted on the evidence, what remains, and any human acceptance of limitations. Acceptance does not convert an unrun check into a pass.
+## Delivery conclusion｜交付结论
+
+根据本次范围说明交付了什么、验证了什么、还缺什么。区分本次请求与整个 process 或 workflow 的完成，列出剩余工作。
+
+记录人类接受的重要限制及其依据，保持事实状态；接受限制不改变未执行检查的状态。

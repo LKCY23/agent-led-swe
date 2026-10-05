@@ -1,16 +1,18 @@
-# Verification record: work item
+# Verification Record｜验证记录
 
-Append meaningful reviews, checks and corrections. Preserve failed results relevant to later conclusions; a plan or command mention is not execution evidence.
+注明被检查的 process 或 workflow，关联计划与验收依据。按 [验证指导](../../references/phases/verification.md)记录实际检查；有意义的后续检查和更正追加记录，历史保留遵循 [文档机制](../../references/mechanisms/documentation-and-traceability.md)。
 
-## Check ID — purpose
+## 检查标识 — 目的
 
-- **Time:** timestamp and timezone.
-- **Target:** checked commit or working-tree snapshot; relevant config, inputs and environment.
-- **Requirement / criterion:** governing reference.
-- **Method:** operation or review actually performed; describe completed execution, not intended execution.
-- **Outcome:** pass, fail or unknown, with findings.
-- **Evidence:** usable artifact/log/code references and brief interpretation.
-- **Limits:** what was not checked or cannot be inferred.
-- **Follow-up:** related defect, correction or later check when applicable.
+- **时间：** 时间与时区。
+- **检查对象：** 代码版本或工作区快照，以及相关配置、输入和环境。
+- **要求／判据：** 对应的需求、设计、工程约定或交付条件。
+- **实际方法：** 完成了哪些操作或审阅；尚未执行或执行受阻时，说明到哪一步及原因。
+- **结果：** pass、fail 或 unknown，说明实际观察到什么及其支持的结论。
+- **证据：** 可访问的日志、产物、代码或其他证据引用，以及必要解释。
+- **限制：** 未覆盖或不能推断的内容，补齐检查还缺少什么。
+- **后续处理：** 相关缺陷、修正或后续检查的引用。
 
-For reviews, report requirement/design findings and engineering-standard findings separately. Reconcile the delivery checklist against these records, including unverified items.
+结论限于实际检查的对象与范围。集成检查注明提供方、使用方版本及真实交互；fixtures、本地命令与托管 CI 结果分别说明。环境阻塞时，受影响行为保持未验证，不能据此认定产品失败。
+
+审阅发现的需求／设计问题与工程约定问题分别记录。依据这些证据更新交付清单，不把待运行的检查写成已通过。

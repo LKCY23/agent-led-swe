@@ -1,41 +1,44 @@
-# Engineering practice catalog
+# Engineering Practices and References｜工程实践与参考目录
 
-Use this catalog for a concrete project choice. These are reference sources and selectable practices, not a universal checklist. Explain the applicable scope, benefit, cost, tailoring and verification in the project's engineering baseline. Consult official current details before relying on version-sensitive provisions. Do not claim certification or full conformance from adopting selected ideas.
+需要作具体工程选择时查阅相关条目，依据项目目标、已有约定和人类偏好采用并裁剪。知识体系帮助检查问题是否遗漏，设计思路帮助形成工程规则，文档框架帮助组织说明，它们承担不同作用。
 
-## Knowledge and quality
+下表中的约定和用法是供项目选择的示例，不代表外部来源强制要求。选定后按 [工程基线机制](../mechanisms/engineering-baseline.md)记录范围、理由和检查方式。涉及版本或标准条文时查阅原始资料；引用部分思想不等于全面采用该标准。
 
-**SWEBOK — coverage of engineering concerns.** Use when framing a substantial project or checking whether requirements, design, construction, testing and maintenance concerns have been overlooked. It is a knowledge map, not a required sequence of documents. Tailor to the current scope. Check that relevant concerns are addressed, not that every knowledge area has a file. Source: [IEEE Computer Society](https://www.computer.org/education/bodies-of-knowledge/software-engineering).
+## Knowledge and quality｜工程问题与质量目标
 
-**ISO/IEC 25010 — quality goals.** Use when "good quality" needs to become meaningful requirements. Select relevant attributes and scenarios; justify measurements and trade-offs. Do not manufacture thresholds or claim adherence to the full paid standard from its abstract. Check selected goals against actual scenarios/evidence. Source: [ISO/IEC 25010:2023](https://www.iso.org/standard/78176.html).
+| 参考与作用 | 项目如何使用 | 检查与裁剪 |
+| --- | --- | --- |
+| [SWEBOK](https://www.computer.org/education/bodies-of-knowledge/software-engineering)：工程知识参考 | 在项目规划或较大变更中检查需求、设计、构建、测试和维护问题是否遗漏，将相关问题纳入工作安排。 | 检查本次目标所需的问题是否有对应工作；按适用范围取用，不按知识领域创建文件。 |
+| [ISO/IEC 25010](https://www.iso.org/standard/78176.html)：质量模型参考 | 将“质量好”等诉求细化为项目相关的质量目标和场景。目标由需求维护，基线关联实现约定与检查方法。 | 用目标场景和证据检查；度量与阈值需要项目依据，不能从标准名称直接推导。 |
 
-## Architecture and interfaces
+## Architecture and interfaces｜架构与接口
 
-**Information hiding and cohesive responsibilities.** Useful when multiple changes or integrations need stable boundaries. Organize around decisions/reasons to change, expose what consumers need, and assess dependency impact. Extra interfaces or layers add cost; introduce them for meaningful variation or responsibility separation. Check actual change locality, contracts and dependency direction. Source: [Parnas, On the Criteria To Be Used in Decomposing Systems into Modules](https://www.cs.lafayette.edu/~gexia/cs301/resources/parnas.html).
+| 参考与作用 | 项目如何使用 | 检查与裁剪 |
+| --- | --- | --- |
+| [信息隐藏与职责内聚](https://www.cs.lafayette.edu/~gexia/cs301/resources/parnas.html)：模块划分思路 | 按职责及变化原因组织模块，可形成“使用方通过公开接口访问，不依赖内部实现”等约定。 | 对照实际调用、依赖与修改影响检查；具体模块边界在设计中确定。 |
+| [arc42](https://arc42.org/overview/)：架构说明框架 | 选择能解释当前系统的结构、交互、部署或贯穿机制视角，用于架构文档。 | 检查图文是否一致、读者关心的问题是否得到回答；只采用有解释作用的视角。 |
+| [Ports and Adapters](https://alistair.cockburn.us/hexagonal-architecture)：隔离外部技术变化的思路 | 需要替换服务或隔离测试时，可约定核心逻辑通过能力接口使用外部系统，具体接入由 adapter 承担。 | 检查替换接入是否影响预期边界之外的代码；接口与适配层有维护成本，需要由实际变化需求支持。 |
 
-**arc42 — architecture views.** Useful when maintainers need a common picture of scope, structure, runtime interactions, deployment or cross-cutting mechanisms. Select the views that explain this system; a small project need not fill twelve sections. Check that diagrams and text agree and answer stakeholder questions. Source: [arc42 overview](https://arc42.org/overview/).
+## Language and repository｜语言与仓库组织
 
-**Ports and adapters — external variation.** Useful for replacing external services or testing behavior independently of technology. The seam and adapter maintenance are costs; do not impose a hexagon or five directories on every module. Check that the intended dependency is replaceable and domain behavior remains comprehensible. Source: [Cockburn](https://alistair.cockburn.us/hexagonal-architecture).
+| 参考与作用 | 项目如何使用 | 检查与裁剪 |
+| --- | --- | --- |
+| [PEP 8](https://peps.python.org/pep-0008/)：Python 风格参考 | 对应语言缺少约定时参考社区规范；已有项目优先确认其格式、命名和检查配置。 | 执行项目配置的检查，补充命名与可读性审阅；其他语言采用对应规范。 |
+| [PyPA](https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/)：Python 包组织参考 | 项目需要安装、发布或存在导入歧义时，据此选择包组织方式，并在设计中记录代码归属。 | 检查安装后的导入和运行行为；一次性脚本与可发布库的组织需求不同。 |
 
-## Language and repository
+## Verification and review｜验证与审阅
 
-**Language style, exemplified by PEP 8.** Use the relevant language/community guidance together with existing project configuration. Project-specific conventions can tailor general guidance; do not break compatibility merely for style. Check the configured formatter/linter plus naming/readability where tooling cannot decide. Source: [PEP 8](https://peps.python.org/pep-0008/).
+| 参考与作用 | 项目如何使用 | 检查与裁剪 |
+| --- | --- | --- |
+| [面向行为的检查](https://google.github.io/eng-practices/review/reviewer/looking-for.html)与[聚焦修改](https://google.github.io/eng-practices/review/developer/small-cls.html)：测试与变更审阅参考 | 根据变化的行为选择单元、集成或端到端验证，预期结果来自需求和独立依据；按可审阅的工作组织改动。 | 检查测试能否发现目标缺陷、改动是否包含无关内容；TDD 是否采用由项目需要决定。 |
+| [Standards／Spec review](https://github.com/mattpocock/skills/blob/d81f3a183412e71a5b1e84ca21bc1a35eea03a60/skills/engineering/code-review/SKILL.md)：分别检查规范与需求的审阅思路 | 形成约定：审阅分别报告工程规范问题，以及需求的缺失、错误或越界实现。 | 每项问题关联规则或需求及具体证据；不因功能可运行就省略工程审阅。 |
 
-**Package organization, exemplified by PyPA.** Relevant to installable Python code or import/build ambiguity. Consider src vs flat layout and packaging needs; a disposable script does not require library scaffolding. Check the intended installed/imported behavior, not just execution from the repository root. Source: [Python Packaging User Guide](https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/).
+## Documentation and delivery｜文档与交付
 
-## Verification and review
+| 参考与作用 | 项目如何使用 | 检查与裁剪 |
+| --- | --- | --- |
+| [Diátaxis](https://diataxis.fr/)：使用者文档框架 | 根据读者需要组织教程、操作指南、参考或解释，补齐使用和理解产品所需的信息。 | 检查读者能否找到并完成相应任务；内部需求、设计和决策记录仍由项目文档机制组织。 |
+| [决策理由记录](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions)：保留背景、选择与后果的思路 | 重要选择关联背景、理由和影响；本 skill 的具体记录方式引用 [文档机制](../mechanisms/documentation-and-traceability.md#decision-log-protocol)。 | 检查决定来源和替代关系是否可追溯；是否需要独立分析文档取决于问题复杂度。 |
+| [Semantic Versioning](https://semver.org/)：公开 API 的版本兼容约定 | 使用方依赖版本化契约时，先明确公开 API，再确定版本与兼容策略。 | 对照实际兼容性变化检查版本安排；版本号不能替代兼容性验证。 |
 
-**Behavior-oriented tests and focused changes.** Derive expectations independently of the implementation; select unit, integration or end-to-end checks according to the changed behavior. TDD is an optional development strategy, not a universal gate. Test infrastructure and broad suites have maintenance cost. Check meaningful failure sensitivity and integration behavior, and inspect design/complexity as well as test success. Sources: [Google review guidance](https://google.github.io/eng-practices/review/reviewer/looking-for.html), [small changes](https://google.github.io/eng-practices/review/developer/small-cls.html).
-
-**Standards and specification review.** Report engineering-convention findings separately from missing/wrong/extra requirements. A style-compliant implementation can still implement the wrong thing. Treat heuristic smells as judgments, not hard violations. Independent reviewers are useful where justified and authorized, not mandatory for every fix. Inspiration: [Matt Pocock code-review, pinned source](https://github.com/mattpocock/skills/blob/d81f3a183412e71a5b1e84ca21bc1a35eea03a60/skills/engineering/code-review/SKILL.md).
-
-## Documentation and delivery
-
-**Diátaxis — consumer documentation.** Use when readers need tutorials, how-to guides, reference or explanation. Select by reader need; these categories do not replace requirements/design/decision/verification records. Avoid empty scaffolding. Check that the user can find the relevant learning or operational answer. Source: [Diátaxis](https://diataxis.fr/).
-
-**Decision rationale.** Preserve context, choice and consequences for consequential decisions. Our default is an append-only Markdown log with optional detailed records; it does not require one ADR file for every decision. Check provenance and superseding links. Source: [Nygard on architecture decisions](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions).
-
-**Semantic Versioning — declared public API compatibility.** Relevant where consumers rely on versioned public contracts. Establish what the public API is before applying version rules. Release discipline adds overhead and does not substitute for compatibility testing. Check observed changes against the selected version policy. Source: [Semantic Versioning](https://semver.org/).
-
-## Selection boundaries
-
-The catalog is curated, not exhaustive. Add specialized safety, security, accessibility, reproducibility or operations practices when actual requirements warrant them, with primary sources and explicit applicability. Reuse existing project choices; conflicts with human intent or material constraints need a supported decision, not silent imposition of a catalog preference.
+目录覆盖当前通用选择。安全、可访问性、可复现性或运维等方面有具体需求时，再补充对应实践及原始来源；已有约定与候选实践冲突时，按工程基线机制处理。

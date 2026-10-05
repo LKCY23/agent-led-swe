@@ -1,0 +1,12 @@
+{
+  "name": "agents-sdk",
+  "instance_id": "openai__openai-agents-python-842",
+  "dataset": "PGCodeLLM/FeatBench-Verified",
+  "split": "test",
+  "row_index": 30,
+  "base_commit": "8dfd6ff35c1b73bc5d2e6a14c0246b03aa2f9f98",
+  "metadata_sha256": "654756554e9ef466465ba72b8f15b28819f202ddaa0cfa9881be0004706870b6",
+  "source_sha256": "735cd53c21f54fb471ab9479bab4a0f1cf99e3a09e68087b21f04ded62594f95",
+  "patch_mode": "fix",
+  "python_image": "python:3.13-slim"
+}

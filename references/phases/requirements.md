@@ -1,11 +1,34 @@
-# Requirements and success
+# Requirements Analysis｜需求分析
 
-Translate the agreed problem into observable behavior and acceptance conditions for this increment. Include relevant error/boundary behavior, inputs/outputs, compatibility, operational constraints, and quality priorities. Do not substitute the current implementation's behavior for intended behavior.
+## 何时使用
 
-Use concrete scenarios to surface ambiguities. Distinguish requirements, assumptions, preferences, proposed options, and later work. Research uncertain facts; resolve material intent conflicts through [human collaboration](../mechanisms/human-collaboration.md).
+问题与目标已能说明，需要确定行为、约束和验收条件时使用。已有需求仅对当前变更存在缺口时，补充相应部分；引用项目共享要求和接口约定，避免重新定义。
 
-Start [engineering baseline](../mechanisms/engineering-baseline.md) selection from project purpose and existing conventions. Adopt relevant practices with scope and justification; a research prototype and a public library need different investments. Avoid arbitrary thresholds without a requirement or measurement basis.
+## 工作与产出
 
-Define what the user will receive and how success can be checked. Start a [delivery checklist](../../assets/templates/delivery-checklist.md) when useful. Its criteria derive from requirements and baseline; implementation details may refine verification methods later without silently changing the desired behavior.
+从 [问题说明](problem-framing.md)和实际场景出发，形成以下内容：
 
-Use [requirements](../../assets/templates/requirements.md) and [documentation protocol](../mechanisms/documentation-and-traceability.md) for authorized artifacts. For existing sufficient requirements, reference them and fill only blocking gaps. Proceed to design when this increment's consequential ambiguity is resolved or isolated so it cannot invalidate the work being advanced.
+| 内容 | 要明确什么 |
+| --- | --- |
+| 预期行为 | 在相关输入或场景下，系统应产生什么可观察结果。 |
+| 边界与失败行为 | 对本次目标有影响的异常输入、失败和边界情形，应如何处理。 |
+| 约束与质量要求 | 必须保留的兼容承诺，以及相关运行条件、质量优先级和其他限制。 |
+| 验收条件 | 用什么可观察结果判断要求得到满足，交付应包含什么。 |
+
+用具体场景检查歧义和冲突，区分确定要求、偏好、假设和提案。现有实现可以提供事实，不自动等于期望行为。事实问题由 Agent 调查；需要人类选择的目标或取舍按 [人机协作机制](../mechanisms/human-collaboration.md)处理。
+
+将结果写入或引用 [需求文档](../../assets/templates/requirements.md)，标明来源和未决问题影响的工作。需要明确交付承诺时建立 [交付清单](../../assets/templates/delivery-checklist.md)；工程约定的选择与检查方式使用 [工程基线机制](../mechanisms/engineering-baseline.md)。
+
+验收条件先明确判断什么，具体测试工具和命令可随设计细化，不能因此改变原定的行为要求。
+
+## 推进依据
+
+当前准备设计的部分已有明确的行为、相关约束和验收条件；影响方案方向的冲突已解决，或不涉及该部分时，可以进入 [Design](design.md)。未决事项继续保留，并注明哪些工作需要等待。
+
+## 返回与调整
+
+- 场景或目标判断有误：返回 [Problem Framing](problem-framing.md)，修正受影响的需求。
+- 设计发现需求无法同时满足：说明冲突与证据，提出取舍建议，按人机协作机制确定变化后再更新约定。
+- 验收方式不能反映期望行为：改进检查方法；若要改变验收目标，先处理需求决定。
+
+按 [文档机制](../mechanisms/documentation-and-traceability.md)同步已确定的变化与相关计划，不用实现结果反过来改写未满足的要求。

@@ -1,6 +1,6 @@
 # Decision support: question
 
-Status: proposed, or a reference to the settled decision-log entry. This file holds supporting analysis; the log records the decision and provenance.
+Status: proposed, or a reference to the settled decision-log entry. Use this file when a decision needs extended analysis; a simple choice can use a paragraph in the existing work record. Follow the [human collaboration guidance](../../references/mechanisms/human-collaboration.md). This file holds supporting analysis; the log records the decision and provenance.
 
 ## Problem
 
@@ -16,8 +16,8 @@ Recommended option and reasons. Include only meaningful alternatives and their t
 
 ## Impact
 
-Effects on relevant behavior, design, quality, compatibility, scope, cost and further work.
+Effects on relevant behavior, design, quality, compatibility, scope, cost and further work. For shared changes, identify affected processes, consumers and rework.
 
 ## Decision linkage
 
-Link the actual decision when formed. Material later changes receive a new decision/supporting revision so the historical rationale remains recoverable.
+Link the actual decision when formed, including its scope and conditions; keep unresolved parts distinguishable from settled choices. Material later changes receive a new decision/supporting revision so the historical rationale remains recoverable.

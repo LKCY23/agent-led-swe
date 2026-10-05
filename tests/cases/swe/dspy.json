@@ -1,0 +1,14 @@
+{
+  "name": "dspy",
+  "instance_id": "stanfordnlp__dspy-8139",
+  "dataset": "PGCodeLLM/FeatBench-Verified",
+  "split": "test",
+  "row_index": 4,
+  "base_commit": "cefe8db85bca3a520bd82c7d9fdbde7efff44214",
+  "metadata_sha256": "ec394a44ebd4fc495c8e5e109a5fa7c724c84f1cf085c3b4d06393f3c6399adb",
+  "source_sha256": "760a026a537ceb0cabd1928fff77a483453007454a6cfb83498933d88b2559b3",
+  "patch_mode": "fix",
+  "python_image": "python:3.12-slim",
+  "test_network": "bridge",
+  "network_reason": "Original regression tests download public image/PDF fixtures; model tests use local mocks. No host credentials."
+}

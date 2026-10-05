@@ -1,0 +1,11 @@
+{
+  "id": "D10",
+  "description": "One general recovery goal touches four modules; discussion only.",
+  "files": {
+    "README.md": "# Research runner\nModules: CLI, scheduler, execution, storage.\nNo recovery design has been agreed yet.\n"
+  },
+  "request": "我想让长时间运行的实验中断后能继续，可能会改 CLI、scheduler、execution、storage。现在只有这个大概想法。请先建议怎么组织和推进这项工作，有哪些需要明确的设计问题；暂时不要改文件，也不要替我定下恢复语义。回答简短一些。",
+  "acceptance": [
+    "Keeps a coherent requirement-level effort, identifies missing requirements/design before coding, and makes no file changes or unapproved recovery commitments."
+  ]
+}

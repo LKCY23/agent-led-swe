@@ -1,23 +1,39 @@
-# Verification and evaluation
+# Verification and Validation｜验证与确认
 
-Use the originating requirements, accepted design/contracts, engineering baseline, delivery criteria, and actual diff. Identify the revision or working-tree snapshot being checked. A checklist item is not satisfied by a promise to run a command.
+## 确定检查范围与依据
 
-## Check separately
+实现过程中形成可检查的产物、变更影响已有结果，或准备交付时，核对有效需求、设计与接口、工程基线、交付条件和实际改动。明确本次检查覆盖哪个行为、哪项 process 或哪部分整体结果，以及被检查的版本或工作区快照。
 
-| Question | Evidence |
+根据这些依据选择检查：
+
+| 要回答的问题 | 检查内容与证据 |
 | --- | --- |
-| Does behavior work? | Suitable automated tests, actual operation, measured properties, or domain-specific validation. |
-| Does it implement the intended work? | Requirement/design coverage, omissions, partial behavior, unintended additions, contract and failure semantics. |
-| Does it meet engineering expectations? | Applicable standards, responsibility ownership, dependency direction, clarity, complexity, compatibility, and documentation consistency. |
+| 是否满足约定行为和需求 | 相关正常、边界及失败场景；需求覆盖、遗漏或超出范围的行为。 |
+| 是否在使用场景中达到目标 | 任务所需的真实调用、操作流程或领域验证；例如接口接入后的实际使用方能否完成约定操作。 |
+| 是否符合设计和工程约定 | 代码 diff、职责与依赖、接口语义、兼容性及文档与实现的一致性。 |
 
-A success in one dimension cannot hide a failure in another. For significant changes, an independent review may be useful when authorized; it does not guarantee correctness. Ordinary bounded fixes do not require a multi-agent ceremony.
+验证既定目标，不在检查过程中擅自增加验收要求。若设计或规格本身不足以满足原目标，提出需求或设计问题，再处理取舍。
 
-## Validate the validation
+## 执行并核查证据
 
-Use acceptance grounded in requirements rather than reproducing implementation logic. Confirm what the test actually observes, whether it would fail for the relevant defect, and whether mocks conceal the behavior under review. Choose checks proportionate to the change. Broad test repetition needs a changed dependency, new failure, or another unresolved concern.
+执行项目要求且覆盖本次变更的测试、审阅和适用的 CI 检查。确认测试实际观察了什么、能否发现目标缺陷，以及 mocks 是否遮蔽了需要验证的交互。依据需求或独立场景确定预期，避免只重复实现逻辑。
 
-Record pass/fail/unknown, actual operations completed, environment/configuration/input references, evidence location, and limits in a [verification record](../../assets/templates/verification-record.md). Distinguish a missing dependency or inaccessible environment from a verified product failure. Preserve unsuccessful attempts relevant to the conclusion and subsequent corrections.
+局部测试和整体集成分别给出结论。使用 fixtures 的通过结果只支持其覆盖的本地行为；整体交付还需要相应真实交互的证据。独立审阅是否使用，依据任务需要及已有授权决定。
 
-When a check fails: repair implementation defects against the agreed contract; investigate requirement/design conflicts before changing the contract. If upstream commitments must change, use [human collaboration](../mechanisms/human-collaboration.md), update affected artifacts and rerun the impacted checks.
+在 [验证记录](../../assets/templates/verification-record.md)中保存实际执行的方法、结果和证据。区分本地执行 CI 命令与托管 CI 的结果，注明尚未执行、执行受阻或证据缺失的原因。
 
-Reconcile the [delivery checklist](../../assets/templates/delivery-checklist.md) with evidence. Existing passes are reusable only where the checked version and conditions remain relevant. Leave unverified items visible; do not change thresholds or delete items to report completion.
+## 解释结果并处理问题
+
+| 结果 | 判定依据与后续处理 |
+| --- | --- |
+| **通过（pass）** | 有效检查支持指定要求在所记录条件下满足。结论限于实际覆盖范围。 |
+| **不通过（fail）** | 有效检查发现行为或产物不满足要求。记录具体差异，修复或返回对应设计与需求处理。 |
+| **无法判断／未验证（unknown）** | 检查未完成或证据不足。说明缺少什么，以及补齐后如何继续检查。 |
+
+环境缺失、权限不足或工具出错是检查受阻的原因，不直接证明产品行为失败。命令退出失败时，先区分产品问题、检查方法问题和环境问题，再给出结论；不能把运行失败一律当作产品不通过。
+
+实现缺陷返回 [Implementation and Integration](implementation.md)修复；设计问题返回 [Design](design.md)；需求或验收冲突返回 [Requirements Analysis](requirements.md)。涉及重要约定改变时，使用 [人机协作机制](../mechanisms/human-collaboration.md)。修正后重跑受影响的检查，保留仍有效的证据和相关失败记录。
+
+## 用于交付判断
+
+将结论对应到 [交付清单](../../assets/templates/delivery-checklist.md)。已有通过结果仅在检查版本和条件仍适用时复用；未覆盖部分继续标为未验证。按 [交付指导](delivery-and-maintenance.md)说明实际完成范围，不能用某项检查通过代替其他尚未满足的承诺。

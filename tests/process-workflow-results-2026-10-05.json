@@ -1,0 +1,132 @@
+{
+  "date": "2026-10-05",
+  "version": "0.2.0 working tree",
+  "scope": "Process/workflow guides and plan templates",
+  "target_files": {
+    "SKILL.md": "32df32da366d45778146f8f9cfcc3adbafe723e163f101e3b13081a260dcafe9",
+    "agents/openai.yaml": "bad09b065a2b6ecfc00a9acca2bd4d3f66e29c895c7e2ad20d0f63c13d2aa495",
+    ".claude-plugin/plugin.json": "7db5a233aaa2407bb6d6857dc5002cef69e404956f7939e6c9cf560f3aeda808",
+    "references/process.md": "8b1fca20371b2683d2ba61d2c10f4fb6d6c6d1ca4f107adaa311fe579243feac",
+    "references/workflow.md": "d7e94de7d42b56fe85b696da7bf3c238f783c38234477b6d6d0626cae650122d",
+    "references/mechanisms/engineering-baseline.md": "f207c62bfa6eec30f2fc6a1b3f058a4e5d9fbecc29bad3988445f167ea031ab8",
+    "references/mechanisms/human-collaboration.md": "449cb36bf5b7f7bc7679798b8b9a6aa51dcb4700de09e6a41a141f39f1a7e409",
+    "references/mechanisms/documentation-and-traceability.md": "8ef1cd0f79b3dbd2630be1b175305ad2fb9d4d40f94eebfdd1bd182e1a4bbe4d",
+    "references/phases/implementation.md": "3d930fa3f24106eaf615347a719d50c489919bfb67b87fd250176a292dd433a8",
+    "references/phases/problem-framing.md": "e7661c900a84f9cd3a35d111c66debd81f9026584a765e69ccf634183b592fcf",
+    "references/phases/requirements.md": "1b30abebe6f3c9905407a52974e72cd9b50599e23c15dff036e95fc6dea0fd13",
+    "references/phases/verification.md": "645e949c6a896a1823ecd197c1bbcd49958b740f7c95a1434e9234a130c05e91",
+    "references/phases/design.md": "2c43c04a8f1b519f6d3066219aa845366cf38f408d92121d0ff9ff7c9e19c094",
+    "references/phases/delivery-and-maintenance.md": "fe71d2dc61e5f04c35425bac98872e618aae4049fdd7f85899f5c7fce8a53699",
+    "references/practices/catalog.md": "5391fd9e5fbacf0befd5c01d29d2454a43e769b75ca9b16d81978003a375ad96",
+    "assets/templates/requirements.md": "23323b9bd4cec1f3e10f06883e758d68f03f02ea5a402c6d80f8b0cfd1556e7a",
+    "assets/templates/architecture.md": "bb272b698c8b4b9d8b327da8cc294eb5c5661f2529b7382c9d8a8b50b2115d18",
+    "assets/templates/decision-log.md": "390f266268a16266b4800015e76af2e39b57909a2074479e7e0c02a5b55e0a36",
+    "assets/templates/glossary.md": "c86efda830ab7d0eed693524e19cbce2f8e7548b4c58bc4ab22dc310ab8028f1",
+    "assets/templates/engineering-baseline.md": "d8fb8d8e8d26cf04b1aa9ce6753d4772fcac1ebd20810dedf84ecc9c5b59ba72",
+    "assets/templates/workflow-plan.md": "8b569777a973b69d7990c8af686310ba77163ceeeedec731b233b8a44d8437fb",
+    "assets/templates/module-design.md": "00572504f4eb5614692135601c2c7e8e77421cb1b450706cd645c84fc19e6e17",
+    "assets/templates/process-plan.md": "ab26d3c5a65bfee45e9bccda7f289c300a2562220cc016e95a3be42f8ae8b6ea",
+    "assets/templates/verification-record.md": "ec28e9c435ba65cb2cbc70af9dcfd0651b45f94408853f6b2786af254dcbe2a6",
+    "assets/templates/decision-detail.md": "e7079b02fab541b3c764747ccbdba199d9732501eefa8ec8877bfdbcd71ab852",
+    "assets/templates/project-index.md": "2efdc5a87d062d6b8205d421370d07605760a13c6c6dadddddf177bdc7569496",
+    "assets/templates/delivery-checklist.md": "6ec49d6eea30c39366995e5806293717e1e7d9e8698cdab184442f8f61587594",
+    "assets/templates/interface-contract.md": "e694bd2d2c5f6632ea15f869ca1a4ef7daced9cb56bf766889dc5966d52f5fb5"
+  },
+  "budget": "D13 then D11, one attempt each, timeout 180 seconds each",
+  "results": [
+    {
+      "case": "D13",
+      "run_status": "completed",
+      "functional_status": "pass",
+      "checks": [
+        "Created only the requested process plan; original fixture files unchanged.",
+        "Plan includes investigation, human semantic decisions and module/interface design before dependent coding.",
+        "Accounts for existing JSON consumers and actual compatibility checks.",
+        "Leaves recovery semantics undecided and explicitly distinguishes plan completion from feature/process completion."
+      ],
+      "writing_observation": "Needs refinement: repeats authorization, undecided semantics and non-completion in several sections. Functional success does not establish concise output.",
+      "assessment": "Author review of output and deterministic fixture checks; no independent judge.",
+      "evidence_directory": "tests/runs/D13-20261005T040533835204Z",
+      "entrypoint_read_command_ids": [
+        "item_2"
+      ],
+      "final_message_id": "item_11",
+      "final_response": "已写入 [process 计划](docs/changes/resume/plan.md)，包含推进顺序、产出与依赖、验证和交付安排，以及本轮结束状态。来源链接已检查有效。\n\n本轮计划编写完成；整个恢复需求仍未完成。恢复粒度和重复执行语义保留待讨论，未形成恢复设计、实现功能或执行功能验证。下一步是补齐现状资料，准备语义讨论所需的场景与选项影响。",
+      "elapsed_seconds": 144.662451,
+      "exit_code": 0,
+      "usage": {
+        "input_tokens": 178067,
+        "cached_input_tokens": 157696,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3906,
+        "reasoning_output_tokens": 84
+      },
+      "cli": "codex-cli 0.160.0",
+      "cli_path": "/Users/liyao/.nvm/versions/node/v22.19.0/bin/codex",
+      "settings": {
+        "model": "gpt-6.1-sol",
+        "model_reasoning_effort": "high"
+      },
+      "fixture_before": {
+        "README.md": "46406caeba93bb952ecf07ad009b5f8bd144d3343b042881f1c807e279271e90",
+        "docs/goal.md": "1b4bd5d0dfdfce70eec9b6d002cae253119bd8791bb693546b7bcf7919d2605b"
+      },
+      "fixture_after": {
+        "README.md": "46406caeba93bb952ecf07ad009b5f8bd144d3343b042881f1c807e279271e90",
+        "docs/changes/resume/plan.md": "86fd8d575fafd183521d15c22dc73bdedf53e57a8a43f27879d0c033d36cc724",
+        "docs/goal.md": "1b4bd5d0dfdfce70eec9b6d002cae253119bd8791bb693546b7bcf7919d2605b"
+      }
+    },
+    {
+      "case": "D11",
+      "run_status": "completed",
+      "functional_status": "pass",
+      "checks": [
+        "Discussion fixture unchanged.",
+        "Reuses accepted contract and partial producer work.",
+        "Allows consumer design/local work before producer completion; real integration depends on real output.",
+        "Requires combined verification and does not claim either goal complete."
+      ],
+      "writing_observation": "Concise discussion response; no material repetition noted in author review.",
+      "assessment": "Author review of output and deterministic fixture checks; no independent judge.",
+      "evidence_directory": "tests/runs/D11-20261005T040834411895Z",
+      "entrypoint_read_command_ids": [
+        "item_1"
+      ],
+      "final_message_id": "item_4",
+      "final_response": "按 `agent-led-swe` 技能，建议保留两个独立 process，用一个 workflow 协调共同交付。沿用 `docs/contracts.md` 中已接受的契约，不重新定义。\n\n- **当前可推进**：A「记录统一化」继续补齐生产端实现；B「离线重新评测」可依据已有契约开展设计，并用现有 fixture 启动本地实现与检查，无需等 A 全部完成。现有 fixture 只有一条成功记录、证据引用为空，后续需补充失败及证据引用场景的检查材料。\n- **需要等待**：B 接入真实生产输出的集成检查，需等 A 提供符合契约的真实记录。依赖应落到这项具体产出，只等待受影响的活动。共享契约继续以原文档为准，统一协调接口问题和集成顺序。\n- **整体验收**：先分别检查 A 的记录符合契约、证据只引用不复制，以及 B 能读取存量记录重新评测且不重跑 agent；再验证完整链路“真实生产输出 → 保存 → 离线重新评测”。记录输入、版本、操作和结果证据，明确通过、失败与未验证项。fixture 检查通过不能替代真实集成验收。\n\n本轮仅形成上述组织建议，未修改文件、执行实现或验证；两项目标仍未完成。",
+      "elapsed_seconds": 36.830218,
+      "exit_code": 0,
+      "usage": {
+        "input_tokens": 62368,
+        "cached_input_tokens": 49792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 725,
+        "reasoning_output_tokens": 161
+      },
+      "cli": "codex-cli 0.160.0",
+      "cli_path": "/Users/liyao/.nvm/versions/node/v22.19.0/bin/codex",
+      "settings": {
+        "model": "gpt-6.1-sol",
+        "model_reasoning_effort": "high"
+      },
+      "fixture_before": {
+        "docs/contracts.md": "3ba189d7e07feeeec5669363e327af14d25f4590c63da0f39dbf71e48154cf54",
+        "docs/progress.md": "7a2cc4dc9fb942ac8c67f3251a63d2157c3e07c60a41da409963459a6abffe94",
+        "fixtures/run.json": "1eb9e23ff2a4600753900eb829df44d66406615b3388566185c33d4a5037c674"
+      },
+      "fixture_after": {
+        "docs/contracts.md": "3ba189d7e07feeeec5669363e327af14d25f4590c63da0f39dbf71e48154cf54",
+        "docs/progress.md": "7a2cc4dc9fb942ac8c67f3251a63d2157c3e07c60a41da409963459a6abffe94",
+        "fixtures/run.json": "1eb9e23ff2a4600753900eb829df44d66406615b3388566185c33d4a5037c674"
+      }
+    }
+  ],
+  "limitations": [
+    "Development trials, explicit target use, no routing or baseline comparison.",
+    "Author assessment only; no independent grader.",
+    "D13 produced an overlong plan with repeated policy explanations; writing quality is not fully established.",
+    "Raw artifacts remain local under ignored tests/runs.",
+    "No global installation or host-discovery rerun for this revision."
+  ]
+}

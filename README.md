@@ -1,11 +1,13 @@
 # agent-led-swe
 
-v0.1.0：以 Agent 主导执行、人类把关目标与关键决策的软件工程 skill。六项开发活动由人机协作、工程基线、文档与决策追溯三项机制贯穿。根据任务规模裁剪，复用项目已有材料。
+v0.2.0：以 Agent 主导执行、人类把关目标与关键决策的软件工程 skill。围绕用户的语义需求与变更目标组织 process，以 SWE lifecycle 指导每项需求的开发活动；通过 workflow 协调多个相关 process。人机协作、工程基线、文档与决策追溯贯穿其中。根据任务规模裁剪，复用项目已有材料。
 
 ## 入口与组织
 
 - [SKILL.md](SKILL.md)：调用范围、关键规则和按需读取入口。
-- [Workflow](references/workflow.md)：阶段识别、推进与反馈。
+- [Process](references/process.md)：识别与组织单项需求，指导必要的开发活动、反馈与完成判断。
+- [Workflow](references/workflow.md)：协调多个 process 的产出依赖、共享约定与整体交付。
+- `references/phases/`：process 内部按需使用的开发活动指导，目录名保留，不代表项目只有一个当前阶段。
 - [人机协作](references/mechanisms/human-collaboration.md)：阶段性和反馈触发的介入，问题／证据／建议／影响。
 - [工程基线](references/mechanisms/engineering-baseline.md)：编码前确定适用约定，持续检查与演进。
 - [文档与追溯](references/mechanisms/documentation-and-traceability.md)：模板导航、项目目录、append-only 决策日志和工作单元记录。
@@ -14,14 +16,16 @@ v0.1.0：以 Agent 主导执行、人类把关目标与关键决策的软件工�
 
 ## 首轮重点 review
 
+本轮分批审阅与整体一致性复核已完成，结论见 [验证记录](tests/validation.md)。下表保留为设计导航；当前版本的真实开发效果仍需后续对照测试验证。
+
 | 顺序 | 文件 | 需要检查的设计 |
 | --- | --- | --- |
-| 1 | [主入口](SKILL.md) 与 [Workflow](references/workflow.md) | 讨论／实施授权边界，既有材料复用，小任务是否足够轻量。 |
+| 1 | [主入口](SKILL.md)、[Process](references/process.md) 与 [Workflow](references/workflow.md) | 需求如何归组、延续或拆分，开发活动如何裁剪，多个 process 如何协调及整体验收。 |
 | 2 | [人机协作](references/mechanisms/human-collaboration.md) | 什么交给人类决定，什么由 Agent 自主处理。 |
 | 3 | [工程基线](references/mechanisms/engineering-baseline.md) 与 [Catalog](references/practices/catalog.md) | 是否能约束工程偏好，又不会无条件套用规范。 |
 | 4 | [文档机制](references/mechanisms/documentation-and-traceability.md) 与 [决策日志模板](assets/templates/decision-log.md) | 当前设计和历史记录的区别，决策主体、时间、版本及替代关系。 |
-| 5 | [设计阶段](references/phases/design.md) 与 [交付清单](assets/templates/delivery-checklist.md) | general 方案到实现的细化程度，以及实现前的交付承诺。 |
-| 6 | [验证阶段](references/phases/verification.md) | 功能、需求／设计、工程质量的检查与未验证项处理。 |
+| 5 | [Design：设计](references/phases/design.md) 与 [交付清单](assets/templates/delivery-checklist.md) | general 方案到实现的细化程度，以及实现前的交付承诺。 |
+| 6 | [Verification and Validation：验证与确认](references/phases/verification.md) | 功能、需求／设计、工程质量的检查与未验证项处理。 |
 
 ## claudespace 归档与宿主适配
 
@@ -33,9 +37,19 @@ v0.1.0：以 Agent 主导执行、人类把关目标与关键决策的软件工�
 
 ## 验证与限制
 
-运行 `python3 tests/check_package.py` 检查包结构、元数据、链接与模板可达性。`python3 tests/check_hosts.py` 在临时项目中检查本机 Codex 与 Claude Code 的实际发现，不调用模型或安装全局插件。
+测试机制与改造安排见 [测试方案](tests/README.md)和 [统一协议](tests/protocol.md)，覆盖代码、文档、项目管理和人机衔接。pytest／packaging 已接入统一任务、执行和独立验收流程，并通过受控检查；真实仓库的首次模型对照及整体收益评价仍待推进。既有 D1 试跑证据保留，SDK 暂缓，DSPy 尚需稳定运行环境。
 
-结构和加载检查不能证明模型遵循规则。代表性行为用例见 [scenarios.md](tests/scenarios.md)，实际范围和结果见 [validation.md](tests/validation.md)。这是一份行为指导 skill，不是操作系统权限控制或不可篡改审计系统。
+在已初始化 Codex／Claude CLI 的日常终端中，进入仓库根目录后运行：
+
+```sh
+uv sync --locked
+uv run --locked python tests/check_package.py
+uv run --locked python tests/check_hosts.py
+```
+
+uv 根据 `.python-version`、`pyproject.toml` 和 `uv.lock` 创建本地 `.venv` 并安装锁定的测试依赖。包检查覆盖元数据、本地文件与章节链接、模板可达性；宿主检查在临时项目中验证 Codex 与 Claude Code 的发现，不调用模型或安装全局插件。自动化工具的 shell 初始化方式及行为测试入口见 [测试环境说明](tests/README.md#本地测试环境)。
+
+结构和加载检查不能证明模型遵循规则。用例定义、可运行性与历史验证版本统一见 [场景与状态](tests/scenarios.md)，详细执行证据见 [validation.md](tests/validation.md)。这是一份行为指导 skill，不是操作系统权限控制或不可篡改审计系统。
 
 ## 来源与实现选择
 

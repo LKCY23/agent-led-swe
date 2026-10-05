@@ -1,86 +1,106 @@
-# Documentation and decision traceability
+# Documentation and Traceability｜文档与追溯
 
-## Select documents by purpose
+在项目中维护需求、设计、决定、进展和证据，使人和 Agent 能查明当前依据、实际成果及下一步。编辑前先读已有记录，沿用项目位置与术语；文档的创建范围遵循当前请求。
 
-Read before editing. Reuse authoritative project material and familiar filenames. Create only information needed for the authorized work; a discussion or directory-initialization request is not permission to fill unresolved designs. Templates are adaptable starting points, not a mandatory file checklist.
+## Select documents by purpose｜按用途选择文档
 
-| Information | When needed | Template |
-| --- | --- | --- |
-| Navigation/current position | Several documents or cross-session work | [Project index](../../assets/templates/project-index.md) |
-| Behavior, constraints, acceptance | Requirements clarification | [Requirements](../../assets/templates/requirements.md) |
-| Adopted quality/conventions | Engineering choices not already settled | [Engineering baseline](../../assets/templates/engineering-baseline.md) |
-| Project-specific vocabulary | Ambiguity or repeated terminology | [Glossary](../../assets/templates/glossary.md) |
-| System scope/structure/interactions | Overall solution design | [Architecture](../../assets/templates/architecture.md) |
-| Shared behavioral/data agreement | Consumers must coordinate independently | [Interface contract](../../assets/templates/interface-contract.md) |
-| Important internal mechanisms | Overall design leaves material implementation questions | [Module design](../../assets/templates/module-design.md) |
-| Work ordering and verification | Planning the current increment | [Implementation plan](../../assets/templates/implementation-plan.md) |
-| Deliverables and acceptance | Before implementation, reconciled at delivery | [Delivery checklist](../../assets/templates/delivery-checklist.md) |
-| Consequential settled decisions | Whenever a decision occurs | [Decision log](../../assets/templates/decision-log.md) |
-| Extended decision reasoning | An entry cannot usefully hold the argument | [Decision detail](../../assets/templates/decision-detail.md) |
-| Actual review/check outcomes | During verification and delivery | [Verification record](../../assets/templates/verification-record.md) |
+先确定需要保存什么信息，再选择承载位置。已有文档能够满足用途时直接更新；小型工作可以将需求、设计、计划和结果合并在一份工作记录中。模板只提供内容组织参考。
 
-A problem brief can become part of requirements. A compact spec or issue can combine requirements, design, plan, delivery criteria, and results. Split only when distinct ownership, scope, size, or maintenance makes it useful.
+| 信息与职责 | 模板 |
+| --- | --- |
+| 当前目标概览、文档入口和待处理事项 | [项目索引](../../assets/templates/project-index.md) |
+| 预期行为、约束和验收条件 | [需求文档](../../assets/templates/requirements.md) |
+| 采用的工程约定、范围与检查方式 | [工程基线](../../assets/templates/engineering-baseline.md) |
+| 项目概念及其含义 | [术语表](../../assets/templates/glossary.md) |
+| 系统结构、职责、交互与设计取舍 | [整体设计](../../assets/templates/architecture.md) |
+| 使用方共同依赖的数据和行为语义 | [接口文档](../../assets/templates/interface-contract.md) |
+| 模块职责、内部机制及实现安排 | [模块设计](../../assets/templates/module-design.md) |
+| 一项需求的工作安排、进展和下一步 | [Process 计划](../../assets/templates/process-plan.md) |
+| 多个 process 的依赖、共享约定和整体交付安排 | [Workflow 计划](../../assets/templates/workflow-plan.md) |
+| 交付承诺、验收条件和实际满足情况 | [交付清单](../../assets/templates/delivery-checklist.md) |
+| 已形成的重要决定及来源、理由和影响 | [决策日志](../../assets/templates/decision-log.md) |
+| 需要保留的决策分析与备选方案 | [决策分析](../../assets/templates/decision-detail.md) |
+| 实际检查、结果、证据及限制 | [验证记录](../../assets/templates/verification-record.md) |
 
-## Suggested project organization
+## Organize and maintain authoritative records｜归属与权威记录
+
+以下目录表达信息归属，按项目已有结构调整，不要求全部创建：
 
 ```text
 docs/
 ├── README.md
 ├── requirements.md
 ├── engineering-baseline.md
-├── glossary.md                       # when needed
+├── glossary.md                       # 需要时维护
 ├── design/
 │   ├── overview.md
 │   ├── contracts.md
-│   └── modules/<module>.md           # when needed
+│   └── modules/<module>.md           # 需要独立模块说明时维护
 ├── decisions/
 │   ├── log.md
-│   └── details/<decision-id>.md      # when needed
-└── changes/<work-name>/
-    ├── plan.md
-    ├── delivery.md
-    └── verification.md
+│   └── details/<decision-id>.md      # 分析较复杂时维护
+├── changes/<work-name>/              # 一项 process 的工作记录
+│   ├── plan.md
+│   ├── delivery.md
+│   └── verification.md
+└── workflows/<overall-goal>.md       # 多项工作需要协调时维护
 ```
 
-`changes/` groups an independently scoped work item, not every conversation, day, or commit. One work item may span sessions/commits. A small fix can use one work note or issue. The tree is a proposal, not an initialization command. Keep user-facing run/usage/API documentation in the project's established locations and link it from delivery.
+项目级需求、设计和基线维护当前约定；`changes/` 记录具体工作的安排与成果；`workflows/` 关联局部计划并记录整体协调。使用、运行和 API 文档沿用项目既有位置，在交付记录中引用。
 
-Project documents describe current effective requirements and design. Change records describe the scope, plan, and evidence of a particular effort. Keep each requirement/contract authoritative in one place; use references rather than copying its full definition into every document. Existing schemas/types may own exact structure while prose owns semantics and rationale. If code and docs disagree, investigate rather than automatically treating either as correct.
+**从提案到当前约定，按以下方式维护：**
 
-## Lifecycle and feedback
+1. **尚未确定。** 将方案放在所属工作记录、设计草稿或决策分析中，明确标为提案或未决事项；同一文档包含多种状态时，区分对应段落。未决方案不覆盖已有效的约定。
+2. **决定形成。** 更新权威需求、设计、接口或基线。重要决定在日志中保留来源和理由，提案关联最终决定；已替代的内容不继续作为当前依据。
+3. **实现与验证推进。** 在工作记录中分别记录实现和验证状态，并关联证据。已确认但尚未实现的设计明确注明该状态；设计认可、代码实现和检查通过分别有各自的依据。
 
-Separate the status of a decision (proposed/settled/superseded), implementation (not started/partial/implemented), and verification (unverified/pass/fail/unknown). Use simple prose or existing project states; no extra machine state database is required.
+共享要求和接口语义只保留一个权威定义，其他文件引用它。代码 schema/type 可以维护精确结构，文档补充语义与理由。发现文档与代码不一致时，核查是实现偏差还是已决定但尚未同步的变更，再修正相应内容。
 
-| Feedback | Update |
-| --- | --- |
-| Unclear term or requirement | Open question and relevant glossary/requirement after resolution |
-| Design infeasible or materially different trade-off | Evidence, decision support, then accepted design/contracts and affected tasks |
-| Ordinary implementation defect | Defect/work record, implementation, relevant regression check and result |
-| Test reveals conflicting requirements | Requirement/design decision, then implementation and verification plan |
-| Scope or quality target changes | Decision and impact, authoritative requirement/baseline, plan/checklist |
-| Maintenance feedback | Relevant issue, investigation and justified design/baseline changes |
+## Update at meaningful events｜创建与更新时机
 
-Current design, baseline, plans, and checklist status are editable living records. Preserve material commitment changes via decisions and version history. Validation records append meaningful checks and corrections; failed evidence is not replaced by later successes. Retain only evidence useful to diagnosis or conclusions, not a transcript of every command.
+按实际成果和变化更新记录。用于指导相关实现的约定，应在该实现开始前明确；随后在形成可核查结果、出现影响工作的新信息或准备交付时同步状态，无需逐条记录对话和命令。
+
+| 触发时机 | 创建或更新什么 | 要明确的结果 |
+| --- | --- | --- |
+| 问题、需求或术语得到澄清 | 需求、必要的术语定义和相关计划 | 当前目标、约束、验收条件及未决问题。 |
+| 工作安排和交付范围确定 | Process／Workflow 计划、交付清单 | 要形成哪些产出，依赖什么，怎样检查。 |
+| 设计确定或工程约定改变 | 权威设计、接口或基线；重要决定写入日志；同步相关计划 | 哪项约定已生效，哪些使用方和工作受影响。 |
+| 实现形成可检查的成果 | 工作进展、相关产物引用；核对设计与实际实现 | 哪些内容已实现，哪些尚待验证。 |
+| 完成有意义的测试或审阅 | 验证记录、计划和清单中的对应状态 | 实际检查对象、结果、证据和限制。 |
+| 新反馈使需求、设计或依赖需要调整 | 问题与证据、必要的决策材料；决定形成后更新权威约定和受影响计划 | 变化理由、仍有效的成果、需要返回处理的工作。 |
+| 结束当前请求或交付成果 | 交付结论、计划进展和必要的使用维护说明 | 本次完成范围、整个 process 的状态、剩余问题和下一步。 |
+| 目标、有效文档位置或关键阻塞改变 | 项目索引的摘要和链接 | 读者能找到当前依据和待处理工作。 |
+
+反馈是否需要人类决定使用 [人机协作机制](human-collaboration.md)，跨 process 的影响使用 [Workflow 指导](../workflow.md#handle-changes)。先形成处理依据，再更新约定，不能直接用未确认的实现变化改写需求。
+
+当前约定和计划随工作更新；重要承诺变化保留决定与版本历史。验证记录追加有意义的检查及更正，后续成功不覆盖与结论相关的失败证据。
 
 ## Decision-log protocol
 
-Use one append-only Markdown log in the project's decision location. Record consequential choices affecting goals, requirements, design, engineering conventions, compatibility, or further work; do not log every local coding choice.
+使用项目决策位置中的 append-only Markdown 日志，记录影响目标、需求、设计、工程约定、兼容性或后续工作的重要决定。普通局部编码选择无需逐项记录，未决提案保留在相应分析或工作记录中。
 
-Each entry carries a stable ID, time (with timezone), decision-maker (human or agent), the decision and reason, affected scope, and relevant references. Record the source of human confirmation or agent delegation. An agent writing the record is not necessarily its decision-maker. Unconfirmed proposals stay in open questions or decision support material, not as accepted log entries.
+每条决定记录稳定标识、时间与时区、决定主体、内容与理由、影响范围及引用。注明人类确认或 Agent 委托的来源；记录者不一定是决定者。条目形状使用 [决策日志模板](../../assets/templates/decision-log.md)。
 
-Read the current tail/IDs immediately before appending. Use the existing ID convention; avoid collisions with concurrent writers. Preserve previous entries. Append a new decision referencing the prior one when superseding, or append a correction if a record is wrong. Update the current authoritative design/baseline as a separate step. Resolve conflicting decisions rather than assuming the newest timestamp always wins across unrelated scopes.
+追加前检查最新条目和编号，避免并行写入产生冲突。替代或纠正历史决定时，追加新条目并引用原条目，同时更新当前权威文档。冲突按决定的内容、范围和来源核实，不只按时间先后判断。
 
-Context commit is optional: identify the code observed when deciding. Implementation commit/PR is a different optional reference, often unknown until later; append a linkage entry when known. With no Git repository or no commit, record that fact instead of inventing a revision. Link extended reasoning under `decisions/details/` only when useful. Treat append-only as an editing rule, not a tamper-proof audit guarantee.
+决定时参考的代码版本与后来实现该决定的 commit／PR 分开记录；后者明确后可追加关联。没有版本引用时如实说明，不编造。较长分析放在链接的详情中。Append-only 是编辑规则，不代表日志不可篡改。
 
-## Evidence and traceability
+## Evidence and traceability｜证据与关联
 
-Maintain useful links: requirement/baseline → design/contract/decision → work item → change → verification → delivery result. Follow both directions: where was a requirement implemented/checked, and why does this change exist? Stable anchors, issue IDs, or requirement IDs suffice; do not require a full traceability matrix for every small task.
+保留能够双向查找的关系：需求／工程约定 → 设计／接口／决定 → 工作与代码变更 → 验证 → 交付。用现有文档链接、章节、issue 或决定标识建立关联，能回答“这个要求在哪里实现和检查”“这项变更依据什么”。
 
-Evidence identifies the checked code/configuration and relevant data/environment, the operation actually completed, result, and limits. Use commit references when available; for uncommitted work record the relevant diff/content snapshot. A command printed in a plan is not an executed check. An earlier pass applies only to the version and conditions actually checked.
+证据注明实际检查的代码、配置和相关输入环境、完成的操作、结果与限制。已提交代码使用版本引用；未提交工作使用相关 diff 或内容快照。计划中的命令不能当作已执行证据，旧的通过结果只适用于实际检查过的版本与条件。
 
-On handoff/resumption, the index points to current agreements, actual progress, unresolved matters, and the next action. Verify those against the current tree. Completion of one task does not prove the whole project complete.
+Workflow 引用局部验证，并补充整体检查的证据。详细日志保存在证据位置，正文保留判断所需的结论、解释与链接。
 
-## Writing requirements
+## Writing requirements｜写作与去重
 
-Be accurate, concise but sufficient, readable, consistent, traceable, and maintainable. Separate observed facts from hypotheses and plans. Lead with purpose and conclusions; use diagrams for specific relationships and tables for comparisons. Preserve terminology across prose, diagrams, interfaces, and code. Keep project-specific glossary definitions separate from implementation instructions. Move detailed evidence behind links; avoid duplicating live rules in index, spec, tasks, and agent steering files.
+使用用户或项目的语言，先明确文档的读者与用途，再组织内容：
 
-Templates provide output shapes; this file owns document behavior and lifecycle. Write in the user's/project's language. Do not leave template prompts presented as actual decisions or evidence.
+- **写项目事实与具体安排。** 需求写目标和约束，计划写要做什么，设计写机制和取舍，验证记录写实际结果。通用开发规则引用指导，不复制到每一份产物。
+- **区分信息状态。** 事实、推断、提案、决定、实现和验证结果应能辨认。不要把模板提示保留为项目结论。
+- **让重复承担不同作用。** 同一事项可在计划中说明安排、在验证中说明结果；无需在各节重复同一句授权或状态声明。必要摘要引用权威详情，修改时同步受影响的摘要。
+- **保持术语与表示一致。** 术语表定义项目概念；图表、接口和正文使用相同含义。图用于展示具体关系，表用于比较，文字解释必要的依据和取舍。
+- **按信息价值检查篇幅。** 删除一段后若不影响理解、判断或行动，考虑删除或合并；必要的例子和边界说明保留，不用统一字数限制代替审阅。
+
+项目索引只保存简短概览、入口和待处理事项；详细进展、依赖和下一步安排由 Process／Workflow 计划维护。交付文档前，核对本文档是否完成其用途、关键状态是否有依据、引用是否可用，以及是否重复维护了其他文档的内容。

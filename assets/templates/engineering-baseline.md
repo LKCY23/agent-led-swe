@@ -1,18 +1,22 @@
-# Engineering baseline
+# Engineering Baseline｜项目工程约定
 
-Scope and effective decision references. For an existing project, reference sufficient conventions instead of duplicating them.
+说明适用范围和有效决定的引用。按 [工程基线机制](../../references/mechanisms/engineering-baseline.md)记录；已有规范、配置或设计已表达的内容直接引用，注明适用范围与检查方式。
 
-## Project context
+## Project context｜项目背景
 
-Purpose, expected maintenance/use, quality priorities, and human preferences relevant to engineering choices.
+记录影响工程选择的项目用途、使用维护背景、质量优先级和人类偏好。需求与整体设计引用权威文档，不在此重新定义。
 
-## Adopted conventions
+## Adopted conventions｜采用的约定
 
-| Area | Adopted requirement or recommendation | Scope and rationale | Conformity check | Source / decision |
+| 领域 | 采用的要求或建议 | 适用范围与理由 | 检查方式 | 来源／决定 |
 | --- | --- | --- | --- | --- |
 
-Cover only relevant architecture, organization, interface, language, dependency, test, review, documentation, or delivery choices. Mark what was tailored from external guidance.
+将约定写成能指导选择、能够检查的规则，区分必须遵守的要求和建议。检查方式说明要核对的对象及依据，不能只写“代码审查”或“运行测试”。
 
-## Exceptions and unresolved choices
+只记录当前需要的架构、组织、接口、语言、依赖、测试、审阅、文档或交付约定。参考外部实践时注明采用和裁剪的部分；详细方案留在设计中。
 
-Explicit accepted exceptions with rationale and scope; unresolved choices remain proposals.
+## Exceptions and unresolved choices｜例外与未决事项
+
+记录已确定例外的原因、范围、条件及决定引用；范围之外仍适用原约定。
+
+未决事项写明待确定的选择、影响的工作及所缺依据，保持提案状态。根据依赖区分可以继续的工作与需要等待的部分。

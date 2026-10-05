@@ -1,0 +1,684 @@
+{
+  "date": "2026-10-05",
+  "scope": "Local ARM64 Docker preflight; no model runs; not an official leaderboard result",
+  "cases": [
+    {
+      "name": "pytest",
+      "spec": {
+        "name": "pytest",
+        "instance_id": "pytest-dev__pytest-10051",
+        "dataset": "princeton-nlp/SWE-bench_Verified",
+        "split": "test",
+        "row_index": 330,
+        "base_commit": "aa55975c7d3f6c9f6d7f68accc41bb7cadf0eb9a",
+        "metadata_sha256": "88bb24818c26edfa4f14a34ef282bd1e164919436d5b8409d9d48058d90149bb",
+        "source_sha256": "42587bca80f689036a2125a4ded03bebac754c13cedcbaa796e8cf3bbf51b6a0",
+        "patch_mode": "fix",
+        "python_image": "python:3.10-slim"
+      },
+      "image_id": "sha256:671639cd6f403b73e447c557b2b1cf507cbade38ccdd4cbc16e191a1a6d48f68",
+      "runs": [
+        {
+          "variant": "control",
+          "repetition": 1,
+          "group": "FAIL_TO_PASS",
+          "exit_code": 1,
+          "timed_out": false,
+          "elapsed_seconds": 1.339062,
+          "counts": {
+            "tests": 1,
+            "failures": 1,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "0647df8c510a3ccef8c48bfae332a50fd108bbff1e8c629604bb35315e1dc793"
+        },
+        {
+          "variant": "control",
+          "repetition": 1,
+          "group": "PASS_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 1.228261,
+          "counts": {
+            "tests": 15,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "fd32a85ef377bb687d7317a3f7a434329d3c33cb5f01d31a00e9e5822e59dbd7"
+        },
+        {
+          "variant": "control",
+          "repetition": 2,
+          "group": "FAIL_TO_PASS",
+          "exit_code": 1,
+          "timed_out": false,
+          "elapsed_seconds": 1.494185,
+          "counts": {
+            "tests": 1,
+            "failures": 1,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "0647df8c510a3ccef8c48bfae332a50fd108bbff1e8c629604bb35315e1dc793"
+        },
+        {
+          "variant": "control",
+          "repetition": 2,
+          "group": "PASS_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 1.390248,
+          "counts": {
+            "tests": 15,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "fd32a85ef377bb687d7317a3f7a434329d3c33cb5f01d31a00e9e5822e59dbd7"
+        },
+        {
+          "variant": "reference",
+          "repetition": 1,
+          "group": "FAIL_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 1.288142,
+          "counts": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "e67f0ba41f89136f79f58ba5e1316d754b55b63768dbaab057c0e6c2c22a37ae"
+        },
+        {
+          "variant": "reference",
+          "repetition": 1,
+          "group": "PASS_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 2.065337,
+          "counts": {
+            "tests": 15,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "fd32a85ef377bb687d7317a3f7a434329d3c33cb5f01d31a00e9e5822e59dbd7"
+        },
+        {
+          "variant": "reference",
+          "repetition": 2,
+          "group": "FAIL_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 1.963163,
+          "counts": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "e67f0ba41f89136f79f58ba5e1316d754b55b63768dbaab057c0e6c2c22a37ae"
+        },
+        {
+          "variant": "reference",
+          "repetition": 2,
+          "group": "PASS_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 1.931531,
+          "counts": {
+            "tests": 15,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "fd32a85ef377bb687d7317a3f7a434329d3c33cb5f01d31a00e9e5822e59dbd7"
+        }
+      ],
+      "summary": {
+        "test_contract": "pass",
+        "reason": "Expected control failures and reference passes repeat twice; this does not establish that tests cover every written requirement"
+      },
+      "evidence": "tests/runs/swe-preflight-20261005/pytest-attempt-1",
+      "readiness": "preflight passed"
+    },
+    {
+      "name": "packaging",
+      "spec": {
+        "name": "packaging",
+        "instance_id": "pypa__packaging.013f3b03.test_metadata.e00b5801.lv1",
+        "dataset": "LiberCoders/FeatureBench",
+        "split": "fast",
+        "row_index": 0,
+        "base_commit": "013f3b03a61fb795587d2b6e0c288656abca1d45",
+        "metadata_sha256": "a3df31441176ba1961e5bfb92782efd3805ea0d28efeb6d5489ae495e8c89a5b",
+        "source_sha256": "298981f8e5e7918d2c4fa319fb58d77217a1a0af835705ee11a1494c6a85cedd",
+        "patch_mode": "mask",
+        "python_image": "python:3.10-slim"
+      },
+      "image_id": "sha256:163233746275d789db7ea225d50c87f872681d1193d091df71ef7f78b0fa95f4",
+      "runs": [
+        {
+          "variant": "control",
+          "repetition": 1,
+          "group": "FAIL_TO_PASS",
+          "exit_code": 1,
+          "timed_out": false,
+          "elapsed_seconds": 5.161891,
+          "counts": {
+            "tests": 294,
+            "failures": 284,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "3d45091e4c0f0978db9318e02061f4940836cc48b0124058704fdd918b9a33ac"
+        },
+        {
+          "variant": "control",
+          "repetition": 1,
+          "group": "PASS_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 4.933443,
+          "counts": {
+            "tests": 3508,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "1c643bc3779f3ca592fd7ed27e5db3a7ca9a9f1411f1022b444a5fc6b65b2840"
+        },
+        {
+          "variant": "control",
+          "repetition": 2,
+          "group": "FAIL_TO_PASS",
+          "exit_code": 1,
+          "timed_out": false,
+          "elapsed_seconds": 8.896605,
+          "counts": {
+            "tests": 294,
+            "failures": 284,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "3d45091e4c0f0978db9318e02061f4940836cc48b0124058704fdd918b9a33ac"
+        },
+        {
+          "variant": "control",
+          "repetition": 2,
+          "group": "PASS_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 5.796547,
+          "counts": {
+            "tests": 3508,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "1c643bc3779f3ca592fd7ed27e5db3a7ca9a9f1411f1022b444a5fc6b65b2840"
+        },
+        {
+          "variant": "reference",
+          "repetition": 1,
+          "group": "FAIL_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 1.284484,
+          "counts": {
+            "tests": 294,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "e7fc8aaf516180bf9d0889a8e5c1f4da982f2739a4fa1bc6f3cf8f1534ac317d"
+        },
+        {
+          "variant": "reference",
+          "repetition": 1,
+          "group": "PASS_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 3.474068,
+          "counts": {
+            "tests": 3508,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "1c643bc3779f3ca592fd7ed27e5db3a7ca9a9f1411f1022b444a5fc6b65b2840"
+        },
+        {
+          "variant": "reference",
+          "repetition": 2,
+          "group": "FAIL_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 1.129259,
+          "counts": {
+            "tests": 294,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "e7fc8aaf516180bf9d0889a8e5c1f4da982f2739a4fa1bc6f3cf8f1534ac317d"
+        },
+        {
+          "variant": "reference",
+          "repetition": 2,
+          "group": "PASS_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 4.601782,
+          "counts": {
+            "tests": 3508,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "1c643bc3779f3ca592fd7ed27e5db3a7ca9a9f1411f1022b444a5fc6b65b2840"
+        }
+      ],
+      "summary": {
+        "test_contract": "pass",
+        "reason": "Expected control failures and reference passes repeat twice; this does not establish that tests cover every written requirement"
+      },
+      "evidence": "tests/runs/swe-preflight-20261005/packaging-attempt-1",
+      "readiness": "preflight passed"
+    },
+    {
+      "name": "agents-sdk",
+      "spec": {
+        "name": "agents-sdk",
+        "instance_id": "openai__openai-agents-python-842",
+        "dataset": "PGCodeLLM/FeatBench-Verified",
+        "split": "test",
+        "row_index": 30,
+        "base_commit": "8dfd6ff35c1b73bc5d2e6a14c0246b03aa2f9f98",
+        "metadata_sha256": "654756554e9ef466465ba72b8f15b28819f202ddaa0cfa9881be0004706870b6",
+        "source_sha256": "735cd53c21f54fb471ab9479bab4a0f1cf99e3a09e68087b21f04ded62594f95",
+        "patch_mode": "fix",
+        "python_image": "python:3.13-slim"
+      },
+      "image_id": "sha256:735d4278e655c62fdd56d6eb4ede6dbbcb44b7da11e25966c572e969c11fbcce",
+      "runs": [
+        {
+          "variant": "control",
+          "repetition": 1,
+          "group": "FAIL_TO_PASS",
+          "exit_code": 1,
+          "timed_out": false,
+          "elapsed_seconds": 9.274498,
+          "counts": {
+            "tests": 8,
+            "failures": 8,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "86d4ab96065f7f83f3d0842c3b9dcfa5c4b23a42ebf2b8c7d0a1a10f800b3116"
+        },
+        {
+          "variant": "control",
+          "repetition": 1,
+          "group": "PASS_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 11.93689,
+          "counts": {
+            "tests": 349,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "7a413896f2442cd01ccb97601cf3cdafbf3a49451079f52f9eb3937b3c8e3662"
+        },
+        {
+          "variant": "control",
+          "repetition": 2,
+          "group": "FAIL_TO_PASS",
+          "exit_code": 1,
+          "timed_out": false,
+          "elapsed_seconds": 6.793618,
+          "counts": {
+            "tests": 8,
+            "failures": 8,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "86d4ab96065f7f83f3d0842c3b9dcfa5c4b23a42ebf2b8c7d0a1a10f800b3116"
+        },
+        {
+          "variant": "control",
+          "repetition": 2,
+          "group": "PASS_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 9.257629,
+          "counts": {
+            "tests": 349,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "7a413896f2442cd01ccb97601cf3cdafbf3a49451079f52f9eb3937b3c8e3662"
+        },
+        {
+          "variant": "reference",
+          "repetition": 1,
+          "group": "FAIL_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 7.281539,
+          "counts": {
+            "tests": 8,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "fa0b8b3d121217027ee3db6281ef33e07342d33b79dd843a0e911f24a02a4f0f"
+        },
+        {
+          "variant": "reference",
+          "repetition": 1,
+          "group": "PASS_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 10.923711,
+          "counts": {
+            "tests": 349,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "7a413896f2442cd01ccb97601cf3cdafbf3a49451079f52f9eb3937b3c8e3662"
+        },
+        {
+          "variant": "reference",
+          "repetition": 2,
+          "group": "FAIL_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 5.915033,
+          "counts": {
+            "tests": 8,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "fa0b8b3d121217027ee3db6281ef33e07342d33b79dd843a0e911f24a02a4f0f"
+        },
+        {
+          "variant": "reference",
+          "repetition": 2,
+          "group": "PASS_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 10.133209,
+          "counts": {
+            "tests": 349,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "7a413896f2442cd01ccb97601cf3cdafbf3a49451079f52f9eb3937b3c8e3662"
+        }
+      ],
+      "summary": {
+        "test_contract": "pass",
+        "reason": "Expected control failures and reference passes repeat twice; this does not establish that tests cover every written requirement"
+      },
+      "evidence": "tests/runs/swe-preflight-20261005/agents-sdk-attempt-3",
+      "readiness": "hold: requirement/reference mismatch"
+    },
+    {
+      "name": "dspy",
+      "spec": {
+        "name": "dspy",
+        "instance_id": "stanfordnlp__dspy-8139",
+        "dataset": "PGCodeLLM/FeatBench-Verified",
+        "split": "test",
+        "row_index": 4,
+        "base_commit": "cefe8db85bca3a520bd82c7d9fdbde7efff44214",
+        "metadata_sha256": "ec394a44ebd4fc495c8e5e109a5fa7c724c84f1cf085c3b4d06393f3c6399adb",
+        "source_sha256": "760a026a537ceb0cabd1928fff77a483453007454a6cfb83498933d88b2559b3",
+        "patch_mode": "fix",
+        "python_image": "python:3.12-slim",
+        "test_network": "bridge",
+        "network_reason": "Original regression tests download public image/PDF fixtures; model tests use local mocks. No host credentials."
+      },
+      "image_id": "sha256:24e048261d08c56d580522fcea75a57c95595f2763bcc0665c662bf3add4d08d",
+      "runs": [
+        {
+          "variant": "control",
+          "repetition": 1,
+          "group": "FAIL_TO_PASS",
+          "exit_code": 1,
+          "timed_out": false,
+          "elapsed_seconds": 4.897295,
+          "counts": {
+            "tests": 2,
+            "failures": 2,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "78e708005ae133243524ebed5ddec5e1c0139636aee24b3ae9ae92724f44aa93"
+        },
+        {
+          "variant": "control",
+          "repetition": 1,
+          "group": "PASS_TO_PASS",
+          "exit_code": 1,
+          "timed_out": false,
+          "elapsed_seconds": 91.080711,
+          "counts": {
+            "tests": 305,
+            "failures": 0,
+            "errors": 1,
+            "skipped": 0,
+            "xfailed": 2
+          },
+          "outcome_sha256": "dcf25596580622df2e16c52511e68330b50eb84d872b0f537d904b0bd99f770d"
+        },
+        {
+          "variant": "control",
+          "repetition": 2,
+          "group": "FAIL_TO_PASS",
+          "exit_code": 1,
+          "timed_out": false,
+          "elapsed_seconds": 6.292646,
+          "counts": {
+            "tests": 2,
+            "failures": 2,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "78e708005ae133243524ebed5ddec5e1c0139636aee24b3ae9ae92724f44aa93"
+        },
+        {
+          "variant": "control",
+          "repetition": 2,
+          "group": "PASS_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 75.877378,
+          "counts": {
+            "tests": 305,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 2
+          },
+          "outcome_sha256": "ee19f242081bac903a45c30227bc945ec8ae60542c52dee065b0bd27c1c6df51"
+        },
+        {
+          "variant": "reference",
+          "repetition": 1,
+          "group": "FAIL_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 8.603634,
+          "counts": {
+            "tests": 2,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "d187603c8ba2a571ee118ae512b8940b1df8db31ea830ff4e96605118adbb8ea"
+        },
+        {
+          "variant": "reference",
+          "repetition": 1,
+          "group": "PASS_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 84.951577,
+          "counts": {
+            "tests": 305,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 2
+          },
+          "outcome_sha256": "ee19f242081bac903a45c30227bc945ec8ae60542c52dee065b0bd27c1c6df51"
+        },
+        {
+          "variant": "reference",
+          "repetition": 2,
+          "group": "FAIL_TO_PASS",
+          "exit_code": 0,
+          "timed_out": false,
+          "elapsed_seconds": 15.645967,
+          "counts": {
+            "tests": 2,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 0
+          },
+          "outcome_sha256": "d187603c8ba2a571ee118ae512b8940b1df8db31ea830ff4e96605118adbb8ea"
+        },
+        {
+          "variant": "reference",
+          "repetition": 2,
+          "group": "PASS_TO_PASS",
+          "exit_code": 1,
+          "timed_out": false,
+          "elapsed_seconds": 99.20546,
+          "counts": {
+            "tests": 305,
+            "failures": 1,
+            "errors": 0,
+            "skipped": 0,
+            "xfailed": 2
+          },
+          "outcome_sha256": "75ba2d600ee08dbb72ab4f8f3f386a9f38cb20e61cea0c4d100c0be8884014a5"
+        }
+      ],
+      "summary": {
+        "test_contract": "unknown",
+        "reason": "Timeout, missing, errored or skipped tests"
+      },
+      "evidence": "tests/runs/swe-preflight-20261005/dspy-attempt-3",
+      "readiness": "hold: local proxy startup timeout and timing-sensitive regression failure"
+    }
+  ],
+  "semantic_probe": {
+    "case": "agents-sdk",
+    "capture": {
+      "schema_version": 1,
+      "cwd": "/Users/liyao/agent-led-swe/tests/runs/swe-preflight-20261005/agents-sdk-attempt-3/reference",
+      "argv": [
+        "docker",
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--cpus",
+        "1",
+        "--memory",
+        "2g",
+        "-e",
+        "PYTHONPATH=/testbed/src",
+        "-v",
+        "/Users/liyao/agent-led-swe/tests/runs/swe-preflight-20261005/agents-sdk-attempt-3/reference:/testbed:ro",
+        "-v",
+        "/Users/liyao/agent-led-swe/tests/runs/swe-preflight-20261005/probe_extra_args_none.py:/probe.py:ro",
+        "agent-led-swe-preflight-agents-sdk:8528b20b32",
+        "python",
+        "/probe.py"
+      ],
+      "started_at": "2026-10-05T11:44:28.910380+00:00",
+      "timeout_seconds": 60,
+      "timed_out": false,
+      "exit_code": 0,
+      "launch_error": null,
+      "process_group_cleanup": "already_exited",
+      "elapsed_seconds": 3.060114
+    },
+    "result": {
+      "reference_null_filtered": false,
+      "reference_non_null_forwarded": true
+    },
+    "script_sha256": "80962a1273bf55efc49c1fd8451ce88a09ac27edf18e152999fe41328d8a788a"
+  },
+  "selection": {
+    "active": [
+      "pytest",
+      "packaging",
+      "dspy"
+    ],
+    "parked": [
+      "agents-sdk"
+    ],
+    "user_decision": "User requested parking SDK and preflighting DSPy instead."
+  },
+  "dspy_attempts": [
+    {
+      "path": "tests/runs/swe-preflight-20261005/dspy-attempt-1",
+      "outcome": "Stopped after discovering missing proxy test dependencies; partial evidence retained."
+    },
+    {
+      "path": "tests/runs/swe-preflight-20261005/dspy-attempt-2",
+      "outcome": "Offline regressions failed on public fixture downloads and proxy startup; stopped further repeats."
+    },
+    {
+      "path": "tests/runs/swe-preflight-20261005/dspy-attempt-3",
+      "outcome": "Full two-repeat matrix completed with startup and timing failures; not stable."
+    },
+    {
+      "path": "tests/runs/swe-preflight-20261005/dspy-attempt-4",
+      "outcome": "Used packaged LiteLLM model cost map; stopped when setup errors recurred. No pass claimed."
+    }
+  ]
+}

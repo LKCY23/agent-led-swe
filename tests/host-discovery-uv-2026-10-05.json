@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-05",
+  "environment": "Repository uv environment, launched with zsh -lic",
+  "command": "uv run --locked python tests/check_hosts.py",
+  "hosts": {
+    "codex": {
+      "status": "passed",
+      "version": "codex-cli 0.160.0",
+      "name": "agent-led-swe:agent-led-swe",
+      "scope": "repo",
+      "display_name": "Agent 主导的软件工程",
+      "default_prompt": "使用 $agent-led-swe 围绕需求目标组织开发 process，按需协调 workflow，并维护关键决策、工程约定与交付证据。",
+      "explicit_invocation": "$agent-led-swe:agent-led-swe",
+      "skill_path": "/Users/liyao/agent-led-swe/SKILL.md",
+      "other_discovery_errors": 0
+    },
+    "claude_code": {
+      "status": "passed",
+      "version": "2.1.278 (Claude Code)",
+      "inventory": "agent-led-swe 0.2.0\n  Description: Requirement-driven development processes and workflow coordination, with human decisions, engineering conventions, and traceable delivery evidence.\n  Source: agent-led-swe@inline\n\nComponent inventory\n  Skills (1)  agent-led-swe\n  Agents (0)\n  Hooks (0)\n  MCP servers (0)\n  LSP servers (0)\n\nProjected token cost\n  Always-on:   ~34 tok   added to every session\n\nPer-component (rounded)\n  component      always-on  on-invoke\n  agent-led-swe        ~30       ~890\n\n  On-invoke cost is paid each time a skill or agent fires.\n  Token counts are estimates and may differ from actual usage."
+    }
+  }
+}

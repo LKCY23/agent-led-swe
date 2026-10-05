@@ -1,20 +1,44 @@
-# Solution design
+# Design｜设计
 
-Start with effective requirements, the relevant engineering baseline, existing system structure, and prior decisions. Set the requested design depth: an overview explains responsibilities and relationships; an implementation-ready design resolves the material questions for the current increment.
+## 何时使用与选择范围
 
-## Elaborate in this order, with feedback
+需求需要转化为实现方案，或现有方案受到变更影响时使用。先读取有效需求、相关工程基线、既有结构与接口，以及先前决定，确定需要细化的部分：
 
-1. **Overall design:** scope/context, major responsibilities and dependencies, key data/runtime flows, and significant trade-offs. Use the [architecture template](../../assets/templates/architecture.md) when a document is warranted.
-2. **Contracts and mechanisms together:** refine what consumers must know and how the providers can fulfill it. A [contract](../../assets/templates/interface-contract.md) includes meaning, invariants, relevant ordering, errors and side effects, not only type signatures. [Module design](../../assets/templates/module-design.md) explains important internal state/behavior and where it belongs.
-3. **Implementation and verification approach:** choose useful increments and checks. Reference existing code or interfaces where doing so helps implementation; avoid premature exhaustive file/class lists. Use the [plan](../../assets/templates/implementation-plan.md).
-4. **Delivery readiness:** reconcile promised deliverables, acceptance conditions and verification methods in the [checklist](../../assets/templates/delivery-checklist.md). Task breakdowns reference these commitments rather than redefining them.
+| 变更涉及什么 | 更新什么 | 需要说明的结果 |
+| --- | --- | --- |
+| 系统边界、主要职责、依赖或关键交互变化 | [整体设计](../../assets/templates/architecture.md) | 组件如何分工与协作，方案怎样满足目标，以及重要取舍。 |
+| 模块内部行为或职责实现发生变化 | [模块设计](../../assets/templates/module-design.md) | 关键状态、规则、算法与错误处理如何工作，代码归属及复用安排。 |
+| 对外能力、共享数据或使用方约定变化 | [接口文档](../../assets/templates/interface-contract.md) | 输入输出含义、约束、行为保证、失败语义和兼容影响。 |
 
-A small change can carry all of this in one spec/issue. Shared contracts stay authoritative in one place; split module documents only where needed. Persistence/recovery, migrations, concurrency and deployment details belong only when they affect this change. Do not prescribe the AgentInfra module taxonomy for unrelated projects.
+同一变更可以涉及多项设计。沿用仍然有效的整体设计，更新真正受影响的部分；小任务可以将说明合并在已有记录中。请求仅为 overview 时，交付相应层次的说明，并指出尚待细化的问题。
 
-## Decisions and uncertainty
+## 工作与产出
 
-Present meaningful alternatives for consequential choices and explain why one is recommended. Use prototypes or inspection to reduce factual uncertainty within the user's scope. Label exploratory results; they do not automatically become production decisions.
+1. **形成方案。** 明确行为归属、依赖与关键交互。重要取舍说明推荐方案、理由及有实际意义的备选方案。
+2. **联合细化接口与机制。** 检查使用方能否依据契约正确调用，提供方的内部机制能否满足承诺。类型签名之外，补齐影响正确使用的语义；共享契约保持一份权威定义。
+3. **检查实现依据。** 结合代码和技术约束核实方案。对影响可行性的事实不确定性，安排调查或授权范围内的试验，并记录结果；试验不自动成为已确定的生产方案。
+4. **连接实施与验证。** 说明新增代码归属、已有能力复用、相关迁移及如何验证关键行为，将工作安排写入 [Process 计划](../../assets/templates/process-plan.md)，与交付条件对应。
 
-Apply [human collaboration](../mechanisms/human-collaboration.md) to unsettled consequential choices, carrying forward existing authorization. Record settled decisions via the [documentation mechanism](../mechanisms/documentation-and-traceability.md). Do not mark agent proposals as human-approved.
+代码归属说明到当前实现所需的模块或目录职责即可，不要求预先列出所有类与函数。持久化、恢复、并发和部署等机制在影响当前目标时细化。设计状态、决定和记录的维护使用 [文档机制](../mechanisms/documentation-and-traceability.md)。
 
-Proceed into implementation when the intended scope has sufficient requirements, design/contract semantics, an applicable baseline, and delivery criteria, and the user has authorized implementation. A design-only request concludes with the requested design and clearly identified unresolved matters.
+## 推进依据
+
+进入当前部分的实现前，应能根据设计回答：
+
+- 行为由谁负责，各部分怎样交互？
+- 使用方依赖什么契约，关键机制及失败处理怎样满足要求？
+- 代码归属哪里，复用什么，需要哪些上游产出或兼容处理？
+- 如何检查相关需求与工程约定得到满足？
+
+影响这些答案的关键选择已有依据，必要依赖与工程约定已具备，并在当前实施授权内时，进入 [Implementation and Integration](implementation.md)。其他未决事项注明影响范围，不阻塞独立工作。设计成果完成不等于功能已经实现。
+
+## 返回与决定
+
+| 发现的问题 | 处理方式 |
+| --- | --- |
+| 可行性依赖尚未证实的事实 | 调查或试验后重新检查方案，保留仍成立的设计。 |
+| 内部机制无法满足既定接口 | 调整机制与相关设计；若必须改变共享契约，识别使用方影响并按既有决定权限处理。 |
+| 满足目标必须改变需求、验收或重要约定 | 返回 [Requirements Analysis](requirements.md)或相应约定，按 [人机协作机制](../mechanisms/human-collaboration.md)准备决定，再继续受影响的设计。 |
+| 共享设计变化影响其他 process | 按 [Workflow 指导](../workflow.md#handle-changes)更新依赖与受影响工作。 |
+
+既有目标、约定和授权能够支持的技术细化由 Agent 推进；尚未确定或委托的重要工程偏好和取舍，提交相应设计与证据供人类判断。

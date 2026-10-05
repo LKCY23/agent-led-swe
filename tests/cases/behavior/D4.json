@@ -1,0 +1,12 @@
+{
+  "id": "D4",
+  "description": "Prior human and agent decisions; a new human decision supersedes one.",
+  "files": {
+    "docs/decisions/log.md": "# Decision log\n\n## DEC-001 — Result directory\n\n- Time: 2026-09-20T10:00:00+08:00\n- Decision-maker: human, confirmed in initial design meeting.\n- Decision: save results to results/.\n- Reason: keep outputs easy to locate.\n\n## DEC-002 — Internal parser\n\n- Time: 2026-09-21T10:00:00+08:00\n- Decision-maker: agent, delegated choice of local parsing implementation.\n- Decision: reuse the existing JSON parser.\n",
+    "docs/design.md": "# Current design\n\nResults are saved in results/. The existing JSON parser is reused.\n"
+  },
+  "request": "我现在确定把结果目录从 results/ 改为 artifacts/，因为运行产物不仅是最终结果。请记录这个新的人工决定，关联被替代的决定，并更新现行设计。这里只改文档，不改代码，也不用提交 Git。",
+  "acceptance": [
+    "Preserves the log byte prefix, appends correctly attributed decision, updates current design, leaves unrelated entries intact."
+  ]
+}

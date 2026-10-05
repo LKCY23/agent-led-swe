@@ -1,11 +1,21 @@
-# Problem and goals
+# Problem Framing｜问题界定
 
-Read the request, prior decisions, relevant project instructions, and the smallest useful part of the existing system. Identify who needs the change, their scenario, the current difficulty, the desired outcome, and the scope of this request.
+## 何时使用
 
-Distinguish user intent from implementation facts. Investigate facts in code or other available sources; ask the human about meaningful intent or preference gaps. Present a concrete question with evidence and a recommendation using [human collaboration](../mechanisms/human-collaboration.md).
+收到新的想法，或现有工作的目标、场景、范围不清时，先界定问题。已有依据足够时直接复用，需求归属按 [Process 指导](../process.md)处理。
 
-For substantial new work, establish the affected system boundary, intended lifetime/users, important constraints, and explicit non-goals. For a small known defect, the reproduction and expected behavior may already be enough.
+## 工作与产出
 
-Output a concise shared problem statement and material open questions. Persist it only within the requested scope; it may later become the opening of the requirements document. Use the [requirements template](../../assets/templates/requirements.md) if a durable artifact is needed, rather than inventing a mandatory extra brief file.
+1. **调查现状。** 阅读相关请求、决定、代码和运行资料，确认当前发生什么、影响谁或哪种场景。对于已知缺陷，复现与预期行为通常就是主要依据。
+2. **澄清意图。** 区分观察到的事实、对原因的推断和用户希望达到的结果。明确范围、已有约束，以及会影响方向的未决问题。
+3. **形成问题说明。** 简述当前情况、要解决的差距、目标与范围，附上重要事实依据和待澄清事项。
 
-Proceed when the current problem is understood well enough to define requirements. A request to initialize folders or discuss options ends at that requested result; it does not authorize writing the entire proposed solution.
+问题说明可作为 [需求文档](../../assets/templates/requirements.md)的开头，也可保存在已有 issue 或工作记录中。面向新项目时补充相关使用方、系统边界和使用维护背景；不要为已有明确问题重做整个项目分析。
+
+## 推进依据
+
+能够说明当前与预期结果的差别、涉及的场景和本次范围，且未决问题不会改变接下来分析的目标时，可以开展 [Requirements Analysis](requirements.md)。只推进已有依据支持的部分。
+
+## 返回与澄清
+
+事实不足或相互矛盾时继续调查。目标、优先级或范围需要人类取舍时，按 [人机协作机制](../mechanisms/human-collaboration.md)提出具体问题与建议。后续分析发现原问题判断错误时，修正问题说明，并检查受影响的需求与计划。

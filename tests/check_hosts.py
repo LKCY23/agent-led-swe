@@ -65,7 +65,7 @@ class Rpc:
 def codex_check(root):
     binary = shutil.which('codex')
     if binary is None:
-        raise RuntimeError('codex is not installed')
+        raise RuntimeError('codex was not found on this process PATH; run from an initialized terminal')
     with tempfile.TemporaryDirectory(prefix='agent-led-swe-host-') as tmp:
         learner = Path(tmp).resolve() / 'learner'
         discovery = learner / '.agents/skills'
@@ -79,7 +79,7 @@ def codex_check(root):
             rpc = Rpc(process)
             try:
                 rpc.send({'id': 1, 'method': 'initialize', 'params': {
-                    'clientInfo': {'name': 'agent_led_swe_check', 'version': '0.1.0'}}})
+                    'clientInfo': {'name': 'agent_led_swe_check', 'version': json.loads((root / '.claude-plugin/plugin.json').read_text())['version']}}})
                 rpc.response(1)
                 rpc.send({'method': 'initialized', 'params': {}})
                 rpc.send({'id': 2, 'method': 'skills/list', 'params': {
@@ -125,7 +125,7 @@ def codex_check(root):
 def claude_check(root):
     binary = shutil.which('claude')
     if binary is None:
-        raise RuntimeError('claude is not installed')
+        raise RuntimeError('claude was not found on this process PATH; run from an initialized terminal')
     with tempfile.TemporaryDirectory(prefix='agent-led-swe-claude-') as tmp:
         run([binary, 'plugin', 'validate', str(root)], cwd=tmp)
         inventory = run([binary, '--plugin-dir', str(root), 'plugin', 'details', 'agent-led-swe'], cwd=tmp)

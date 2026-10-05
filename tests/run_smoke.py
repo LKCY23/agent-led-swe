@@ -17,30 +17,44 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
-CASES = {
-    'D1': {
-        'files': {'README.md': '# Research utility\nWe are deciding how to organize task loading and evaluation.\n'},
-        'request': '我准备做一个研究评测工具，现在只讨论 Tasks 和 Evaluation 的职责边界。请解释两个可行选择及取舍，列出最关键的待定问题。不要写文档或代码，也不要替我确认方案。',
-    },
-    'D4': {
-        'files': {
-            'docs/decisions/log.md': '# Decision log\n\n## DEC-001 — Result directory\n\n- Time: 2026-09-20T10:00:00+08:00\n- Decision-maker: human, confirmed in initial design meeting.\n- Decision: save results to results/.\n- Reason: keep outputs easy to locate.\n\n## DEC-002 — Internal parser\n\n- Time: 2026-09-21T10:00:00+08:00\n- Decision-maker: agent, delegated choice of local parsing implementation.\n- Decision: reuse the existing JSON parser.\n',
-            'docs/design.md': '# Current design\n\nResults are saved in results/. The existing JSON parser is reused.\n',
-        },
-        'request': '我现在确定把结果目录从 results/ 改为 artifacts/，因为运行产物不仅是最终结果。请记录这个新的人工决定，关联被替代的决定，并更新现行设计。这里只改文档，不改代码，也不用提交 Git。',
-    },
-    'D7': {
-        'files': {
-            'docs/delivery.md': '# Delivery\n\n| Item | Acceptance | State |\n| --- | --- | --- |\n| Local calculation | 2 + 2 returns 4 | verified |\n| Remote result persistence | Integration check against staging storage | unverified |\n',
-            'docs/verification.md': '# Checks\n\nCHECK-001: Local calculation passed on the supplied revision.\nCHECK-002: Remote result persistence was not run: staging credentials are unavailable. No remote integration result exists.\n',
-        },
-        'request': '请根据已有交付清单和验证记录，给我一段这次工作的交付结论。现在不运行新测试，也不要修改清单或记录。',
-    },
-}
+CASE_DIR = ROOT / 'tests/cases/behavior'
+
+
+def case_ids():
+    return sorted((p.stem for p in CASE_DIR.glob('*.json')),
+                  key=lambda value: (len(value), value))
+
+
+def load_case(case_id):
+    if case_id not in case_ids():
+        raise ValueError(f'Unknown runnable case: {case_id}')
+    path = CASE_DIR / f'{case_id}.json'
+    case = json.loads(path.read_text())
+    if (not isinstance(case, dict) or case.get('id') != case_id
+            or not isinstance(case.get('request'), str) or not case['request'].strip()):
+        raise ValueError(f'Invalid case identity or request: {path}')
+    if not isinstance(case.get('files'), dict):
+        raise ValueError(f'Invalid fixture mapping: {path}')
+    for name, content in case['files'].items():
+        relative = Path(name)
+        if (not name or '\x00' in name or relative.is_absolute() or '..' in relative.parts
+                or relative == Path('.') or not isinstance(content, str)):
+            raise ValueError(f'Invalid fixture file in {path}: {name}')
+    if (not isinstance(case.get('acceptance'), list) or not case['acceptance']
+            or any(not isinstance(item, str) or not item.strip() for item in case['acceptance'])):
+        raise ValueError(f'Missing acceptance criteria: {path}')
+    return case
+
+
+def case_input_hash(case):
+    body = json.dumps({key: case[key] for key in ('request', 'files')},
+                      ensure_ascii=False, sort_keys=True, separators=(',', ':'))
+    return hashlib.sha256(body.encode()).hexdigest()
 
 
 def hashes(root):
@@ -50,12 +64,20 @@ def hashes(root):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('case', choices=CASES)
+    parser.add_argument('case', choices=case_ids())
     parser.add_argument('--codex-bin', type=Path,
                         help='Use this exact CLI entrypoint instead of resolving codex through PATH')
     parser.add_argument('--capture', type=Path,
                         default=Path.home() / '.codex/skills/skill-evaluator/scripts/capture.py')
     args = parser.parse_args()
+    try:
+        case = load_case(args.case)
+    except (ValueError, OSError) as exc:
+        parser.error(str(exc))
+    case_definition = {
+        'path': str(CASE_DIR / f'{args.case}.json'),
+        'sha256': hashlib.sha256((CASE_DIR / f'{args.case}.json').read_bytes()).hexdigest(),
+        'input_sha256': case_input_hash(case)}
     capture = args.capture.resolve()
     if not capture.is_file():
         parser.error('Provide installed skill-evaluator capture.py with --capture')
@@ -76,12 +98,13 @@ def main():
     instruction_files += list((ROOT / 'references').rglob('*')) + list((ROOT / 'assets').rglob('*'))
     target_hashes = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
                      for p in instruction_files if p.is_file()}
-    case = CASES[args.case]
     prompt = ('Use the skill at ' + str(ROOT / 'SKILL.md') + '. Read its entrypoint and only relevant references. '
               'This is a disposable local task. Work only on the supplied fixture and read-only skill references; '
-              'use local shell/file tools only. Do not browse, use connectors, inspect evaluation scripts or sibling evidence, '
+              'use local shell/file tools only. Do not browse, use connectors, inspect evaluation scripts, '
+              'case definitions, grader-only material or sibling evidence, '
               'invoke other agents, change global settings, or access unrelated projects.\n\n' + case['request'])
     (evidence / 'prompt.txt').write_text(prompt)
+    (evidence / 'case.json').write_text(json.dumps(case, ensure_ascii=False, indent=2) + '\n')
     with tempfile.TemporaryDirectory(prefix='agent-led-swe-case-') as tmp:
         fixture = Path(tmp).resolve()
         for name, content in case['files'].items():
@@ -96,13 +119,15 @@ def main():
         for key, value in settings.items():
             argv += ['-c', key + '=' + json.dumps(value)]
         argv += ['-']
-        captured = subprocess.run([shutil.which('python3'), str(capture), '--cwd', str(fixture),
+        captured = subprocess.run([sys.executable, str(capture), '--cwd', str(fixture),
                         '--out', str(evidence / 'capture'), '--timeout', '180',
                         '--stdin-file', str(evidence / 'prompt.txt'), '--'] + argv,
                        check=False, timeout=195, capture_output=True, text=True)
         after = hashes(fixture)
         shutil.copytree(fixture, evidence / 'after')
-        manifest = {'case': args.case, 'target': str(ROOT), 'target_files': target_hashes,
+        manifest = {'case': args.case,
+                    'case_definition': case_definition,
+                    'target': str(ROOT), 'target_files': target_hashes,
                     'cli': subprocess.check_output([binary, '--version'], text=True).strip(),
                     'cli_path': binary, 'cli_resolved_path': str(Path(binary).resolve()),
                     'execution_overrides': {'agents.enabled': False},

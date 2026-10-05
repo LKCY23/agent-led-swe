@@ -1,36 +1,53 @@
-# Human–agent collaboration
+# Human–Agent Collaboration｜人机协作
 
-## Responsibilities
+## Responsibilities｜职责分工
 
-The human owns goals, priorities, preferences, consequential trade-offs, and acceptance of material deviations. The agent owns investigation, recommendations, technical elaboration, implementation, verification, and accurate reporting. Human agreement does not transfer responsibility for technical correctness to the human.
+人类把关目标、优先级、工程偏好、重要取舍及重要偏差的接受。Agent 负责调查、建议、技术细化、实现、验证和准确报告；人类确认方案不代替 Agent 的技术核查。
 
-The agent decides routine, local, reversible engineering details within existing goals, conventions, and authorization. Carry forward prior choices; do not repeatedly ask the user to select ordinary function names, test mechanics, or implementation details that follow the agreed design.
+Agent 根据已有目标、设计、工程约定和授权作出实现选择、安排步骤并解决技术问题。自主范围由这些依据决定，不以修改是否局部或是否涉及多个模块来划分。已约定的跨模块重构也可以自主推进。
 
-## Two triggers for human decisions
+先调查能够通过事实核查解决的问题。需要未确定的人类偏好，或需要改变重要承诺时，再引入人类决定。请求范围与实施授权沿用 [SKILL.md](../../SKILL.md) 的规则。
 
-**Phase-based:** involve the human where their intent or a consequential commitment is needed: clarifying goals and acceptance conditions, choosing consequential design/engineering trade-offs, and judging delivery outcomes or remaining limitations. Existing decisions may already satisfy the need. Do not require a new approval for every phase or every task when authorization is clear.
+## When to involve the human｜介入条件
 
-**Feedback-triggered:** involve the human when new evidence creates a meaningful choice beyond the current agreement: conflicting requirements, changed public behavior, significant architecture/deployment/dependency consequences, compatibility changes, or relaxing an accepted standard. A normal failing test or fixable defect is not itself a human decision.
+### Phase-based｜根据开发活动识别决策事项
 
-Ask: can this be resolved by technical investigation within the accepted outcome, or does it require a human preference or a changed commitment? Investigate the former first. Present the latter once the alternatives and consequences are concrete.
+开展下列活动时，检查相关决定是否已有依据。已有决定或明确委托可以直接沿用，不因进入一项活动而重新要求审批。
 
-## Decision support
+| 活动 | 需要人类把关的事项 | Agent 应提供的审阅材料 |
+| --- | --- | --- |
+| Problem Framing、Requirements Analysis | 尚未明确的目标、范围、优先级，以及存在取舍的验收要求。 | 具体场景、已有约束、未决问题、建议及对范围和验收的影响。 |
+| Design | 既有约定未覆盖、也未委托 Agent 决定的重要工程偏好、架构或接口取舍。 | 对应的整体、模块或接口设计，必要的备选方案、理由及对实现和后续维护的影响。 |
+| Implementation and Integration、Verification and Validation | 通常依据约定自主推进；发现重要约定需要改变时提出决定。 | 具体实现或验证证据、冲突所在、处理建议及影响。 |
+| Delivery and Maintenance | 重要偏差、剩余限制是否可接受，以及由此产生的后续取舍。 | 对照交付承诺的实际结果、验证证据、未满足项及处理建议。 |
 
-Prepare information sufficient for a choice:
+### Feedback-triggered｜根据执行反馈提出决定
 
-1. **Problem:** exactly what must be decided and why existing agreements do not resolve it.
-2. **Evidence:** observed facts, relevant constraints, investigation results, and uncertainty; distinguish observations from inference.
-3. **Recommendation:** a justified option and meaningful alternatives, proportionate to the decision.
-4. **Impact:** effects on behavior, design, quality, cost, compatibility, scope, and subsequent work as relevant.
+新证据导致以下选择超出现有约定时，准备人类决策：需求相互冲突；需要改变公共行为或兼容承诺；需要调整重要架构、依赖、部署、成本或质量约定。
 
-A paragraph is enough for a simple decision; a comparison, diagram, prototype, or diff may suit a complex one. Do not make the user perform the technical investigation. Do not substitute a vague "may I continue?" for a concrete choice.
+普通缺陷和测试失败先按约定调查、修复。只有处理它们需要人类偏好或改变重要承诺时，才进入决策流程。
 
-While a required decision is pending, continue independent authorized work. Do not treat silence or elapsed time as agreement, or implement the disputed choice as a default. Record the decision when it actually occurs and update affected agreements before dependent implementation.
+## Prepare the decision｜提出决定前
 
-## Attribution and scope
+完成当前授权范围内能够开展的调查，将需要决定的内容整理为：
 
-An agent-proposed option confirmed by the human is a human decision. An option selected under delegated discretion is an agent decision. Identify confirmation or delegation from the conversation or other trusted project evidence; never invent approval.
+| 内容 | 要说明什么 |
+| --- | --- |
+| **问题** | 具体要决定什么，为什么已有约定无法支持当前选择。 |
+| **证据** | 已观察到的事实、约束和调查结果；区分推断与剩余不确定性。 |
+| **建议** | 推荐方案及理由，有实际意义的备选方案和取舍。 |
+| **影响** | 对行为、设计、质量、兼容性、成本和后续工作的具体影响。涉及多个 process 时，指出受影响的使用方、共享约定和返工。 |
 
-Design acceptance, permission to implement, and authorization to deploy/publish are contextual and distinct. Follow the actual user request and prior authorization. A request for an outline or discussion does not authorize writing a complete project spec or implementation; an implementation request does not require another generic go-ahead.
+简单选择用一段说明即可；需要比较多个方案或保留较长分析时，使用 [决策分析模板](../../assets/templates/decision-detail.md)，必要时配图、示例或 diff。提出可判断的具体选择，不将技术调查转交给人类，也不以笼统的“是否继续”代替决策材料。
 
-Use the [decision-log protocol](documentation-and-traceability.md#decision-log-protocol) for consequential settled decisions. This is a decision mechanism, not a taxonomy of status updates, optional opinions, and approvals.
+## While awaiting a decision｜等待决定时
+
+暂停依赖未决选择的工作，继续已有授权内的独立工作。说明被阻塞的部分及原因；提案、沉默或等待时间均不代表决定已形成。
+
+## Apply the decision｜决定形成后
+
+1. **核对决定内容。** 根据实际回复或已有项目记录，明确决定的范围、条件和仍未解决的部分。仅在仍有影响后续工作的歧义时澄清，不要求人类重复确认已经清楚的决定。
+2. **记录决定来源。** 人类确认的方案记为人类决定；Agent 在委托范围内选择的方案记为 Agent 决定。记录者不一定是决定者。重要决定使用 [决策日志模板](../../assets/templates/decision-log.md)，追加、纠正和替代方式遵循 [决策日志规范](documentation-and-traceability.md#decision-log-protocol)。
+3. **落实到工作。** 更新受影响的需求、设计、工程约定和计划，在授权范围内继续实施与验证。跨 process 的影响按 [Workflow 指导](../workflow.md#handle-changes)处理。
+
+接受某项限制与验证通过分别记录；决定只确认其中一部分时，其余部分继续保持未决。

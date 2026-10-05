@@ -1,0 +1,11 @@
+{
+  "id": "D1",
+  "description": "Empty fixture: discuss module choices only; do not write yet.",
+  "files": {
+    "README.md": "# Research utility\nWe are deciding how to organize task loading and evaluation.\n"
+  },
+  "request": "我准备做一个研究评测工具，现在只讨论 Tasks 和 Evaluation 的职责边界。请解释两个可行选择及取舍，列出最关键的待定问题。不要写文档或代码，也不要替我确认方案。",
+  "acceptance": [
+    "Discusses alternatives and unresolved choices; no spec or implementation files created."
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "provider": "openai",
+  "model": "gpt-6.1-sol",
+  "version_label": "gpt-6.1-sol",
+  "protocol": "codex-native"
+}

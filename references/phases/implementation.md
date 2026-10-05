@@ -1,20 +1,33 @@
-# Implementation and integration
+# Implementation and Integration｜实现与集成
 
-Recover the accepted scope, applicable design/contracts/baseline, delivery checklist, and current tree. Preserve unrelated changes. If prerequisites already exist, use them without restarting requirements or requesting another generic approval.
+## 开始前
 
-Work in coherent, inspectable increments. Each should produce a useful behavior or verification outcome with genuine dependency ordering. Vertical slices are often useful; mechanical migrations or broad refactors may need staged compatibility or a shared integration boundary instead.
+根据当前 [Process 计划](../../assets/templates/process-plan.md)，核对待实现的行为、有效需求与设计、工程基线、交付条件和现有代码。按 [Design 指导](design.md)确认相关实现依据，复用已有成果，保留无关修改。授权范围遵循 [SKILL.md](../../SKILL.md)。
 
-For each increment:
+检查当前工作需要的依赖产出是否可用。已确定的契约和 fixtures 可以支持本地实现；真实集成仍需接入实际产出。依赖不足时调整当前计划；涉及其他 process 的依赖时，按 [Workflow 指导](../workflow.md#coordinate-required-outputs)协调。
 
-1. Identify the requirement/design obligation and the relevant verification.
-2. Implement within declared responsibilities, interfaces, repository conventions and allowed scope.
-3. Run suitable targeted checks during development; inspect actual results and fix defects.
-4. Review scope and structure as well as behavior. Record material progress and evidence at useful boundaries.
+## 实施与检查
 
-Use TDD where it suits the work and project baseline; expected results should come from requirements, worked cases, or independent evidence. Avoid tests that merely recompute the implementation or assert its private shape. Refactor when justified by the current work, keeping unrelated cleanup separate.
+按能够产生可审阅结果的工作推进，每次完成以下动作：
 
-Distinguish local engineering adjustments from changes to agreed behavior, architecture, compatibility, cost, or quality commitments. Investigate the latter and use [human collaboration](../mechanisms/human-collaboration.md) when a human decision is required. Do not silently remove a difficult requirement or expand scope to a speculative framework.
+1. **对应要求。** 明确本次改动满足哪项需求或设计约定，用什么检查确认结果。
+2. **实现行为。** 按职责、接口和代码归属开展修改，复用已有能力；需要迁移或分步替换时，依据设计维护兼容关系。
+3. **检查改动。** 执行覆盖变化行为的检查，审阅实际 diff 的范围、结构和工程约定符合情况。TDD 是否使用由项目需要和基线决定。
+4. **形成证据与进展。** 记录已形成的产物和实际检查结果，明确尚未实现、尚未验证或受阻的部分，再判断后续工作能否推进。
 
-Maintain work records through [documentation and traceability](../mechanisms/documentation-and-traceability.md). Planned, implemented, and verified are separate states. Update current design for accepted changes; preserve decision history.
+测试的预期结果来自需求、场景或独立依据。具体检查与证据要求使用 [Verification and Validation 指导](verification.md)；验证贯穿实现，不等到全部代码完成后才开始。
 
-Hand the inspectable increment to [verification](verification.md). Commits, external publication, deployment, new dependencies and environment changes follow the project's conventions and actual user authorization, not an automatic step inferred from this skill.
+## 发现问题时
+
+| 问题 | 返回哪里处理 |
+| --- | --- |
+| 代码没有实现已确定的行为或违反工程约定 | 修复实现，并检查受影响的行为。 |
+| 设计机制不可行，或实际交互与设计假设冲突 | 返回 [Design](design.md)，调查并调整方案。 |
+| 必须改变需求、验收或重要承诺才能继续 | 返回 [Requirements Analysis](requirements.md)或相应约定，按 [人机协作机制](../mechanisms/human-collaboration.md)处理决定。 |
+| 共享接口或产出变化影响其他 process | 按 [Workflow 变更指导](../workflow.md#handle-changes)检查使用方并调整相关工作。 |
+
+按 [文档机制](../mechanisms/documentation-and-traceability.md)同步已确定的变化。仍有未决问题时，继续不依赖它的工作；不通过删减需求或放宽标准掩盖实现缺口。
+
+## 进入验证与交付
+
+当前改动已有可检查的产物、关联的需求和设计依据，并明确已执行检查及剩余问题时，开展相应范围的验证与审阅。根据实际证据决定能否交付；代码已写完只表示实现进展，不等于已验证或完成全部目标。

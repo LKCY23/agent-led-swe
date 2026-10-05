@@ -1,19 +1,19 @@
-# Interface contract: capability
+# Interface Contract｜接口文档
 
-Provider, consumers, scope, decision status, and related requirements/design. Reference authoritative schema/type definitions where available rather than copying them.
+注明能力提供方、使用方、适用范围和决定状态，关联需求与设计。按 [Design 指导](../../references/phases/design.md)定义共同依赖的语义；已有 schema 或类型定义维护精确结构时直接引用。
 
-## Meaning and operations
+## Meaning and operations｜能力与操作
 
-What capability is provided and what consumers must know to use it correctly?
+说明接口提供什么能力、操作的含义，以及使用方正确调用它需要了解什么。
 
-## Inputs and outputs
+## Inputs and outputs｜输入输出
 
-Meaning, constraints, ownership and lifetime of relevant data; examples where they resolve ambiguity.
+说明相关数据的含义、约束、所有权和生命周期。单位、默认值、缺失值或结果含义会影响正确使用时，明确这些语义；用例子消除实际歧义。
 
-## Behavioral guarantees
+## Behavioral guarantees｜行为约定
 
-Relevant preconditions, postconditions, invariants, errors and side effects. Include ordering, cancellation, concurrency, idempotency, resource limits or compatibility only where consumers need them.
+说明适用前提、调用后的保证、必须保持的约束，以及错误和副作用如何表现。顺序、取消、并发、幂等性、资源限制或兼容性在使用方需要依赖时明确，避免仅给出类型签名。
 
-## Verification and open matters
+## Verification and open matters｜验证与未决事项
 
-Observable cases that distinguish compliance from violation; unresolved semantics and affected consumers.
+给出能区分遵守或违反契约的可观察场景，供提供方与使用方共同检查。未确定的语义保持未决，注明影响的使用方和工作；变更已有约定时关联决定及兼容处理。

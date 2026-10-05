@@ -1,27 +1,46 @@
-# Engineering baseline
+# Engineering Baseline｜工程基线
 
-Establish the quality requirements and engineering conventions applicable to the current increment before substantial implementation. A baseline is an explicit working agreement that can evolve with evidence, not a demand to predict every internal detail.
+工程基线是项目当前采用、用于指导设计、实现和审阅的一组工程约定。已有规范、设计决定和工具配置可以作为依据，不要求另建一份重复文档。
 
-## Form it
+## Scope｜约定的范围
 
-1. Inspect project purpose, expected lifetime, consumers, deployment/maintenance context, and explicit human preferences.
-2. Read the existing repository guidance, architecture, build/test configuration, and representative code. Separate deliberate conventions from accidental defects or unfinished work.
-3. Identify choices material to this increment: architecture and responsibilities, repository organization, interfaces, dependencies, language style, testing, review, compatibility, and documentation as relevant.
-4. Consult the [practice catalog](../practices/catalog.md) only for the choices at hand. Explain applicability, cost, and necessary tailoring. A referenced standard is not automatically adopted in full.
-5. Record what applies, its scope, why it was selected, and how conformity is checked. Distinguish requirements from recommendations. Resolve consequential conflicts using [human collaboration](human-collaboration.md).
+基线说明开发需要遵守什么、适用于哪里、怎样检查。例如，“跨模块通过公开接口访问”是工程约定；具体模块提供哪些接口，由接口设计维护。需求定义预期行为与质量目标，设计定义具体方案，基线引用这些依据并记录相应工程规则。
 
-For an existing bounded change, sufficient conventions may already exist. Cite and use them rather than producing another baseline file. For a new substantial project, use the [baseline template](../../assets/templates/engineering-baseline.md) once the relevant choices are settled.
+只维护一份有效的共享约定。各 process 引用与当前工作相关的部分；局部例外注明适用范围。
 
-## Apply and check
+## Form the baseline｜确定适用约定
 
-Translate conventions into engineering choices rather than generic promises such as "clean code." Example: a declared dependency direction constrains imports and composition; a compatibility promise determines which interfaces may change and what checks are needed.
+开始项目设计或准备实现时，检查已有约定能否覆盖当前工作；新增工程选择或变化影响原约定时，补充或调整相关部分。
 
-Use suitable automated checks for measurable conventions and actual review for architecture, readability, complexity, and maintainability. A smell is a reason to investigate, not automatically a violation. Test count, file count, coverage percentage, or function length alone does not prove quality.
+1. **了解背景。** 确认项目用途、使用方、预期维护方式、质量要求与人类偏好，识别本次工作涉及的工程选择。
+2. **检查已有依据。** 阅读项目说明、已确认设计、格式与构建测试配置，以及相关代码。代码中的既有写法是调查线索；与明确约定冲突时，先核实原因，不能直接把它当成新规范。
+3. **补充缺口。** 对尚未确定的选择，查阅 [实践目录](../practices/catalog.md)，说明采用何种规则、适用范围和取舍。涉及未定的人类偏好或重要承诺时，使用 [人机协作机制](human-collaboration.md)；已有决定或授权直接沿用。
+4. **形成可检查的约定。** 记录要求或建议、适用范围与理由、检查方式及来源。用 [工程基线模板](../../assets/templates/engineering-baseline.md)或项目已有位置承载，需求和设计的完整定义保持在原权威文档中。
 
-Check three distinct questions: does behavior work, are requirements/design faithfully implemented, and does the code conform to the engineering baseline? Record evidence and limits for each. Do not invent arbitrary numerical thresholds absent an accepted requirement or justified measurement.
+**准备实现的部分已有适用约定、检查方式明确，影响实现方向的未决选择已解决或与该部分隔离，即可推进。** 尚未涉及的工程选择留待需要时确定；未决事项应指出影响哪些工作。
 
-## Evolve it
+## Apply and check｜执行与检查
 
-If a convention conflicts with new requirements or evidence, explain the conflict and consequences. Make consequential changes through the collaboration mechanism. Append the decision, update the current baseline, and identify affected design, code, and verification. Do not silently relax a rule because the current implementation fails it.
+设计与实现时，根据适用约定确定代码归属、依赖、接口和验证安排。审阅时把规则与实际改动对应起来：
 
-Preserve project-specific preferences and useful existing conventions. Avoid imposing a universal architecture, file layout, formatter, test strategy, or dependency just because it appears in the catalog.
+| 约定示例 | 实现与检查方式 |
+| --- | --- |
+| 跨模块通过公开接口访问 | 检查实际调用和依赖是否绕过接口；项目已有依赖检查工具时复用。 |
+| 变更保持已承诺的接口兼容性 | 确认受影响的使用方，以其调用路径或契约测试验证兼容行为。 |
+| 使用项目现有格式和静态检查配置 | 执行对应检查，核对实际结果及无法覆盖的部分。 |
+
+可自动检查的规则使用工具验证；职责、可读性与复杂性等问题通过具体代码和修改影响审阅。约定尚未给出依据时，不能临时用行数、覆盖率等阈值代替质量判断。
+
+记录适用规则、检查结果及未验证部分；完整的行为、需求和工程质量验证使用 [Verification and Validation 指导](../phases/verification.md)。
+
+## Handle deviations and changes｜处理偏差与调整
+
+发现冲突时，先确定是实现问题、局部需要还是共享约定需要改变，再处理：
+
+| 情况 | 行动与产出 |
+| --- | --- |
+| 实现违反仍然适用的约定 | 修复实现，重新检查受影响部分，记录结果。 |
+| 当前任务需要局部例外，共享约定仍适用 | 说明原因、范围、代价和检查方式，按人机协作机制确定例外后记录；其他部分继续遵守原约定。 |
+| 新需求或证据表明共享约定需要调整 | 提出新旧约定及取舍，识别受影响的设计、代码、使用方和验证；形成决定后更新权威约定与相关工作。 |
+
+重要决定按 [文档与追溯机制](documentation-and-traceability.md)保留依据；跨 process 的影响使用 [Workflow 指导](../workflow.md#handle-changes)。依据当前有效约定推进，不能因实现不符合要求而事后降低标准。

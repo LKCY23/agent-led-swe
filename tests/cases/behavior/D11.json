@@ -1,0 +1,13 @@
+{
+  "id": "D11",
+  "description": "Two separately useful goals with an accepted shared contract, fixtures, and partial producer implementation.",
+  "files": {
+    "docs/contracts.md": "# Accepted result contract\nA stored run record has task_id, attempt_id, outcome, artifact_refs. outcome is success or failure. Evidence is referenced, not copied. This contract was accepted by the human.\n",
+    "docs/progress.md": "# Current work\nGoal A: normalize run records for existing systems. Contract and fixtures agreed; producer implementation partial.\nGoal B: add independent reevaluation of stored records. It must not rerun agents. No implementation yet.\nBoth capabilities are independently useful, and together must allow producer output to be reevaluated.\n",
+    "fixtures/run.json": "{\"task_id\":\"t1\",\"attempt_id\":\"a1\",\"outcome\":\"success\",\"artifact_refs\":[]}\n"
+  },
+  "request": "我们要一起推进记录统一化和离线重新评测。已有材料都在文件里。请给一个简短的工作组织方案，说明当前能推进什么、什么需要等待、整体怎么验收。现在只讨论，不改文件，不重写已有契约。",
+  "acceptance": [
+    "Organizes related processes with output-specific dependencies, reuses existing agreements, advances ready design/local work, and requires real integrated evidence for overall delivery. No file changes."
+  ]
+}

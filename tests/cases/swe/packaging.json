@@ -1,0 +1,12 @@
+{
+  "name": "packaging",
+  "instance_id": "pypa__packaging.013f3b03.test_metadata.e00b5801.lv1",
+  "dataset": "LiberCoders/FeatureBench",
+  "split": "fast",
+  "row_index": 0,
+  "base_commit": "013f3b03a61fb795587d2b6e0c288656abca1d45",
+  "metadata_sha256": "a3df31441176ba1961e5bfb92782efd3805ea0d28efeb6d5489ae495e8c89a5b",
+  "source_sha256": "298981f8e5e7918d2c4fa319fb58d77217a1a0af835705ee11a1494c6a85cedd",
+  "patch_mode": "mask",
+  "python_image": "python:3.10-slim"
+}

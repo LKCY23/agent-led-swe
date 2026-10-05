@@ -1,36 +1,43 @@
-# Workflow and entry
+# Workflow｜多项需求的协调
 
-## Recover the current position
+多个 process 存在依赖或共同交付要求时，通过 workflow 协调；各 process 保留自己的目标、工作安排和证据。需求归组与拆分使用 [Process 指导](process.md#identify-the-work)。
 
-Identify the requested result and scope from the latest instruction together with prior decisions. Inspect existing requirements, engineering conventions, design, work records, and relevant code. Distinguish settled facts, suggestions, assumptions, and missing information. Report the next meaningful activity briefly; a document inventory is not a new approval ceremony.
+## Organize the overall work
 
-Existing material can satisfy a phase. Normalize only what the next activity genuinely needs; do not restart discovery or rewrite accepted designs because their names differ from the templates.
+开始协调时，明确整体目标、范围和交付要求，检查各 process 的目标、计划及已有成果，确定它们如何共同支持整体结果。
 
-## Six recurring activities
+形成或更新 [Workflow 计划](../assets/templates/workflow-plan.md)，关联各 process 的计划，列出共享约定和协调事项。共享要求引用权威文档，文档的维护方式遵循 [文档机制](mechanisms/documentation-and-traceability.md)。
 
-| Phase | Work | Sufficient basis to proceed |
-| --- | --- | --- |
-| Problem and goals | Understand users, scenarios, current behavior, purpose, scope, and unknowns. | The current problem and intended outcome are clear enough to define requirements. |
-| Requirements and success | Define behavior, constraints, quality goals, and acceptance conditions. | This increment has actionable requirements; material ambiguity is resolved or explicitly isolated. |
-| Solution design | Determine responsibilities, interactions, contracts, mechanisms, and trade-offs. | Consequential choices are settled and the intended increment has an implementation and verification approach. |
-| Implementation and integration | Build bounded increments, test, integrate, and track deviations. | The current increment is inspectable and its actual completion state is known. |
-| Verification and evaluation | Check behavior, requirement coverage, design conformity, and code quality. | Evidence supports a precise statement of what passed, failed, or remains unknown. |
-| Delivery and evolution | Reconcile deliverables, explain operation/maintenance, and incorporate feedback. | The recipient can use or continue the work and understand remaining issues. |
+## Coordinate required outputs
 
-These are activities, not a waterfall or six mandatory files. Verification starts with defining success and continues during implementation. Refine interfaces and internal design together. Work at a useful increment instead of specifying every future module up front.
+安排工作顺序时，将每项依赖说明为：**哪个 process 提供什么产出，供哪个 process 的哪项活动使用，以及怎样确认该产出可用。** 检查产出是否已提供、是否满足约定，不能仅凭上游计划将依赖视为已满足。
 
-## Tailor the work
+各 process 可以开展不同活动，按产出依赖协调，不要求同步进入同一阶段。例如，A 统一运行记录，B 实现离线重新评测：
 
-- Discussion or design-only: inspect, reason, and present decisions at the requested level. Persist a spec when requested; suggestions are not accepted requirements.
-- Small implementation: reuse repository conventions; identify the changed behavior, make the focused change, verify it, and report evidence. A short issue or work note can carry the whole record.
-- Substantial or cross-module implementation: establish relevant requirements, engineering baseline, design/contract boundaries, delivery criteria, and implementation steps. Reuse existing approvals and fulfill explicit implementation authorization.
-- Exploratory prototype: identify the uncertainty being investigated and the permitted experiment. Record findings as evidence, not a production design or completed feature.
-- Maintenance/resumption: compare the current tree and evidence with records. Revalidate only where changes or missing evidence warrant it.
+| B 的活动 | 需要的上游产出与可用依据 |
+| --- | --- |
+| 设计 | 已确定的记录语义与接口契约。 |
+| 本地实现与检查 | 契约及满足本地检查需要的代表性 fixtures。 |
+| 集成 | A 的真实输出，且符合双方约定的契约。 |
+| 整体验收 | 真实记录能够保存并被重新评测的验证证据。 |
 
-## Feedback loop
+契约和 fixtures 可以支持本地工作，但不能替代真实集成证据。推进条件满足的活动，等待尚缺产出的部分；无需默认等 A 的所有工作结束后才开始 B。
 
-Implementation defect → repair against the existing requirement. Technical uncertainty → investigate with suitable evidence. A design conflict → revisit design. A goal/preference conflict or consequential change → use [human collaboration](mechanisms/human-collaboration.md). Revise affected documents and checks after the decision; do not redefine success to fit an implementation.
+安排并行修改时，明确谁维护共享修改、谁负责集成以及采用什么顺序，避免多个 process 同时作出不兼容的修改。工作是否可推进的实际状态记录在计划的进展部分。
 
-A blocker applies to dependent work, not automatically the entire project. Keep unresolved matters visible. A verified increment does not establish completion of the whole work item.
+## Handle changes
 
-Project records live in the target project. The installed skill and its templates are reusable guidance, never a storage location for project decisions or progress.
+共享产出、依赖条件或整体要求发生变化时：
+
+1. **定位影响。** 明确改变的行为或语义，找出依赖它的 process、活动、设计、代码与证据。
+2. **确认处理依据。** 偏离现有约定的实现缺陷按约定修复；如果需要改变目标、优先级、共享承诺或重要取舍，按 [人机协作机制](mechanisms/human-collaboration.md)提出决定及跨 process 的影响。不能直接把实现偏差当作新约定。
+3. **调整工作。** 根据已确定的处理方式，更新共享文档及受影响的计划，明确哪些工作和证据可保留、哪些需要修改或重新验证。
+4. **恢复依赖工作。** 完成必要修复或变更，并按依赖条件检查产出后，再推进相关下游活动。
+
+约定范围内的顺序调整由 Agent 处理；等待决定或产出时，继续不受影响的工作。
+
+## Establish overall completion
+
+准备整体交付时，对照 workflow 的交付要求，检查各 process 的结果和所需的整体证据：共享契约是否兼容、相关集成是否成立、共同交付的行为是否满足要求。局部检查通过不能代替尚未执行或已经失败的整体检查。
+
+在 Workflow 计划中关联整体 [验证记录](../assets/templates/verification-record.md)和交付结论，明确未满足要求、未验证项及其影响。重要限制是否可以接受，按人机协作机制处理；具体交付检查使用 [Delivery and Maintenance 指导](phases/delivery-and-maintenance.md)。

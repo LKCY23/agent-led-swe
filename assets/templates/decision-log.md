@@ -1,12 +1,12 @@
 # Decision log
 
-Append consequential settled decisions using the project's ID convention. Use the following entry shape without rewriting prior entries. Copy the shape only when an actual decision exists.
+Append consequential settled decisions using the [decision-log protocol](../../references/mechanisms/documentation-and-traceability.md#decision-log-protocol) and the project's ID convention. Use the following entry shape without rewriting prior entries. Copy the shape only when an actual decision exists.
 
 ## Decision ID — short summary
 
 - **Time:** timestamp and timezone.
 - **Decision-maker:** human, or agent acting within delegated scope. Identify the confirmation or delegation source; optionally identify a different proposer.
-- **Decision and reason:** what was settled and why, with evidence or uncertainty as relevant.
+- **Decision and reason:** what was settled, under which conditions, and why, with evidence or remaining uncertainty as relevant.
 - **Affected scope:** requirements, design, contracts, baseline, or work items.
 - **References:** supporting material and related work.
 - **Supersedes / corrects:** earlier ID when applicable.

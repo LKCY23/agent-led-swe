@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-05",
+  "scope": "Seven existing runnable cases extracted without changing their requests or fixture contents",
+  "source_runner_sha256": "5582db90a99a52d9b8143e478f68871730eea745738abe6ddf89818ae229dcd8",
+  "input_hash_definition": "SHA-256 of UTF-8 JSON for request and files; sorted keys, ensure_ascii=False, separators comma/colon",
+  "input_hashes": {
+    "D13": "229cce9d09861777133fce56918b69c594bf123fe5e265c639d6c85b09452444",
+    "D10": "9da436a833b97cffb1b50d69f15444fab2280a793df892ddb8e6746462b50248",
+    "D11": "e6f1a662701c02048a34686076dabb2581eb042bbcb4c74f7eefaecc4743e0f0",
+    "D12": "05099e7b5cc80f5a9cd84d4172ed0f9af413716dcb5ee59c1d5b66e4883e753a",
+    "D1": "03fb2314dae03a36ddae0d19af97c06dc9b315afe9c9f231e1cd8faa9bc86206",
+    "D4": "96d83c4f440912272b601516d1af545b17f131ddcd93064f723c35b8742e2021",
+    "D7": "67224d51ed09238a852594c5ef64cfea2ab955a7506b58770d6939518b29ff00"
+  },
+  "behavioral_rerun": false
+}

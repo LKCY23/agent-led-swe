@@ -1,7 +1,7 @@
 interface:
   display_name: "Agent 主导的软件工程"
   short_description: "让 Agent 自主推进开发，由人类把关关键决定，并维护工程约定与交付证据"
-  default_prompt: "使用 $agent-led-swe 根据当前项目和已确认的需求推进工作，明确关键决策、工程约定与交付依据。"
+  default_prompt: "使用 $agent-led-swe 围绕需求目标组织开发 process，按需协调 workflow，并维护关键决策、工程约定与交付证据。"
 
 policy:
   allow_implicit_invocation: true

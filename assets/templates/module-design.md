@@ -1,19 +1,19 @@
-# Module design: responsibility
+# Module Design｜模块设计
 
-Scope, decision status, and links to overall design, requirements, baseline and shared contracts.
+注明模块范围与设计状态，关联需求、整体设计、工程基线和共享契约。按 [Design 指导](../../references/phases/design.md)说明当前变更如何实现，不重复未受影响的已有设计。
 
-## Responsibility and collaboration
+## Responsibility and collaboration｜职责与协作
 
-What the module owns, what it exposes, and what it needs from others. Reference shared contracts instead of redefining them.
+说明模块负责什么、对外提供什么、依赖什么，以及与其他部分的交互。共享接口通过引用说明，不在这里另写一份契约。
 
-## Important internal behavior
+## Important internal behavior｜关键内部行为
 
-State, rules, algorithms and failure handling needed to guide this increment. Explain persistence/recovery or concurrency only where relevant.
+说明实现当前行为所需的状态、规则或算法，以及正常和失败情况下的处理。让实现者能够据此展开代码；仅列类名或组件名不足以表达机制。持久化、恢复或并发在影响当前要求时细化。
 
-## Integration with the repository
+## Integration with the repository｜仓库中的实现安排
 
-Existing capabilities to reuse, intended ownership of new code, and any migration. Detail files/classes only to the extent the current design needs them.
+说明复用的已有能力、新代码归属的模块或目录职责，以及相关迁移或接入安排。文件与类只细化到当前工作需要的程度。
 
-## Verification and open matters
+## Verification and open matters｜验证与未决事项
 
-How to check the important behavior and engineering constraints; pending decisions.
+说明可用于检查关键行为、接口承诺和工程约定的场景。列出待解决的事实或决定、影响的工作及后续安排，并关联实施计划。

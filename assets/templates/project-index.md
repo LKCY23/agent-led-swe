@@ -1,17 +1,17 @@
-# Project documentation
+# 项目文档索引
 
-## Current position
+帮助读者找到当前目标、有效依据和待处理工作。按 [文档机制](../../references/mechanisms/documentation-and-traceability.md)维护；详细安排和进展引用相应计划。
 
-Current work scope and phase; actual progress; next meaningful action. Keep this an index, not a duplicate specification.
+## 目标概览
 
-## Effective agreements
+简要说明当前目标及关键状态，关联对应 Process 或 Workflow 计划。多个 process 可以开展不同活动，不为整个项目指定统一阶段。
 
-Links to requirements, engineering baseline, current design/contracts, and relevant decisions. State which material is still proposed when that affects the reader.
+## 文档入口
 
-## Active work
+按用途关联需求、工程基线、设计与接口、重要决定、工作计划、验证和交付记录。注明影响阅读的提案或未实现状态，避免将草稿作为有效约定的入口。
 
-Links to work items, delivery checklists, and relevant evidence; distinguish partial implementation from verified completion.
+## 待处理事项
 
-## Open matters
+简要列出需要决定或处理的问题、影响及相关记录链接，让读者知道下一步要关注什么。详细依赖、任务和行动安排保留在对应计划中。
 
-Unresolved decisions or blockers, their impact, and where supporting material lives. Include only items needed to resume work.
+目标、有效文档位置或关键阻塞变化时同步索引；不复制完整规格、任务清单或验证日志。
