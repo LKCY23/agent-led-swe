@@ -1,239 +1,71 @@
-# agent-led-swe 测试机制与改造方案
+# agent-led-swe 测试机制
 
-日期：2026-10-05  
-当前 worktree 状态：Codex／CC 原生 skill 安装和主动调用已修复并验证，见 [接入报告](reports/native-skill-invocation-2026-10-06.md)。此前对照使用文档读取模式，不能作为 native skill 效果验收；原始结果与候选保留，不合并。原生模式约定见 [协议](protocol.md#原生-skill-安装与调用)。packaging 另有环境暴露问题，迁移验证仍暂停。
+更新：2026-10-06。测试负责执行、保存完整历史和调用 verifier；后续过程分析独立进行，不决定任务是否通过。当前实现约定见 [协议](protocol.md)。
 
-基准版本历史状态（本轮前）：已实现统一任务适配、配对执行、独立功能验收和定性评审，约定见 [统一协议](protocol.md)。[pytest 首轮真实对照](reports/pytest-pilot-2026-10-05.md)已完成：两组功能通过，skill 组漏读贡献规范，工程要求未通过。SDK 暂缓，DSPy 的本机回归尚不稳定，见 [预检报告](reports/swe-preflight-2026-10-05.md)。
+## 职责与结果
+
+| 部分 | 职责 |
+| --- | --- |
+| Executor | 按冻结配置运行 Agent，保留原始事件、用量、原生 skill 调用、文件前后快照和变化清单。 |
+| Verifier | 根据任务的可信测试检查提交产物，给出功能结果和原始证据。 |
+| 历史分析 | 人类与 Agent 按需检查机制、推进、文档和交付，形成观察、归因与优化建议；不自动调用 LLM judge、不修改分数。 |
+
+结果分别记录：
+- `run_status`：是否启动、完成、超时或执行出错。
+- `comparison_validity`：配置、原生调用等是否支持本次对照；无效不等于代码失败。
+- `task_status`：只由 verifier 给出 pass／fail／unknown。未配置 verifier、缺少完整提交或验证受阻时不能虚构通过／失败。
+
+本仓库使用 benchmark 原始测试与本地 Docker 验证适配；不是原 benchmark 官方镜像的榜单成绩。原始计数、xfail、skip、错误与日志均保留。
 
 ## 本地测试环境
 
-使用 uv 管理 Python 测试环境。仓库的 `.python-version` 选择 Python 3.11，`pyproject.toml` 声明依赖，`uv.lock` 固定解析结果；`.venv/` 不纳入 Git。该配置只供本仓库检查使用，不将 skill 构建为 Python 包。
-
-在仓库根目录执行：
+使用 uv、Python 3.11 和锁定依赖，不修改全局 Python：
 
 ```sh
 uv sync --locked
+uv run --locked python -m unittest discover -s tests -p 'test_*.py'
 uv run --locked python tests/check_package.py
 uv run --locked python tests/check_hosts.py
 ```
 
-包检查会验证本地 Markdown 文件的章节锚点，包括同文件跳转、中文标题和重复标题的编号，排除代码块中的示例。检查器自身的回归用例可用 `uv run --locked python -m unittest discover -s tests -p test_check_package.py` 运行，不调用模型。
+自动化工具使用已初始化的终端，如 `zsh -lic 'uv run --locked python tests/check_hosts.py'`。真实 SWE executor 在容器内按 `configs/agents.json` 安装固定版本，不依赖本机 CC Switch；本地行为用例使用本机 Codex。
 
-当前用例的定义、可运行性和历史验证版本统一见 [场景与状态](scenarios.md)。所有本地检查可用 `uv run --locked python -m unittest discover -s tests -p 'test_*.py'` 运行，包含用例迁移与执行器证据检查，不调用模型。
+## 配对执行与独立评价入口
 
-宿主检查、本地行为测试和只读 judge 使用已初始化终端中的 CLI，uv 不安装它们。真实 SWE executor 在容器内独立安装配置指定的 Agent 版本，不依赖本机安装同版本，也不读取本机 CC Switch 配置。通过自动化工具检查本机宿主时，使用相同的终端初始化方式：
-
-```sh
-zsh -lic 'uv run --locked python tests/check_hosts.py'
-```
-
-现有行为冒烟测试同样使用 uv；它会调用模型，按本轮确定的用例和预算运行：
+开始前固定任务、版本、模型、预算和比较组。下面的执行命令调用模型，验证命令不调用模型：
 
 ```sh
-uv run --locked python tests/run_smoke.py D1
+uv run --locked python tests/run_evaluation.py pytest   --swe-inputs '<冻结任务输入目录>'   --agent claude-code --model-profile tests/configs/models/deepseek-v4.1-flash.json   --credentials '<本地凭据文件>' --skill-path '<被测 skill 路径>'   --output-root '<独立运行目录>' --effort high --timeout 300
+uv run --locked python tests/evaluate_results.py '<上一步运行目录>'
 ```
 
-该执行器依赖已安装的 skill-evaluator `capture.py`，默认从 `~/.codex/skills/skill-evaluator/scripts/capture.py` 读取，也可用 `--capture` 指定。采集子进程沿用 uv 环境中的 Python。现有执行器仍是显式加载 skill 的冒烟测试，不具备后文规划的完整对照能力。
+Codex 使用 `--agent codex --model-profile tests/configs/models/codex-gpt-6.1-sol.json`。支持 baseline／skill 两组；加 `--reference-skill-path` 则比较 baseline／current／candidate。每组每轮新建工作区与会话，默认每组一次、不自动重跑；`--repetitions` 和 `--reverse-order` 控制已记录的重复与顺序。
 
-`run_smoke.py` 从 `cases/behavior/` 读取独立用例。任务请求与 fixture 内容是执行输入，验收判据保留在评测端；每次运行在证据目录保存用例快照与哈希。仅列于场景表、尚未定义输入的任务不能由执行器运行。
+Codex 将 skill 安装到隔离 HOME 的 `.agents/skills/agent-led-swe/`，提示词以 `$agent-led-swe` 开头；CC 安装到 `.claude/skills/agent-led-swe/`，以 `/agent-led-swe` 开头。baseline 不安装目标。发现与原生调用均核查，不以普通 Read 或模型自述代替。[原生接入验证](reports/native-skill-invocation-2026-10-06.md)。
 
-### DeepSeek 接入预检
+DeepSeek 凭据填在被 Git 忽略的 `tests/configs/credentials.local.json`，可从 `credentials.example.json` 创建；环境变量优先，`--credentials` 可指定其他文件。连通检查使用 `check_model_connection.py`，不改变本机日常配置。
 
-已实现独立的 Agent／模型配置和 Claude Code Docker adapter。DeepSeek 官方接口、容器内 CC 的连通检查已通过，并完成 pytest 首轮真实配对。接入验证见 [接入报告](reports/agent-adapters-2026-10-05.md)，任务结果见 [试跑报告](reports/pytest-pilot-2026-10-05.md)。
+## 任务与环境
 
-模型配置位于 `configs/models/deepseek-v4.1-flash.json`，使用官方 Anthropic Messages 地址。将密钥填入本机 `tests/configs/credentials.local.json` 的 `DEEPSEEK_API_KEY` 字符串；文件被 Git 忽略，不复制进镜像或评测材料。其他机器可从 `configs/credentials.example.json` 复制创建。环境变量同名值优先，`--credentials` 可指定其他凭据文件。`deepseek-flash` 当前对应 V4.1 Flash，但属于服务方可更新的名称，不能保证以后仍固定到同一权重版本。依据：[官方模型说明](https://api-docs.deepseek.com/quick_start/pricing/)、[Anthropic 兼容接口](https://api-docs.deepseek.com/guides/anthropic_api/)。
+- pytest 与 packaging 使用冻结数据、任务工作区和独立可信测试。SDK 暂缓，DSPy 尚未通过稳定性预检；见 [任务目录](cases/swe/README.md)。
+- packaging 的 verifier 镜像保留完整测试依赖，Agent 使用单独精简的 execution image。已知安装／vendored／缓存副本清除后，需要重复起始／参考检查；实际 worker 安装项目后和执行结束时还会审计。
+- 行为场景见 [场景与状态](scenarios.md)。它们可以执行和分析，但没有程序 verifier 的场景，task_status 保持 unknown。
+- 不挂载私有参考补丁、验收材料或宿主 Docker socket。网络仍用于连接模型；本地来源审计不等同于全面网络隔离。
 
-填写凭据后，在仓库根目录执行：
+## 保存与后续分析
 
-```sh
-# 只检查配置及凭据是否存在，不请求模型
-uv run --locked python tests/check_model_connection.py --check-only
-# 实际连通检查：最多两次请求，每次最多 128 output tokens、60 秒，不重试
-uv run --locked python tests/check_model_connection.py
-```
+每个新运行目录保留：
+- plan、case、来源版本与输入／skill 哈希、模型和预算；
+- prompt、原始 stdout／stderr、工具轨迹、实际原生安装与调用、环境审计；
+- 全部文件前后快照、变化清单、用量及失败／超时记录；
+- verifier 的测试副本、安装与运行日志、XML、原始计数、结果与汇总。
 
-检查只发送固定的测试消息，验证返回模型标识、一次工具调用及工具结果回传；记录响应、usage 和耗时，密钥不写入文件。它关闭 thinking，不测试 streaming、CC 执行或 skill 效果；这些留在之后的 Agent 适配验证中。实际调用会产生服务费用，cost 未知时保留 null。
+重新验证使用新目录，不覆盖原记录。分析按 [测试历史分析](analysis.md)进行，单独保存观察、证据、归因假设、反证和建议。小任务不要求完整文档套件；涉及人类决策或长期维护时，用实际协作记录分析，不虚构 simulated user。
 
-`configs/agents.json` 固定容器内 Codex 0.160.0、Claude Code 2.1.278；模型 profile 单独保存 provider、协议、模型及凭据引用。首次支持 Codex + 原生 OpenAI 配置，以及 CC + DeepSeek Flash；不兼容组合在执行前拒绝。CC 使用原生 CLI 发送请求，模型连通脚本不参与 Agent rollout。独立 judge 暂时仍使用 Codex。
+旧 [rubric](rubrics.md)、judge 判分和文档读取模式结果保留为历史材料，不进入新成绩，也不与 native 模式混合比较。不能凭单个任务、单轮通过或耗时下降认定 skill 有效。
 
-### 配对执行与独立评价入口
+## 隔离优化与检查
 
-新入口复用相同 case。先执行，再评价；二者分别设置模型和单次超时，默认一对、不自动重试。以下命令会调用模型，需先替换模型名并按本轮预算设置参数：
+按仓库 AGENTS.md：基准提交 → 独立 worktree → 工具与 skill 分开修改 → 冻结版本 → 有限测试 → 审阅后决定是否合并。当前版本不被候选覆盖；已用于调优的任务不再称为未见验证集。
 
-```sh
-uv run --locked python tests/run_evaluation.py D1 \
-  --model '<executor-model>' --effort high --timeout 300
-uv run --locked python tests/evaluate_results.py '<上一步输出的运行目录>' \
-  --model '<judge-model>' --effort high --timeout 180
-```
-
-默认最多 2 次 executor 调用，评价阶段最多 2 次 judge 调用。`--repetitions N` 将配对执行次数设为 N；两组共享模型、设置、任务、起始文件、权限与超时，偶数轮交换执行顺序。只强制执行时间上限，不声称限制 tokens 或费用。Codex 支持已有行为 case 及 pytest／packaging；CC 首先支持这两个 Docker SWE 任务。运行方法见 [统一协议](protocol.md#4-代码职责与入口)。
-
-两个入口均依赖已安装的 skill-evaluator，可用 `--evaluator` 指定其根目录。采集和轨迹解析脚本会复制并记录哈希；目标 skill、case、rubric 和适配器代码也记录版本依据。旧 `run_smoke.py` 保留用于单组历史回归。
-
-| 入口 | 做什么 | 留下什么 |
-| --- | --- | --- |
-| `run_evaluation.py` | 适配并冻结任务和运行矩阵；在本地或 Docker 独立环境中组织两组执行。 | `plan.json`、准备好的任务／skill／rubric；每次执行的 prompt、日志、完整文件快照、变化清单与 `result.json`。 |
-| `evaluate_results.py` | 校验产物，运行可信功能检查，再创建只读 judge 做定性评价；可用 `--functional-only` 单独验收功能。 | 分开的 functional checks 与判断依据、评审输入、judgment、校验后的结果及比较。 |
-
-每条 acceptance 对应必需项 `A1`、`A2` 等；rubric 用于解释，不自动增加验收要求。共同工程／交付要求写入双方 request，评分材料留在评测端。功能检查在独立副本运行，恢复可信测试后验收；judge 只读产物、轨迹及功能证据，不运行或修复代码。功能失败不能被定性通过抵消，未做定性评审时不宣称任务整体通过。当前不保证盲评，轨迹和产物可能暴露组别。
-
-运行成功与任务通过分开：缺失运行保留为 `not_started`；超时、无完成事件、无效或缺项的评分不会成为通过。已有失败判据仍保留，即使执行未完成。评价前核对已采集文件和日志的哈希；重评创建新目录，不覆盖旧记录。所有原始材料保留在忽略的 `tests/runs/` 中。
-
-**当前隔离边界：** Codex 使用临时 HOME 或独立容器，执行前核查目录，执行后核对原生 skill 注入；CC 使用全新容器和 HOME、受限设置来源与工具，从 init 和命令回放核查原生调用。两组保留一致的 CC 内置命令，额外用户 skill 仅目标组安装。覆盖项不修改全局配置，项目规范仍是双方共同输入。行为任务沿用本地 `workspace-write`，judge 使用 `read-only`；真实任务边界是 Docker，不挂载评分材料或 Docker socket。详见 [统一协议](protocol.md#2-执行与产物约定)。
-
-`test_evaluation.py` 使用本地假 CLI 和真实采集／解析工具检查链路，不调用模型。它能证明测试工具的行为，不能证明 Codex 实际遵循指导或 skill 带来收益。
-
-## 1. 目标与范围
-
-检验 Agent 使用 agent-led-swe 后，能否更可靠地实现需求、遵守工程约定、组织项目工作、支持人类把关，并方便后续维护；同时比较增加的时间、tokens 和人工负担。
-
-真实开发任务覆盖从需求理解、工作安排、必要设计与文档，到实现、验证和交付的完整工作。活动按任务需要组织并随反馈迭代。目标、约束和授权明确，不代表已经提供了完整计划或设计；识别并完成这些工作本身就是评测内容。
-
-成功需要同时考虑软件成果与开发过程的有效性：功能是否满足需求，必要的项目记录是否准确、有用，是否支持审阅和接续。代码测试通过不能独自证明 skill 有效；文档数量、提问次数或走过多少阶段也不作为成功标准。
-
-采用 `skill-evaluator` 的评测规范、记录格式和通用采集工具。本仓库负责 SWE 任务适配、项目专属验收和工程质量评价。通用规范来源：`/Users/liyao/claudespace/skills/skill-evaluator/SKILL.md`。
-
-## 2. 测试与评估组成
-
-| 类型 | 检查内容 | 能支持的结论 |
-| --- | --- | --- |
-| 基础检查 | 文件、引用、模板可达性、元数据和宿主加载 | 当前版本是否具备正常使用条件。 |
-| 受控行为测试 | 需求组织、设计准备、决策处理、反馈、记录与完成判断 | 某项规则是否有效，以及修改是否引入退化。 |
-| 真实开发任务对照 | 在真实仓库中完成需求，检查代码、文档、项目记录和验证证据 | 相比不使用 skill，开发结果、可审阅性与成本如何变化。 |
-| 实际使用评估 | 人类介入时机、决策材料、工程偏好、持续修改与维护体验 | 发现实际协作中的帮助、负担和改进方向。 |
-
-受控行为测试可预设初始状态与明确变化，例如已有部分实现或新增兼容要求；不预设完整的人机对话。
-
-需要检查自动触发时，单独使用自然请求测试是否应当加载 skill。显式加载只能检验使用后的行为，不能证明自动触发正确。
-
-## 3. 受控评测流程
-
-### 3.1 明确验证目标与验收依据
-
-每轮根据修改范围选择测试。引用或元数据调整以基础检查为主；行为规则调整增加相关回归；Process、Workflow 或文档机制的重要变化，需要真实任务检查它们是否能共同发挥作用。
-
-运行前明确任务目标、允许范围、工程约定、预期成果和验收方法。验收依据来自需求及项目事实，不从 skill 的具体措辞或参考补丁的实现形式反推唯一答案。
-
-对需要设计和项目记录的任务，两组都获得相同的成果要求，但不要求 baseline 使用本 skill 的模板或术语。小修复可以采用简短记录；模块设计、接口文档、计划和决策记录应由实际工作需要触发。
-
-### 3.2 固定版本、条件与预算
-
-| 实验条件 | 用途 |
-| --- | --- |
-| Baseline：Agent 不使用目标 skill | 建立原有开发效果的参照。 |
-| Skill：同一 Agent 使用目标 skill | 检查 skill 带来的变化。 |
-| 固定旧版与新版 skill | 检查一次更新的收益与退化。 |
-
-配对运行保持任务、起始仓库、模型、工具、权限、工程约定、人类偏好和资源预算一致。使用独立会话与环境，检查 baseline 是否仍会通过全局安装、插件或历史上下文接触目标 skill。无法确认隔离时，不据此声称测出了 skill 的增益。
-
-记录被测 skill、任务、评价规则和环境的版本或内容哈希。提前确定 case、实验条件、重复次数及运行上限；预算按任务规模设置，不沿用当前所有用例统一 180 秒的限制。未测得的成本标为未知，未被工具强制执行的上限不宣称是硬限制。
-
-### 3.3 检查环境并执行
-
-真实任务运行前，确认起始代码与描述对应、环境可用、验收能够识别目标行为。必要时检查原始状态与参考修复的结果，并审阅测试是否遗漏要求或过度限定实现。参考补丁、未来修复提交及专用于评分的材料不提供给执行者。
-
-先完成一次小规模运行，确认执行与采集正常，再开展预算内的其余运行。保存实际命令及结果、文件变化、产物、验证输出、时间和用量；原始证据放在执行者可写工作区之外。
-
-除最终产物外，保留计划、设计和记录的形成与更新顺序，以便判断它们是否实际参与了开发。实现后补写的设计可以作为成果说明，但不能证明实现前已完成设计把关。
-
-环境错误、超时、任务未满足和证据不足分别记录，保留所有尝试，不只保留成功运行。
-
-### 3.4 检查结果与开展评审
-
-可执行要求通过可信的测试和文件检查验证，结合项目回归检查与实际使用路径。执行者声称完成或进程退出成功，不代替任务验收。
-
-工程质量、文档有用性和决策材料采用明确 rubric，由独立评审者结合任务约定与产物判断。尽量隐藏实验组别，并由人类校准重要或有争议的判断。记录每项结论的证据和限制；评审者不在评分过程中修复产物。
-
-评测同时检查“是否遵守已确定的要求”和“这些成果是否解决原问题”。发现任务描述或验收有缺陷时，记录为评测问题，不强迫实现迁就错误标准。
-
-### 3.5 比较、定位与回归
-
-分别报告各项要求的满足情况、工程与协作质量、时间和成本，不急于合并为单一分数。功能失败不能被文档整齐抵消；人类接受限制不代表未运行的检查通过。
-
-对改善与退化区分来源：skill 规则、Agent 执行、任务与验收、环境或模型能力。证据不足时保留不确定结论。
-
-依据发现修改后，重跑受影响的用例并保留原失败记录。参与调试的任务用于开发和回归，另留未参与修改的任务检查推广效果。重复运行用于观察结果是否一致，少量样本不直接支持稳定收益或统计优势的结论。
-
-## 4. 评价内容与证据
-
-具体判据、适用条件和判定示例见 [评价标准](rubrics.md)。每个 case 从中选取所需条目并明确验收依据，同一对照中的各组使用一致标准。
-
-| 方面 | 关键问题 | 主要证据 |
-| --- | --- | --- |
-| 需求与功能 | 是否实现目标、遗漏行为或引入回归？ | 需求与实现对应关系、官方验收、项目测试及实际运行。 |
-| 工程质量 | 是否符合项目约定，职责与接口是否清楚，修改是否便于维护？ | 代码与设计 diff、仓库规范、依赖与接口检查、独立审阅。 |
-| 项目管理与文档 | 是否识别必要工作，记录能否指导推进并反映实际状态？ | 需求、计划、模块与接口文档、进展及决策记录的内容和更新轨迹。 |
-| 人机衔接 | 是否识别需要人类判断的问题，材料是否足以支持决定？ | 问题、证据、建议和影响的具体内容；真实使用中的人类反馈。 |
-| 效率与负担 | 收益是否伴随不合理的时间、用量或人工成本？ | 运行用量与耗时、必要人工投入、重复确认和无用产物。 |
-
-### 文档和项目管理的具体检查
-
-- **需求与计划：** 是否识别未决问题、必要活动和依赖；是否遗漏目标中的细节；下一步是否有推进依据。
-- **设计与接口：** 在需要设计时，文档是否明确职责、交互和关键语义；能否指导实现并支持审阅。
-- **进展与变化：** 计划、代码、决策和验证状态是否一致；变化后是否更新受影响的记录。
-- **表达质量：** 内容是否准确、有信息增量，是否重复通用规则或混淆事实、计划与结论。以阅读用途判断，不以字数或文件数量判断。
-- **交付与接续：** 是否能从记录中理解完成了什么、依据是什么、还有哪些问题，以及后续如何继续。
-
-这些检查既关注最终文件，也关注它们何时形成、怎样参与实际工作。真实 benchmark 的功能验收与我们增加的工程、记录和协作评价分别报告；附加了项目管理交付要求的任务应注明改编条件，不混同为原榜单设置。
-
-## 5. 人类参与与实际使用评估
-
-当前不建设独立交互 benchmark 或通用 simulated user。受控开发任务优先明确目标、约束和授权，让 Agent 自主调查、规划、设计、编写必要文档、实现与验证。
-
-这不取消人机衔接的评价：评测者可以检查 Agent 提出的待决问题与支撑材料；人类可在少量真实任务中审阅设计与关键选择，评价这些材料是否降低了把关成本。
-
-完整协作质量以实际使用观察为主。出现必要的人类决定时，按真实需求参与并记录其影响，不为了完成测试而虚构回复。干预条件无法匹配的运行，不直接作为严格配对实验的增益证据。
-
-在代表性工作结束或问题发生时，整理简短使用记录：目标与约定、Agent 的实际行为、帮助或负担、相关证据，以及建议调整的规则。无需逐次复制完整对话。
-
-能明确初始状态和验收依据的问题，再提取为回归用例；依赖人类偏好的问题继续通过使用审阅。实际使用记录用于发现问题和改进，不直接汇入 benchmark 成功率。
-
-## 6. 测试代码与材料的组织
-
-下列为改造后的职责划分；脚本是否进一步拆分在实现时确定。
-
-```text
-tests/
-├── README.md                 # 本方案及后续运行入口
-├── protocol.md               # 任务、结果、评价与可见范围的统一约定
-├── rubrics.md                # 工程、文档和协作评价依据
-├── task_adapters.py          # 将来源差异转换成统一任务
-├── functional_checks.py      # 预检与正式评价共用的可信检查
-├── check_package.py          # 包结构与引用检查
-├── check_hosts.py            # 宿主加载检查
-├── run_evaluation.py         # 准备环境、执行实验条件、采集证据
-├── evaluate_results.py       # 调用验收、组织评审、汇总比较
-├── cases/
-│   ├── behavior/             # 受控行为用例
-│   └── swe/                  # 真实任务定义及适配
-├── reports/                  # 被测版本、结果与比较结论
-├── usage/                    # 实际使用评估记录
-└── runs/                     # 原始日志、快照与产物，默认不进 Git
-```
-
-Case 与执行逻辑分离。任务输入、验收依据和执行适配分别维护，评分材料只交给评测端。真实仓库在独立环境中准备，基础包检查不扫描这些仓库或运行产物。
-
-复用 skill-evaluator 的采集、轨迹解析和结果汇总工具，记录所用版本；本仓库补充任务适配和 SWE 检查，不重复开发通用评测系统。
-
-## 7. 改造推进顺序
-
-| 步骤 | 工作 | 产出与推进依据 |
-| --- | --- | --- |
-| 1. 确定协议与评价标准 | 细化本方案中的验收与 rubric，明确开发任务的文档和项目管理要求。 | 测试说明与评价依据可审阅，能够区分可加载、行为正确和带来收益。 |
-| 2. 整理现有测试 | 将内嵌 case 从执行脚本分离，保留历史证据，整理基础检查和行为回归。 | 原有可用用例能继续运行，结果与被测版本对应。 |
-| 3. 建立对照与评价流程 | 支持实验条件切换、独立环境、证据采集、独立评价和结果比较。 | 可以完成一次条件可核对的配对运行；试跑只验证流程，不宣称开发收益。 |
-| 4. 选择并接入真实任务 | 根据覆盖需要审阅候选 case，验证环境与验收，划分开发和保留任务。 | 首批任务可从起始代码运行到产物验收，选取理由和附加条件明确。 |
-| 5. 运行并持续改进 | 开展对照与必要重复，整理真实使用反馈，将可复现问题加入回归。 | 能说明改善、退化、成本和未验证范围，并据此调整 skill。 |
-
-人类重点把关工程质量、文档有用性与协作体验的评价标准，并校准代表性结果。Agent 负责测试适配、执行、采集、检查和问题分析；技术细节在已确定范围内自主推进。
-
-## 8. 当前基础与尚待完成的工作
-
-现有 [包检查](check_package.py)、[宿主检查](check_hosts.py)、[冒烟执行器](run_smoke.py)和 [行为场景](scenarios.md)作为迁移基础。历史执行范围与限制保留在 [验证记录](validation.md)。
-
-较早的运行是显式加载 skill 的小型场景，缺少有效 baseline 和独立定性评审；新 D1 试跑补齐了本次对照链路。当前仍无正式 SWE benchmark 接入，不能证明完整开发效果得到改善。
-
-[评价标准](rubrics.md)已与当前 skill 对齐，仍需用样本校准定性判断。七个已有可运行用例已迁至 `cases/behavior/`，原始请求和 fixture 保持不变；其他场景、历史执行版本及限制见 [统一状态表](scenarios.md)。
-
-统一协议和接入代码已实现，pytest／packaging 的任务适配与独立验收通过受控检查；容器内真实 Agent 的首次模型对照仍待开展。SDK 暂缓、DSPy 未通过稳定性预检，详见 [任务目录](cases/swe/README.md)。代码衔接与合成验证不等于 skill 效果已被证明，也不代表所有候选均已可用。
+`check_swe_pipeline.py` 使用未修复／参考产物检查验收链路，不调用模型。`check_codex_worker.py`、`check_claude_worker.py` 以模拟 API 检查真实 CLI 原生接入，不能证明模型或 skill 效果。原始记录索引见 [验证记录](validation.md)。

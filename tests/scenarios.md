@@ -47,7 +47,7 @@ uv run --locked python tests/run_smoke.py D1
 
 实际运行会调用模型。旧 `run_smoke.py` 每次只跑一个用例，固定为 180 秒超时，只支持显式加载目标 skill。新配对执行器和独立评价入口见 [运行说明](README.md#配对执行与独立评价入口)，可设置重复次数与超时。可执行不代表默认应全部运行；开始前确定本轮用例和预算。新执行记录包含用例定义快照、输入哈希、skill 文件哈希、命令轨迹及前后文件快照。
 
-新执行／评价链路已完成一次 D1 真实配对与独立评审，本次 baseline 隔离经核查；不能由此推断其他场景或完整开发收益。自然触发与真实 SWE 任务尚未接入。[评价标准](rubrics.md)已与当前 skill 对齐，定性判断仍需人类样本校准。检查器和执行器的本地回归测试不调用模型：
+早期 D1 记录是文档读取模式与旧 judge 机制，不能代表当前原生 skill 效果。当前流程见 [测试说明](README.md)：verifier 独立给出任务结果，过程与协作按 [分析指导](analysis.md)审阅。现有行为用例尚未配置程序 verifier，保留执行轨迹并将任务结果记为 unknown，不使用 LLM 代替。检查器和执行器的本地回归测试不调用模型：
 
 ```sh
 uv run --locked python -m unittest discover -s tests -p 'test_*.py'

@@ -63,6 +63,17 @@ def prepare_task(case, output):
     receipt = next(r for r in report['cases'] if r['name'] == name)
     if receipt['summary']['test_contract'] != 'pass' or receipt['spec'] != spec:
         raise ValueError('A matching passed preflight is required')
+    environment = {'kind': 'docker', 'image': receipt['image_id'], 'network': 'none'}
+    if name == 'packaging':
+        qualification = ROOT / 'tests/reports/packaging-execution-environment-2026-10-06.json'
+        if not qualification.is_file():
+            raise ValueError('Packaging is paused until the clean executor environment qualifies')
+        qualified = json.loads(qualification.read_text())
+        if (qualified.get('qualified') is not True or qualified.get('spec') != spec
+                or qualified.get('base_verifier_image') != receipt['image_id']):
+            raise ValueError('Packaging execution environment qualification is missing or stale')
+        environment.update(execution_image=qualified['executor_image'], audit_packaging_sources=True,
+                           execution_qualification_sha256=digest(qualification))
     inputs = Path(case['swe_inputs'])
     row = inputs / (spec['instance_id'] + '.json')
     archive = inputs / spec['instance_id'] / 'source.tar.gz'
@@ -84,7 +95,7 @@ def prepare_task(case, output):
         shutil.copytree(control / test_root, overlay / test_root)
     return {'id': name, 'request': metadata['problem_statement'] + PROJECT_REQUIREMENTS,
             'acceptance': PROJECT_CHECKS, 'workspace': 'task/workspace',
-            'environment': {'kind': 'docker', 'image': receipt['image_id'], 'network': 'none'},
+            'environment': environment,
             'validation': {'kind': 'pytest', 'overlay': 'task/validation', 'test_roots': [test_root],
                            'groups': {g: test_items(metadata[g]) for g in ('FAIL_TO_PASS', 'PASS_TO_PASS')},
                            'expected_outcomes': {r['group']: r['outcome_sha256'] for r in receipt['runs']

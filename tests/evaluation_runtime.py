@@ -25,7 +25,7 @@ def adapter_hashes():
     root = Path(__file__).parent
     names = [
         'evaluation_runtime.py', 'run_evaluation.py', 'evaluate_results.py', 'run_smoke.py',
-        'task_adapters.py', 'functional_checks.py', 'model_config.py', 'native_skills.py']
+        'task_adapters.py', 'functional_checks.py', 'model_config.py', 'native_skills.py', 'packaging_environment.py']
     names += [str(p.relative_to(root)) for p in sorted((root / 'agent_adapters').glob('*.py'))]
     return {name: digest(root / name) for name in names}
 
@@ -82,7 +82,7 @@ def build_worker_image(environment, version, output, agent='codex'):
         raise ValueError('A pinned agent npm version is required')
     output = output.resolve()
     output.mkdir()
-    base = environment['image']
+    base = environment.get('execution_image', environment['image'])
     if not re.fullmatch(r'sha256:[0-9a-f]{64}', base):
         raise ValueError('Worker base image must be identified by immutable Docker image ID')
     base_tag = 'agent-led-swe-base:' + base[7:]
@@ -91,7 +91,8 @@ def build_worker_image(environment, version, output, agent='codex'):
         f'RUN npm install -g {adapter.npm_package}@{version}\n'
         f'FROM {base_tag}\n'
         'COPY --from=cli /usr/local/bin/node /usr/local/bin/node\n'
-        'COPY --from=cli /usr/local/lib/node_modules /usr/local/lib/node_modules\n'
+        f'COPY --from=cli /usr/local/lib/node_modules/{adapter.npm_package.split("/")[0]} '
+        f'/usr/local/lib/node_modules/{adapter.npm_package.split("/")[0]}\n'
         f'RUN ln -s /usr/local/lib/node_modules/{adapter.cli_entrypoint} /usr/local/bin/{adapter.executable}\n'
         'RUN apt-get update && apt-get install -y --no-install-recommends git '
         '&& rm -rf /var/lib/apt/lists/*\n')
@@ -181,6 +182,12 @@ def execution_environment(task, workspace, evidence, cli, skill=None, authentica
             '--python', '/opt/testenv/bin/python', '--no-deps', '--no-build-isolation', '-e', '/testbed'], 90)
         if record['exit_code'] != 0 or record['timed_out']:
             raise RuntimeError('Worker project installation failed')
+        if task['environment'].get('audit_packaging_sources'):
+            from packaging_environment import audit_container, clean
+            audit = audit_container(name)
+            write_json(evidence / 'environment-source-audit-before.json', audit)
+            if not clean(audit) or not audit['task_import'].startswith('/testbed/'):
+                raise RuntimeError('Packaging executor still exposes an alternative implementation or imports the wrong task')
         actual = subprocess.check_output(['docker', 'exec', name, adapter.executable, '--version'],
                                          text=True, timeout=20).strip()
         actual_version = re.search(r'\d+\.\d+\.\d+', actual)
@@ -207,6 +214,9 @@ def execution_environment(task, workspace, evidence, cli, skill=None, authentica
         # Docker enforces isolation. No elevated caps or host daemon socket are granted.
         yield prefix + [name, adapter.executable], Path('/testbed'), 'danger-full-access', (
             installed + '/SKILL.md' if skill else None)
+        if task['environment'].get('audit_packaging_sources'):
+            audit = audit_container(name, import_task=False)
+            write_json(evidence / 'environment-source-audit-after.json', audit)
     finally:
         if agent == 'codex':
             subprocess.run(['docker', 'cp', f'{name}:/root/.codex/sessions',

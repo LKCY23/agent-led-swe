@@ -41,12 +41,7 @@ if 'debug' in args:
     sys.exit(0)
 print(json.dumps({'type': 'turn.started'}), flush=True)
 if '--output-schema' in args:
-    assert args[args.index('--sandbox') + 1] == 'read-only'
-    assert not (workspace / 'plan.json').exists()
-    checks = json.loads((workspace / 'task.json').read_text())['checks']
-    value = {'checks': [{'id': c['id'], 'status': 'pass', 'reason': 'Expected value exists',
-                         'evidence': ['after/result.txt:1']} for c in checks]}
-    Path(args[args.index('--output-last-message') + 1]).write_text(json.dumps(value))
+    raise AssertionError('Verification must not invoke a model judge')
 else:
     assert args[args.index('--sandbox') + 1] == 'workspace-write'
     assert 'GRADER_ONLY' not in prompt
@@ -69,7 +64,7 @@ print(json.dumps({'type': 'turn.completed', 'usage': {
             return run_evaluation.run_pair(self.case, self.bundle, self.cli, 'synthetic',
                                            'low', 5, 1, runtime.DEFAULT_EVALUATOR)
 
-    def test_full_pair_and_independent_review(self):
+    def test_full_pair_with_no_configured_verifier(self):
         plan = self.run_pair()
         self.assertEqual(plan['max_executor_calls'], 2)
         self.assertEqual(plan['baseline_isolation']['status'], 'unknown')
@@ -88,17 +83,16 @@ print(json.dumps({'type': 'turn.completed', 'usage': {
         (self.target / 'SKILL.md').write_text('Later edit')
         self.assertEqual((self.bundle / 'skill/SKILL.md').read_text(), 'Frozen skill guidance')
         review = self.bundle / 'review'
-        results = evaluate_results.review_pair(self.bundle, review, self.cli, 'synthetic', 'low',
-                                               5, runtime.DEFAULT_EVALUATOR)
-        self.assertEqual([r['task_status'] for r in results], ['pass', 'pass'])
+        results = evaluate_results.evaluate_bundle(self.bundle, review)
+        self.assertEqual([r['task_status'] for r in results], ['unknown', 'unknown'])
         summary = json.loads((review / 'summary.json').read_text())
         self.assertTrue(summary['pairs'][0]['fixtures_match'])
-        self.assertEqual(summary['incremental_value_conclusion'], 'inconclusive')
+        self.assertEqual(summary['score_source'], 'task_verifier')
         self.assertEqual(summary['execution_counts'], {'completed': 2})
         with self.assertRaises(FileExistsError):
             self.run_pair()  # No silent overwrite or retry.
 
-    def test_claude_pair_uses_native_adapter_and_existing_codex_judge(self):
+    def test_claude_pair_uses_native_adapter(self):
         from model_config import load_profile, CONFIGS
         profile = load_profile(CONFIGS / 'models/deepseek-v4.1-flash.json')
         fake = self.root / 'fake-claude'
@@ -149,9 +143,8 @@ print(json.dumps({'type':'result','subtype':'success','is_error':False,
             result = json.loads((self.bundle / trial['id'] / 'result.json').read_text())
             self.assertEqual(result['run_status'], 'completed')
             self.assertEqual(result['isolation']['status'], 'verified-discovery')
-        results = evaluate_results.review_pair(self.bundle, self.bundle / 'review', self.cli,
-                                               'synthetic', 'low', 5, runtime.DEFAULT_EVALUATOR)
-        self.assertTrue(all(r['task_status'] == 'pass' for r in results))
+        results = evaluate_results.evaluate_bundle(self.bundle, self.bundle / 'review')
+        self.assertTrue(all(r['task_status'] == 'unknown' for r in results))
 
     def test_explicit_versions_are_frozen_and_reviewed_with_one_baseline(self):
         candidate = self.root / 'candidate'
@@ -168,12 +161,11 @@ print(json.dumps({'type':'result','subtype':'success','is_error':False,
         self.assertEqual((self.bundle / 'skill/SKILL.md').read_text(), 'Candidate guidance')
         self.assertEqual((self.bundle / 'reference-skill/SKILL.md').read_text(), 'Current guidance')
         (candidate / 'SKILL.md').write_text('Unrelated later edit')
-        results = evaluate_results.review_pair(self.bundle, self.bundle / 'review', self.cli,
-                                               'synthetic', 'low', 5, runtime.DEFAULT_EVALUATOR)
+        results = evaluate_results.evaluate_bundle(self.bundle, self.bundle / 'review')
         summary = json.loads((self.bundle / 'review/summary.json').read_text())
         self.assertEqual(set(summary['task_counts']), {'baseline', 'current', 'candidate'})
         self.assertTrue(summary['pairs'][0]['fixtures_match'])
-        self.assertTrue(all(r['task_status'] == 'pass' for r in results))
+        self.assertTrue(all(r['task_status'] == 'unknown' for r in results))
         (self.bundle / 'reference-skill/SKILL.md').write_text('Tampered snapshot')
         with self.assertRaisesRegex(ValueError, 'Frozen skill snapshot changed'):
             evaluate_results.check_bundle(self.bundle, plan)
@@ -199,26 +191,15 @@ print(json.dumps({'type':'result','subtype':'success','is_error':False,
                                 [sys.executable, '-c', 'pass'], 5, prompt)
         self.assertEqual(empty['run_status'], 'error')
         pass_check = [{'status': 'pass'}]
-        self.assertEqual(evaluate_results.task_status('timeout', pass_check), 'unknown')
-        self.assertEqual(evaluate_results.task_status('error', [{'status': 'fail'}]), 'fail')
+        self.assertEqual(evaluate_results.task_status([]), 'unknown')
+        self.assertEqual(evaluate_results.task_status([{'status': 'fail'}]), 'fail')
 
-    def test_judge_requires_exact_checks_and_supported_decisions(self):
-        valid = {'id': 'A1', 'status': 'pass', 'reason': 'Valid', 'evidence': ['after/a:1']}
-        for rows in ([], [valid, valid], [{**valid, 'id': 'A2'}],
-                     [{**valid, 'evidence': []}], [{**valid, 'status': 'maybe'}],
-                     [{**valid, 'reason': ''}], [None]):
-            with self.subTest(rows=rows), self.assertRaises(ValueError):
-                evaluate_results.validate_checks({'checks': rows}, ['A1'])
-        unknown = {**valid, 'status': 'unknown', 'evidence': []}
-        self.assertEqual(evaluate_results.validate_checks({'checks': [unknown]}, ['A1']), [unknown])
-        self.assertEqual(evaluate_results.task_status('completed', [unknown]), 'unknown')
 
     def test_missing_trial_stays_in_summary(self):
         plan = self.run_pair()
         missing = self.bundle / plan['trials'][1]['id'] / 'result.json'
         missing.unlink()
-        results = evaluate_results.review_pair(self.bundle, self.bundle / 'review', self.cli,
-                                               'synthetic', 'low', 5, runtime.DEFAULT_EVALUATOR)
+        results = evaluate_results.evaluate_bundle(self.bundle, self.bundle / 'review')
         summary = json.loads((self.bundle / 'review/summary.json').read_text())
         self.assertEqual(summary['planned_trials'], 2)
         self.assertEqual(summary['execution_counts']['not_started'], 1)
@@ -230,23 +211,12 @@ print(json.dumps({'type':'result','subtype':'success','is_error':False,
         original = log.read_text()
         log.write_text('Changed log')
         with self.assertRaisesRegex(ValueError, 'Captured log changed'):
-            evaluate_results.review_pair(self.bundle, self.bundle / 'review-log', self.cli,
-                                         'synthetic', 'low', 5, runtime.DEFAULT_EVALUATOR)
+            evaluate_results.evaluate_bundle(self.bundle, self.bundle / 'review-log')
         log.write_text(original)
         (self.bundle / plan['trials'][0]['id'] / 'after/result.txt').write_text('Changed')
         with self.assertRaisesRegex(ValueError, 'Captured artifact changed'):
-            evaluate_results.review_pair(self.bundle, self.bundle / 'review', self.cli,
-                                         'synthetic', 'low', 5, runtime.DEFAULT_EVALUATOR)
+            evaluate_results.evaluate_bundle(self.bundle, self.bundle / 'review')
 
-    def test_invalid_judge_output_is_retained_but_not_accepted(self):
-        self.run_pair()
-        self.cli_file.write_text(self.cli_file.read_text().replace(
-            "json.dumps(value)", "json.dumps({'checks': []})"))
-        review = self.bundle / 'review'
-        results = evaluate_results.review_pair(self.bundle, review, self.cli,
-                                               'synthetic', 'low', 5, runtime.DEFAULT_EVALUATOR)
-        self.assertTrue((review / 'review-1/judgment.json').exists())
-        self.assertTrue(all(r['task_status'] == 'unknown' and 'judge_error' in r for r in results))
 
     def test_execution_failure_is_preserved_without_dropping_other_variant(self):
         original = runtime.execute
@@ -271,40 +241,54 @@ print(json.dumps({'type':'result','subtype':'success','is_error':False,
             with self.subTest(value=value), self.assertRaises(ValueError):
                 runtime.positive_seconds(value)
 
-    def test_functional_checks_gate_model_review_and_can_run_without_judge(self):
-        plan = self.run_pair()
+    def enable_fixture_verifier(self):
         path = self.bundle / 'case.json'
         case = json.loads(path.read_text())
-        case['validation'] = {'kind': 'pytest'}
+        case['validation'] = {'kind': 'fixture'}
         runtime.write_json(path, case)
+        plan_path = self.bundle / 'plan.json'
+        plan = json.loads(plan_path.read_text())
         plan['case_sha256'] = runtime.digest(path)
-        runtime.write_json(self.bundle / 'plan.json', plan)
-        failure = [{'id': 'functional', 'status': 'fail', 'reason': 'Regression', 'evidence': ['test.log']}]
-        with patch.object(evaluate_results, 'validate_task', return_value=failure):
-            rows = evaluate_results.review_pair(self.bundle, self.bundle / 'review-fail', self.cli,
-                                                'synthetic', 'low', 5, runtime.DEFAULT_EVALUATOR)
-        self.assertTrue(all(r['checks'][0]['status'] == 'pass' and r['task_status'] == 'fail' for r in rows))
-        passed = [{**failure[0], 'status': 'pass', 'reason': 'Passed'}]
-        with (patch.object(evaluate_results, 'validate_task', return_value=passed),
-              patch.object(evaluate_results, 'execute', side_effect=AssertionError('Judge must not run'))):
-            rows = evaluate_results.review_pair(self.bundle, self.bundle / 'review-functional', None,
-                                                None, None, 5, runtime.DEFAULT_EVALUATOR, judge=False)
-        self.assertTrue(all(r['functional_checks'][0]['status'] == 'pass'
-                            and r['task_status'] == 'unknown' for r in rows))
-        case['validation']['groups'] = {'FAIL_TO_PASS': ['test_task.py']}
-        runtime.write_json(path, case)
-        plan['case_sha256'] = runtime.digest(path)
-        runtime.write_json(self.bundle / 'plan.json', plan)
+        runtime.write_json(plan_path, plan)
+
+    def test_verifier_alone_decides_outcome_despite_analysis_or_invalid_activation(self):
+        plan = self.run_pair()
+        self.enable_fixture_verifier()
         for trial in plan['trials']:
-            result_path = self.bundle / trial['id'] / 'result.json'
-            failed = json.loads(result_path.read_text())
-            failed['run_status'] = 'error'
-            runtime.write_json(result_path, failed)
-        with (patch.object(evaluate_results, 'validate_task', side_effect=AssertionError('No completed submission')),
-              patch.object(evaluate_results, 'execute', side_effect=AssertionError('No judge for environment error'))):
-            rows = evaluate_results.review_pair(self.bundle, self.bundle / 'review-error', self.cli,
-                                                'synthetic', 'low', 5, runtime.DEFAULT_EVALUATOR)
-        self.assertTrue(all(r['task_status'] == 'unknown' for r in rows))
+            path = self.bundle / trial['id'] / 'result.json'
+            row = json.loads(path.read_text())
+            row.update(task_status='fail', checks=[{'status': 'fail'}],
+                       skill_activation={'status': 'failed'})
+            runtime.write_json(path, row)
+        def fixture_check(task, bundle, artifacts, output):
+            return [{'id': 'content', 'status': 'pass' if (artifacts / 'result.txt').read_text() == 'done' else 'fail',
+                     'reason': 'Actual submitted fixture content', 'evidence': ['after/result.txt']}]
+        with patch.object(evaluate_results, 'validate_task', side_effect=fixture_check) as verifier:
+            rows = evaluate_results.evaluate_bundle(self.bundle, self.bundle / 'verification')
+        self.assertEqual(verifier.call_count, 2)
+        self.assertTrue(all(r['task_status'] == 'pass' for r in rows))
+        self.assertTrue(all(r['comparison_validity']['status'] == 'invalid' for r in rows))
+        self.assertTrue(all('checks' not in r and 'judge' not in r for r in rows))
+
+    def test_verifier_failure_and_unknown_are_preserved(self):
+        self.run_pair()
+        self.enable_fixture_verifier()
+        for status in ('fail', 'unknown'):
+            with patch.object(evaluate_results, 'validate_task', return_value=[{'id': 'check', 'status': status}]):
+                rows = evaluate_results.evaluate_bundle(self.bundle, self.bundle / status)
+            self.assertTrue(all(r['task_status'] == status for r in rows))
+
+    def test_incomplete_execution_does_not_become_a_task_failure(self):
+        plan = self.run_pair()
+        self.enable_fixture_verifier()
+        for trial in plan['trials']:
+            path = self.bundle / trial['id'] / 'result.json'
+            row = json.loads(path.read_text()); row['run_status'] = 'timeout'
+            runtime.write_json(path, row)
+        with patch.object(evaluate_results, 'validate_task', side_effect=AssertionError('No completed submission')):
+            rows = evaluate_results.evaluate_bundle(self.bundle, self.bundle / 'verification')
+        self.assertTrue(all(r['task_status'] == 'unknown' and r['verifier']['state'] == 'not_run' for r in rows))
+
 
     def test_context_check_rejects_unparsed_skill_instructions(self):
         from subprocess import CompletedProcess

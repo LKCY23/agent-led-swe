@@ -149,16 +149,22 @@ def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
                         result['isolation']['status'] = result.get('isolation_status') or 'unknown'
                         write_json(evidence / 'isolation.json', result['isolation'])
                         if result['isolation']['status'] != 'verified-discovery':
-                            result.update(run_status='error', error='Claude discovery isolation was not verified')
+                            result['execution_validity'] = {'status': 'invalid', 'reason': 'Claude discovery isolation was not verified'}
                         if result.get('models_observed') != [model]:
-                            result.update(run_status='error', error='Observed model differs or is unavailable')
+                            result['execution_validity'] = {'status': 'invalid', 'reason': 'Observed model differs or is unavailable'}
                 result['skill_activation'] = verify_activation(adapter.name, evidence, treatment, skill_path)
                 write_json(evidence / 'skill-activation.json', result['skill_activation'])
                 native_paths = [evidence / 'skill-installation.json', evidence / 'skill-activation.json', prompt]
                 native_paths += list((evidence / 'native-codex-session').rglob('*.jsonl'))
                 result['native_files'] = {str(p.relative_to(evidence)): digest(p) for p in native_paths if p.is_file()}
                 if result['skill_activation']['status'] != 'verified' and result['run_status'] == 'completed':
-                    result.update(run_status='error', error='Native skill activation/absence was not verified')
+                    result['execution_validity'] = {'status': 'invalid', 'reason': 'Native skill activation/absence was not verified'}
+                audit_path = evidence / 'environment-source-audit-after.json'
+                if audit_path.is_file():
+                    from packaging_environment import clean
+                    if not clean(json.loads(audit_path.read_text())):
+                        result['execution_validity'] = {'status': 'invalid', 'reason': 'Alternative packaging implementation appeared during execution'}
+                    result['native_files'].update({p.name: digest(p) for p in evidence.glob('environment-source-audit-*.json')})
             except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
                 result['error'] = str(exc)
             finally:
@@ -223,8 +229,9 @@ def main():
     except (ValueError, OSError) as exc:
         parser.error(str(exc))
     print(output)
-    return 0 if all(json.loads((output / t['id'] / 'result.json').read_text())['run_status']
-                    == 'completed' for t in plan['trials']) else 1
+    results = [json.loads((output / t['id'] / 'result.json').read_text()) for t in plan['trials']]
+    return 0 if all(r['run_status'] == 'completed' and r.get('execution_validity', {}).get('status') != 'invalid'
+                    for r in results) else 1
 
 
 if __name__ == '__main__':

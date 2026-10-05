@@ -7,7 +7,9 @@
           ↓ task_adapters：准备并冻结任务
 统一任务 → run_evaluation：配对执行与采集
           ↓ 不可变产物、轨迹、用量
-evaluate_results → 功能验收 + 独立定性评审 → 逐项比较
+evaluate_results → 任务 verifier → 成绩与执行状态分别保存
+          ↓ 按需读取完整历史
+人类／Agent 后续分析 → 观察、证据、归因假设、优化建议
 ```
 
 ## 1. 任务约定
@@ -20,7 +22,7 @@ evaluate_results → 功能验收 + 独立定性评审 → 逐项比较
 | `workspace` | 起始代码和项目资料；每次执行复制一份。 |
 | `environment` | 运行环境；行为任务使用本地工作区，已接入的 SWE 任务使用固定 Docker 镜像。 |
 | `validation` | 可信验证材料和检查方式，只交给评测端；行为任务可以不需要功能测试。 |
-| `acceptance` | 定性评审判据，不放入执行者工作区。共同交付要求已明确写入 request。 |
+| `acceptance` | 历史分析依据，保留但不由 LLM 自动判分。共同交付要求已写入 request。 |
 | `provenance` | 来源、版本、输入哈希及改编说明，保留追溯依据。 |
 
 FeatureBench 的遮蔽、隐藏测试恢复与其他 benchmark 的正向修复，均由适配器处理。执行器只消费准备好的任务，不解释原始 patch。
@@ -48,7 +50,7 @@ skill 组安装原生 skill 并显式调用，baseline 不安装。CC 禁用插�
 
 依据：[Codex 原生 skills](https://learn.chatgpt.com/docs/build-skills)、[CC skills](https://code.claude.com/docs/en/skills)。原生命令按原始字符串写入提示词，不经过 shell 展开；CC 再编码为 stream-json 输入，以保留 CLI 的命令解析回放。
 
-安装复制完整 skill 正文和资源，不把独立的 `.claude-plugin` 包装元数据当作用户 skill 插件再次加载。容器将该 payload 只读挂到原生目录；本地 Codex 使用临时 HOME／CODEX_HOME，不修改本机安装。Codex executor 的原生 session 在清理环境前导出用于验证；judge 仍使用 ephemeral 模式。CC 不使用会阻止该安装方式的 bare／disable-slash-commands。
+安装复制完整 skill 正文和资源，不把独立的 `.claude-plugin` 包装元数据当作用户 skill 插件再次加载。容器将该 payload 只读挂到原生目录；本地 Codex 使用临时 HOME／CODEX_HOME，不修改本机安装。Codex executor 的原生 session 在清理环境前导出用于验证。CC 不使用会阻止该安装方式的 bare／disable-slash-commands。
 
 `skill-installation.json` 和 `skill-activation.json` 分别记录安装与原生调用；缺少调用证据不能以“Agent 读过 SKILL.md”替代。原生证据文件的哈希写入 result，评审前检查。baseline 同样需要证据证明没有目标注入。
 
@@ -65,15 +67,15 @@ skill 组安装原生 skill 并显式调用，baseline 不安装。CC 禁用插�
 | 检查 | 执行方式 |
 | --- | --- |
 | 功能和回归 | 复制提交快照，在独立副本中恢复可信测试材料，再运行固定检查。预检和正式评价复用同一个 Docker 测试入口。 |
-| 工程、文档与开发过程 | 新的只读 judge 依据共同要求、rubric、原始产物、轨迹和功能证据评审，不修复代码。 |
+| 工程、文档与开发过程 | 测试后按需分析完整历史，记录观察、证据和归因；不自动判分。 |
 
 恢复评分材料不覆盖原始提交记录：Agent 改动过的测试或文档仍保留供评审，但不能通过篡改评分测试取得功能通过。
 
-功能与定性结果分别保存，使用 pass／fail／unknown、原因和证据。功能失败不能被定性通过覆盖；缺少必要评审不能宣称整个任务通过。缺失日志、超时、collection error 或环境问题保留 unknown 并给出诊断依据，不一律归因于 Agent。原测试的 xfail 单独记录，不算新增功能通过。
+任务结果只来自冻结的 verifier，保留 pass／fail／unknown、原始计数、日志和证据；没有配置 verifier 时为 unknown，不能用 LLM 补上。执行状态与 comparison_validity 单独保存，原生调用失败会使实验无效，但不能替 verifier 把正确代码判为失败。缺失日志、超时、collection error 或环境问题保留 unknown 并提供诊断依据；原测试 xfail 单列。
 
 真实任务执行未完成时，不把起始代码当作已提交成果验收，也不因此判 Agent 功能失败；保留已有产物和错误证据，结果为 unknown。完成执行后，测试项目和结果指纹还应与预检的参考验收对应，缺项不能靠一个成功退出码变为通过。
 
-定性评价检查实际用途，不要求统一文档数量、文件名或固定阶段。必要项来自任务约定，不能在看到结果后增加或放宽。原 benchmark 功能结果与附加工程要求分别报告；共享工程／交付要求构成的改编已记录在 provenance 中。
+后续分析不要求统一文档数量、文件名或固定阶段，不改变任务分数。原 benchmark 功能结果与过程观察分别报告；共享工程／交付要求的改编保留在 provenance 中。详见 [分析指导](analysis.md)。历史 judge 判分不覆盖，新版验证始终创建新目录。
 
 ## 4. 代码职责与入口
 
@@ -85,7 +87,8 @@ skill 组安装原生 skill 并显式调用，baseline 不安装。CC 禁用插�
 | `evaluation_runtime.py` | 容器构建与生命周期、进程采集及快照。 |
 | `run_evaluation.py` | 冻结条件，组织 baseline／skill 的配对执行。 |
 | `functional_checks.py` | 在独立副本运行可信检查，输出功能结果。 |
-| `evaluate_results.py` | 组织功能验收、独立评审及结果比较。 |
+| `evaluate_results.py` | 校验历史证据，调用任务 verifier，分别汇总任务结果与实验有效性；不调用模型。 |
+| `packaging_environment.py` | 构建精简执行镜像，清理并审计本地实现副本；验收镜像独立保留。 |
 | `preflight_swe.py` | 在正式实验前验证起始／参考状态和运行稳定性，复用准备与检查代码。 |
 
 现有行为任务仍可直接运行。真实任务执行示例：
@@ -100,15 +103,22 @@ uv run --locked python tests/run_evaluation.py pytest \
   --swe-inputs tests/runs/swe-preflight-20261005 \
   --agent claude-code --model-profile tests/configs/models/deepseek-v4.1-flash.json \
   --effort high --timeout 300
-uv run --locked python tests/evaluate_results.py '<运行目录>' \
-  --model '<judge-model>' --effort high --timeout 180
+uv run --locked python tests/evaluate_results.py '<运行目录>'
 ```
 
-只检查功能时使用 `evaluate_results.py '<运行目录>' --functional-only`，不调用 judge。即使功能全部通过，未完成的定性评审仍是 unknown。原运行目录不被覆盖，重评创建新的目录。
+评价默认仅使用 verifier，不需要模型参数。旧 `--functional-only` 保留为兼容参数，含义相同。没有后续分析不会使已通过的 verifier 结果变成 unknown。原运行目录不覆盖，重评创建新目录。
 
 Docker 基础链路可用 `check_swe_pipeline.py --inputs tests/runs/swe-preflight-20261005 --output '<新目录>'` 验证。它使用未修复／参考产物，并模拟替换评分测试与新增文档，不调用模型；其结果不得当作 skill 的收益。
 
 CC 适配可用 `check_claude_worker.py --base-image '<任务依赖镜像 ID>' --output '<新目录>'` 检查：真实容器 CLI 对接本地模拟 API，执行文件读取和 tool-result 回传，分别检查 baseline／skill。该检查不需要密钥，不调用 DeepSeek，也不能证明真实模型表现。
+
+### packaging 执行环境
+
+`environment.image` 仍是独立 verifier 镜像；`execution_image` 是清理后的 Agent 基础镜像。精简镜像移除其他 packaging 安装／vendored 目录、wheel 和 uv／pip 缓存，使用 uv 与 flit_core，不再提供依赖已被移除副本的全局 pip／setuptools。
+
+任务准备要求匹配的数据版本与执行环境资格记录。启动 worker 并安装任务后，再扫描运行目录并确认 Python 导入来自 `/testbed`；不满足则不启动 Agent。执行后复查并保存记录，新出现的副本使实验有效性为 invalid，verifier 成绩仍独立。
+
+检查覆盖本轮发现的本地可读实现来源，不是完整网络安全边界。模型连接沿用现有网络；不声称阻止一切远端获取或恶意绕过。任何新的来源暴露都应保留证据并重新审查任务资格，不能通过提示词或补分掩盖。
 
 ## 5. 隔离候选版本
 

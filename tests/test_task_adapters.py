@@ -43,11 +43,11 @@ class TaskAdapterTest(unittest.TestCase):
         row = {'group': 'FAIL_TO_PASS', 'exit_code': 1, 'timed_out': False,
                'counts': {'tests': 1, 'failures': 1, 'errors': 0, 'skipped': 0, 'xfailed': 0}}
         self.assertEqual(functional_status(row), 'fail')
-        self.assertEqual(task_status('completed', [{'status': 'pass'}, {'status': functional_status(row)}]), 'fail')
+        self.assertEqual(task_status([{'status': functional_status(row)}]), 'fail')
         row['counts']['failures'] = 0
         row['counts']['errors'] = 1
         self.assertEqual(functional_status(row), 'unknown')
-        self.assertEqual(task_status('completed', [{'status': 'pass'}, {'status': 'unknown'}]), 'unknown')
+        self.assertEqual(task_status([{'status': 'pass'}, {'status': 'unknown'}]), 'unknown')
 
 
 if __name__ == '__main__':

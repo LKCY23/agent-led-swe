@@ -1,0 +1,191 @@
+{
+  "base_verifier_image": "sha256:163233746275d789db7ea225d50c87f872681d1193d091df71ef7f78b0fa95f4",
+  "executor_image": "sha256:c93a06c9d7fc8e354ee501fc9de7ba3fd548d69b33cb93daba96d4717c2235d5",
+  "local_source_audit": {
+    "implementation_directories": [],
+    "package_archives": [],
+    "scope": "Local runtime roots; /testbed is the allowed task source"
+  },
+  "local_source_audit_passed": true,
+  "qualified": true,
+  "reason": "Two control/reference repetitions passed on the clean image; worker audit also required before rollout",
+  "runs": [
+    {
+      "variant": "control",
+      "repetition": 1,
+      "group": "FAIL_TO_PASS",
+      "exit_code": 1,
+      "timed_out": false,
+      "elapsed_seconds": 5.240498,
+      "counts": {
+        "tests": 294,
+        "failures": 284,
+        "errors": 0,
+        "skipped": 0,
+        "xfailed": 0
+      },
+      "outcome_sha256": "3d45091e4c0f0978db9318e02061f4940836cc48b0124058704fdd918b9a33ac"
+    },
+    {
+      "variant": "control",
+      "repetition": 1,
+      "group": "PASS_TO_PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 4.075384,
+      "counts": {
+        "tests": 3508,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xfailed": 0
+      },
+      "outcome_sha256": "1c643bc3779f3ca592fd7ed27e5db3a7ca9a9f1411f1022b444a5fc6b65b2840"
+    },
+    {
+      "variant": "control",
+      "repetition": 2,
+      "group": "FAIL_TO_PASS",
+      "exit_code": 1,
+      "timed_out": false,
+      "elapsed_seconds": 5.079776,
+      "counts": {
+        "tests": 294,
+        "failures": 284,
+        "errors": 0,
+        "skipped": 0,
+        "xfailed": 0
+      },
+      "outcome_sha256": "3d45091e4c0f0978db9318e02061f4940836cc48b0124058704fdd918b9a33ac"
+    },
+    {
+      "variant": "control",
+      "repetition": 2,
+      "group": "PASS_TO_PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 3.089656,
+      "counts": {
+        "tests": 3508,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xfailed": 0
+      },
+      "outcome_sha256": "1c643bc3779f3ca592fd7ed27e5db3a7ca9a9f1411f1022b444a5fc6b65b2840"
+    },
+    {
+      "variant": "reference",
+      "repetition": 1,
+      "group": "FAIL_TO_PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 1.005878,
+      "counts": {
+        "tests": 294,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xfailed": 0
+      },
+      "outcome_sha256": "e7fc8aaf516180bf9d0889a8e5c1f4da982f2739a4fa1bc6f3cf8f1534ac317d"
+    },
+    {
+      "variant": "reference",
+      "repetition": 1,
+      "group": "PASS_TO_PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 6.724232,
+      "counts": {
+        "tests": 3508,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xfailed": 0
+      },
+      "outcome_sha256": "1c643bc3779f3ca592fd7ed27e5db3a7ca9a9f1411f1022b444a5fc6b65b2840"
+    },
+    {
+      "variant": "reference",
+      "repetition": 2,
+      "group": "FAIL_TO_PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 1.318013,
+      "counts": {
+        "tests": 294,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xfailed": 0
+      },
+      "outcome_sha256": "e7fc8aaf516180bf9d0889a8e5c1f4da982f2739a4fa1bc6f3cf8f1534ac317d"
+    },
+    {
+      "variant": "reference",
+      "repetition": 2,
+      "group": "PASS_TO_PASS",
+      "exit_code": 0,
+      "timed_out": false,
+      "elapsed_seconds": 6.374234,
+      "counts": {
+        "tests": 3508,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "xfailed": 0
+      },
+      "outcome_sha256": "1c643bc3779f3ca592fd7ed27e5db3a7ca9a9f1411f1022b444a5fc6b65b2840"
+    }
+  ],
+  "spec": {
+    "name": "packaging",
+    "instance_id": "pypa__packaging.013f3b03.test_metadata.e00b5801.lv1",
+    "dataset": "LiberCoders/FeatureBench",
+    "split": "fast",
+    "row_index": 0,
+    "base_commit": "013f3b03a61fb795587d2b6e0c288656abca1d45",
+    "metadata_sha256": "a3df31441176ba1961e5bfb92782efd3805ea0d28efeb6d5489ae495e8c89a5b",
+    "source_sha256": "298981f8e5e7918d2c4fa319fb58d77217a1a0af835705ee11a1494c6a85cedd",
+    "patch_mode": "mask",
+    "python_image": "python:3.10-slim"
+  },
+  "evidence": "/Users/liyao/agent-led-swe/tests/runs/packaging-environment-20261006-v1",
+  "scope": "Removes local alternative Python implementations and wheel/cache copies from the audited runtime roots; no claim of network egress isolation",
+  "worker_checks": [
+    {
+      "agent": "codex",
+      "worker_image": "sha256:db025f3cdc79d84246f5f07e6063e76e802e446931fe5062139ea3157fa187aa",
+      "status": "passed",
+      "checks": [
+        "CLI version",
+        "editable task install",
+        "pytest startup",
+        "before/after local-source audit"
+      ],
+      "expanded_root_audit": {
+        "implementation_directories": [],
+        "package_archives": [],
+        "scope": "Local runtime roots; /testbed is the allowed task source"
+      }
+    },
+    {
+      "agent": "claude-code",
+      "worker_image": "sha256:0c3f164d98bd53915f27ab53c1556576b97b0fe2327a70c27c5dc0e06c8231a4",
+      "status": "passed",
+      "checks": [
+        "CLI version",
+        "editable task install",
+        "pytest startup",
+        "before/after local-source audit"
+      ],
+      "expanded_root_audit": {
+        "implementation_directories": [],
+        "package_archives": [],
+        "scope": "Local runtime roots; /testbed is the allowed task source"
+      }
+    }
+  ],
+  "worker_evidence": "/Users/liyao/agent-led-swe/tests/runs/packaging-worker-preflight-20261006-v2"
+}
