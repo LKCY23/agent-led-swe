@@ -1,3 +1,9 @@
+# First paired SWE pilot — 2026-10-06
+
+Four real executions completed with accepted skill `1c65c00`, Claude Code 2.1.278 and DeepSeek Flash/high, one baseline/skill pair per task, 1,800 seconds per execution, no retries or model judge. Native invocation and network checks passed. Smolagents: baseline fail, skill pass. Xarray: both fail; both miss the positional mapping form required by trusted tests, while the public request emphasizes keyword mapping. Skill variants passed both regression groups. Process analysis found no supporting skill-guide reads, late work records, and unsupported PR references; these observations do not change verifier scores. No skill/tool changes or merges. [Results and analysis](reports/paired-pilot-2026-10-06.md).
+
+---
+
 # Four selected tasks integrated — 2026-10-06
 
 Smolagents, xarray, NodeBB and Navidrome now use the shared runner and verifier entrypoints. Each passed two control/reference qualification rounds; official Pro results remain separate from Navidrome supplemental regression. Original conditional skips/xfails remain explicit. Both CLI workers passed no-model installation, network and artifact capture checks; Node 18 is preserved for NodeBB and Claude HOME cache ownership was repaired for Go tooling. Sixty-one local tests passed. No target skill changes or effect trials. [Report](reports/four-task-integration-results-2026-10-06.md).
