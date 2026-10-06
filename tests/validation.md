@@ -1,3 +1,9 @@
+# Action-sequence candidate — 2026-10-06
+
+Tested accepted `1c65c00` against candidate `dbdf29b`, changing only the entrypoint implementation sequence and commitment-based completion check. Both real executions completed with native loading and network checks verified. Both edited code before recording new design/work agreements and wrote migration records after implementation/testing; the intended process improvement was not observed. Original verifier results: current fail (local MCP connection timeout), candidate pass. Do not attribute that timeout difference to the skill. No retries/judge/merge. [Results](reports/action-sequence-results-2026-10-06.md).
+
+---
+
 # Inline guidance diagnostic — 2026-10-06
 
 Compared accepted skill `1c65c00` with diagnostic `ee58579`, which appends three existing guides without rewriting their rules. Full native expansion passed a real-CLI/synthetic-API check. Two target executions, no retries/judge: current ended with ECONNRESET (task unknown); diagnostic completed and passed the verifier. Comparison is not eligible for complete outcome comparison. Diagnostic said it would create a plan but edited code first; it wrote a work record later and synchronized one subsequent design change. Direct provision alone did not resolve the observed pre-implementation recording gap. [Evidence and limits](reports/inline-guidance-results-2026-10-06.md).
