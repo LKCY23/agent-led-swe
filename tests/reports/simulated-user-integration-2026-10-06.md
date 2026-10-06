@@ -1,5 +1,7 @@
 # 模拟用户接入与真实 Flash 检查
 
+后续：[Pro 小样本对照](simulated-user-pro-comparison-2026-10-06.md)也未通过。以下保留本轮 Flash 接入的原始结论与过程。
+
 **接入代码已实现，但真实模拟用户尚未取得运行资格，因此没有开始 cattrs 的 skill 开发对照。** 本轮从 `3bab3c1` 继续，在原测试 worktree 内工作；正式 skill 不变。用户选择的模拟用户模型为 DeepSeek Flash。
 
 ## 实现范围

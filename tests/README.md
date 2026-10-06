@@ -91,6 +91,8 @@ uv run --locked python tests/check_collaboration_worker.py \
 
 真实多轮入口为 `run_collaboration.py`，所有模型、资格和预算参数必须显式提供。使用 `--prepare-only` 可只冻结计划；运行前还需 `--user-qualification` 提供与 profile、用户规则、需求和适配器匹配的通过记录。目前 Flash 的[资格记录](reports/qualifications/cattrs-user-flash.json)为失败，不能用于真实配对。详见[用户接入与检查](reports/simulated-user-integration-2026-10-06.md)。
 
+`check_simulated_user.py --inputs <冻结任务输入> --profile <用户模型配置> --credentials <凭据文件> --output <新目录>` 是真实用户模型的小样本诊断：两个固定问题，最多 10 次 API 调用，不运行 solver 或功能 verifier。它会产生真实模型用量，不应当作本地单元测试命令。目前 [Pro 对照](reports/simulated-user-pro-comparison-2026-10-06.md)也未取得资格。
+
 旧 [rubric](rubrics.md)、judge 判分和文档读取模式结果保留为历史材料，不进入新成绩，也不与 native 模式混合比较。不能凭单个任务、单轮通过或耗时下降认定 skill 有效。
 
 ## 隔离优化与检查
