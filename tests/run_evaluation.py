@@ -167,6 +167,7 @@ def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
                         result['execution_validity'] = {'status': 'invalid', 'reason': 'Alternative packaging implementation appeared during execution'}
                     result['native_files'].update({p.name: digest(p) for p in evidence.glob('environment-source-audit-*.json')})
             except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
+                result['run_status'] = 'error'
                 result['error'] = str(exc)
             finally:
                 network_audit = evidence / 'network-audit.json'

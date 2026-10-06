@@ -1,36 +1,57 @@
-# 真实 SWE 任务：选择与接入
+# 真实 SWE 任务
 
-本轮先审阅任务是否适合检验 skill，再决定效果试跑。可执行资格与评测适用性分别判断。
+用户已确认并接入以下四题。每题均已完成两轮起始／参考预检，失败记录保留；这不代表 skill 效果已经验证。
 
-| 任务 | 当前状态 | 适用范围与限制 |
+| CLI 名称 | 来源与任务 | 验收与环境 |
 | --- | --- | --- |
-| [packaging](packaging.json) | 已通过环境预检，统一入口可用；暂未启动新对照 | 多文件实现、需求覆盖、兼容性与交付；接口已经给定，不能充分检验自主接口设计。 |
-| [DSPy](dspy.json) | 未启用，等待稳定性处理与审阅 | 同步／异步 ReAct 与工具协作较接近模块变更；回归存在模拟服务启动、耗时断言和联网资源问题。 |
-| [Agents SDK](agents-sdk.json) | 按用户决定暂缓 | 文字需求与参考实现的 None 过滤行为冲突。 |
+| [smolagents](../../reports/qualifications/smolagents.json) | FeatBench，XML 迁移与自定义指令 | 冻结 F2P／P2P，Linux ARM64 CPU 环境 |
+| [xarray](../../reports/qualifications/xarray.json) | FeatBench，Grouper／Resampler 公共 API | 冻结 F2P／P2P，Linux ARM64 环境 |
+| [nodebb](../../reports/qualifications/nodebb.json) | SWE-bench Pro V2，邮件验证状态管理 | 原生 verifier，Linux AMD64，容器内 Redis |
+| [navidrome](../../reports/qualifications/navidrome.json) | SWE-bench Pro V2，SQLite 备份恢复 | 原生 TestDB 套件，另做 cmd／conf 补充回归，Linux AMD64 |
 
-任务选择理由和建议见 [候选审阅](../../reports/task-selection-2026-10-06.md)。现有候选均为开发／校准用例，不是未见验证集。小型修复不足以检验设计、文档和项目管理能力；已退出的 pytest 任务及专属运行历史按用户决定清理。
+任务定义在同名 JSON；上表链接的资格记录锁定 spec、输入、镜像和验收结果。读到已注册名称不等于可以跳过资格检查：材料变化或资格缺失时，运行器在调用模型前拒绝执行。
 
-## 输入与验收分离
+完整接入结果见 [报告](../../reports/four-task-integration-results-2026-10-06.md)，选题依据见 [样例组合](../../reports/sample-suite-candidates-2026-10-06.md)。所有这些任务均属于开发／校准用例。
 
-定义文件记录 dataset、split、任务 ID、base commit、冻结数据与源码归档哈希。完整数据、补丁和隐藏测试仅留在评测端；执行 Agent 只获得 learner 工作区。
+## 冻结输入
 
-- learner：任务起始代码，不含参考补丁或隐藏测试。
-- control：起始代码加可信评分测试，确认未实现时失败。
-- reference：参考实现加同一组评分测试，确认验收可通过。
+本机统一输入目录是：
 
-FeatureBench 的 patch 遮蔽实现，参考状态需要反向恢复；其他修复型来源的 patch 正向应用。适配器保留这个差异，不改变统一 verifier 的职责。
-
-## 环境与预检
-
-依赖在准备镜像时安装。正式 Agent worker 使用内部网络，仅能访问固定模型网关；公开资源应事先冻结准备，不能依赖执行时联网下载。DSPy 旧预检的 bridge 网络是未解决的限制，不是新版 executor 的例外。
-
-packaging 使用独立的精简 executor 镜像与完整 verifier 镜像，并审计本地实现副本。[资格记录](../../reports/packaging-execution-environment-2026-10-06.json)锁定任务和镜像。预检结果见 [报告](../../reports/swe-preflight-2026-10-05.md)。
-
-已有冻结输入可复验：
-
-```sh
-uv run --locked python tests/preflight_swe.py tests/cases/swe/packaging.json \
-  --inputs '<冻结输入目录>' --output '<新输出目录>'
+```text
+/Users/liyao/agent-led-swe/tests/runs/four-task-inputs-v2-20261006/
+  <task>/
+    metadata.json      原始任务记录
+    public.tar.gz      公共起始工作区
+    request.txt        原始任务要求
+    reference.patch   私有参考实现
+    validator/        私有可信验收材料
+    environment.json  固定运行环境
+    validation.json   固定验收方式
+    inputs.json       输入文件哈希
 ```
 
-每轮 control/reference 各两次，每次分目标与回归组，最多 8 次测试命令、每次 180 秒、2 CPU、3 GB。首次非预期结果即停止排查，不删除失败测试、不放宽断言、不以重跑替代归因。预检通过只证明既定验收能够稳定运行，不证明覆盖全部文字需求。
+执行 Agent 只获得公共工作区和任务要求。参考补丁与 validator 不放入 worker；验收在独立副本／新容器中进行。原始来源和准备日志位于此前的 `four-task-inputs-20261006/`。Python 环境配方保存在 [environments](environments/README.md)。
+
+## 准备与资格检查
+
+准备原始 metadata／源码或官方任务材料后，用指定镜像冻结公共输入；命令不覆盖已冻结的 inputs.json：
+
+```sh
+uv run --locked python tests/prepare_suite_task.py smolagents \
+  --inputs '<原始输入根目录>' --image '<准备好的依赖镜像>'
+uv run --locked python tests/preflight_suite.py smolagents \
+  --inputs '<冻结输入根目录>' --output '<新预检目录>' --register
+uv run --locked python tests/check_suite_workers.py smolagents \
+  --inputs '<冻结输入根目录>' --output '<新 worker 检查目录>' \
+  --skill-path /Users/liyao/agent-led-swe
+```
+
+名称可替换为其余三题。预检先检查 control／reference，再重复一轮；每组上限 600 秒，异常即停止该题。只有成功时 --register 才登记资格。Worker 检查不调用模型，验证两种 CLI、skill 安装、网络、任务运行时和产物回收。
+
+Python 测试中的项目自身条件跳过按具体测试身份与原因登记，skip／xfail 单独保留，不计为 passed。缺依赖导致的跳过须先补齐依赖；新增跳过、错误、缺失结果或与参考不一致的结果不能通过。
+
+SWE-bench Pro 的原生脚本、parser 和评分清单保持原样。Navidrome 的补充回归与 OFFICIAL 成绩分别保存，不把它写成官方 P2P。未执行额外接续变体或人机交互测试。
+
+## 其他任务
+
+packaging 保留为辅助用例，继续使用旧的冻结输入和 [独立环境资格](../../reports/packaging-execution-environment-2026-10-06.json)。DSPy、Agents SDK 暂不启用。pytest benchmark 已按用户决定退出并清理；pytest 测试工具仍用于 Python 项目的正常验收。

@@ -29,13 +29,15 @@ FeatureBench 的遮蔽、隐藏测试恢复与其他 benchmark 的正向修复�
 
 参考实现用于预检与测试框架自检，不保存在正式任务的公共工作区中。正式功能评价检查提交产物，不比较 Agent 是否复刻参考代码。
 
-真实任务目前只开放已通过预检的 packaging。SDK 暂缓，DSPy 尚未满足本机稳定性要求。接入其他候选需要相匹配的预检证据，不能只将名字加入 CLI。
+主任务是已通过资格检查的 smolagents、xarray、NodeBB、Navidrome；packaging 保留辅助。SDK／DSPy 暂不启用。新四题的资格同时核对任务定义哈希、冻结输入和不可变镜像 ID；不能只将名字加入 CLI。
 
 ## 2. 执行与产物约定
 
 每轮先冻结任务、skill、rubric、模型／预算和运行矩阵。Baseline 与 skill 使用相同的任务、环境、工程要求和权限；只有 skill 组获得目标指导。项目规范仍是双方共同任务输入，不因禁用全局 skills 而被取消。
 
-真实任务在独立 Docker 容器中运行 Codex 或 CC。基础镜像提供项目依赖，Agent 安装层按 `configs/agents.json` 固定 CLI 版本，`--agent-version` 可显式覆盖并记录；不从本机 CLI 推断容器版本。只挂载公共工作区及 skill 组的只读指导，不挂载评分目录、参考实现或 Docker socket。Codex 使用 full-access；CC 以匹配工作区所有者的非 root 用户使用 bypassPermissions。二者均由容器提供边界：移除默认 capabilities，只保留准备 CC 用户目录所需的 CHOWN，启用 no-new-privileges；不授予 NET_ADMIN 或 NET_RAW。
+真实任务在独立 Docker 容器中运行 Codex 或 CC。基础镜像提供项目依赖，Agent 安装层按 `configs/agents.json` 固定 CLI 版本，`--agent-version` 可显式覆盖并记录；不从本机 CLI 推断容器版本。只将公共工作区及 skill 组的只读指导交给 worker，不挂载评分目录、参考实现或 Docker socket。Codex 使用 full-access；CC 以匹配工作区所有者的非 root 用户使用 bypassPermissions。二者均由容器提供边界：移除默认 capabilities，只保留准备 CC 用户目录所需的 CHOWN，启用 no-new-privileges；不授予 NET_ADMIN 或 NET_RAW。
+
+Python 任务在 /testbed 离线注册源码。NodeBB／Navidrome 保留官方镜像的 /app 与准备好的依赖，复制公共工作区进去；结束后回收源码、新文件和删除状态。node_modules 等声明的镜像依赖不作为提交内容，Navidrome 的预编译程序也不暴露给 executor。Agent 的 Node 22 独立放在 /opt/agent-runtime，避免覆盖任务自己的 Node。任何产物导出失败都使本次执行成为 error，保存已有事件并清理容器，不将旧快照误作完整提交。
 
 模型 profile 与 Agent 分开选择，运行前验证组合和 effort。Codex 使用现有 auth.json 中的有效访问凭据；CC 从显式环境变量或被 Git 忽略的 `configs/credentials.local.json` 取密钥。真实凭据仅通过权限为 0600 的临时文件只读挂载给外部网关，worker 只获得无权限的占位值。网关按固定上游替换认证头，退出时删除临时文件。凭据不写入镜像、命令参数或证据，不修改宿主登录，也不读取本机 CC／CC Switch 设置。
 
@@ -76,12 +78,16 @@ Codex 使用独立的 evaluation-gateway provider 发送 Responses SSE，保留�
 
 | 检查 | 执行方式 |
 | --- | --- |
-| 功能和回归 | 复制提交快照，在独立副本中恢复可信测试材料，再运行固定检查。预检和正式评价复用同一个 Docker 测试入口。 |
+| 功能和回归 | Python 在独立副本恢复可信测试；SWE-bench Pro V2 在全新官方镜像中恢复提交并运行原始 verifier。预检和正式评价复用同一套验收代码。 |
 | 工程、文档与开发过程 | 测试后按需分析完整历史，记录观察、证据和归因；不自动判分。 |
 
 恢复评分材料不覆盖原始提交记录：Agent 改动过的测试或文档仍保留供评审，但不能通过篡改评分测试取得功能通过。
 
 任务结果只来自冻结的 verifier，保留 pass／fail／unknown、原始计数、日志和证据；没有配置 verifier 时为 unknown，不能用 LLM 补上。执行状态与 comparison_validity 单独保存，原生调用失败会使实验无效，但不能替 verifier 把正确代码判为失败。缺失日志、超时、collection error 或环境问题保留 unknown 并提供诊断依据；原测试 xfail 单列。
+
+四题的 Python 验收保留原仓库明确规定的条件 skip／xfail。Skip 的具体测试身份和原因在任务定义中冻结，control／reference 的回归指纹必须一致；缺失依赖、新增跳过或全组未执行不能作为通过。报告分别列出实际执行通过、skip 和 xfail，不能把它们相加成 passed。
+
+SWE-bench Pro V2 的 OFFICIAL 状态核对原生 reward、退出状态和实际测试结果；没有可靠结果或三者不一致时为 unknown。Navidrome 的 PROJECT_REGRESSION 另行记录 cmd／conf 检查，不冒充官方 P2P。任务总状态根据已约定的全部功能检查汇总，官方成绩仍能单独查看。
 
 真实任务执行未完成时，不把起始代码当作已提交成果验收，也不因此判 Agent 功能失败；保留已有产物和错误证据，结果为 unknown。完成执行后，测试项目和结果指纹还应与预检的参考验收对应，缺项不能靠一个成功退出码变为通过。
 
@@ -100,6 +106,8 @@ Codex 使用独立的 evaluation-gateway provider 发送 Responses SSE，保留�
 | `functional_checks.py` | 在独立副本运行可信检查，输出功能结果。 |
 | `evaluate_results.py` | 校验历史证据，调用任务 verifier，分别汇总任务结果与实验有效性；不调用模型。 |
 | `packaging_environment.py` | 构建精简执行镜像，清理并审计本地实现副本；验收镜像独立保留。 |
+| `suite_tasks.py`、`prepare_suite_task.py`、`preflight_suite.py` | 四题的冻结输入、准备与资格检查。 |
+| `swe_pro_verifier.py`、`container_workspace.py` | 原生 Pro 验收与保留镜像依赖的工作区复制／回收。 |
 | `preflight_swe.py` | 在正式实验前验证起始／参考状态和运行稳定性，复用准备与检查代码。 |
 
 现有行为任务仍可直接运行。真实任务执行示例：
@@ -119,7 +127,7 @@ uv run --locked python tests/evaluate_results.py '<运行目录>'
 
 评价默认仅使用 verifier，不需要模型参数。旧 `--functional-only` 保留为兼容参数，含义相同。没有后续分析不会使已通过的 verifier 结果变成 unknown。原运行目录不覆盖，重评创建新目录。
 
-Docker 基础链路可用 `check_swe_pipeline.py --inputs tests/runs/swe-preflight-20261005 --output '<新目录>'` 验证。它使用未修复／参考产物，并模拟替换评分测试与新增文档，不调用模型；其结果不得当作 skill 的收益。
+Docker 基础链路默认检查 packaging；四题可以用 preflight_suite.py，或给 check_swe_pipeline.py 增加 --case。旧入口 `check_swe_pipeline.py --inputs tests/runs/swe-preflight-20261005 --output '<新目录>'` 验证。它使用未修复／参考产物，并模拟替换评分测试与新增文档，不调用模型；其结果不得当作 skill 的收益。
 
 CC 适配可用 `check_claude_worker.py --base-image '<任务依赖镜像 ID>' --output '<新目录>'` 检查：真实容器 CLI 对接本地模拟 API，执行文件读取和 tool-result 回传，分别检查 baseline／skill。该检查不需要密钥，不调用 DeepSeek，也不能证明真实模型表现。
 
@@ -158,3 +166,5 @@ uv run --locked python tests/run_evaluation.py packaging \
 只传 `--skill-path` 时仍为 baseline／skill 两组；同时传 `--reference-skill-path` 时为 baseline／current／candidate 三组，每组一份新工作区和会话。两种 skill 均冻结完整文件、哈希及源路径／Git 状态。原始文件后续变化不影响已冻结实验；评审拒绝被改动的冻结副本。各 Agent 相同的原生安装路径 不暴露新旧版本标签给执行者。
 
 默认首轮按上述顺序，后续 repetition 反序；`--reverse-order` 可反转首轮。顺序记录在 plan 中，不声称单轮已经消除了顺序或服务波动。证据写入全新的输出目录，凭据与原始历史运行不复制进 worktree 或 Git。评测工具和候选内容分开提交，审阅接受前不合并候选。
+
+四题的命令、冻结输入位置和资格状态见 [任务目录](cases/swe/README.md)。check_suite_workers.py 对实际任务检查两种 CLI、skill 安装、模型网关、任务工具及产物回收，不调用模型。

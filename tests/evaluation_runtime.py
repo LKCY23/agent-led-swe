@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import uuid
 import tempfile
+import tarfile
 
 from agent_adapters import get_adapter
 from model_config import credential, claude_environment, DEFAULT_CREDENTIALS
@@ -25,7 +26,7 @@ def adapter_hashes():
     root = Path(__file__).parent
     names = [
         'evaluation_runtime.py', 'run_evaluation.py', 'evaluate_results.py', 'run_smoke.py',
-        'task_adapters.py', 'functional_checks.py', 'model_config.py', 'native_skills.py', 'packaging_environment.py', 'worker_network.py', 'model_gateway.py']
+        'task_adapters.py', 'functional_checks.py', 'model_config.py', 'native_skills.py', 'packaging_environment.py', 'worker_network.py', 'model_gateway.py', 'suite_tasks.py', 'swe_pro_verifier.py', 'container_workspace.py']
     names += [str(p.relative_to(root)) for p in sorted((root / 'agent_adapters').glob('*.py'))]
     return {name: digest(root / name) for name in names}
 
@@ -86,16 +87,21 @@ def build_worker_image(environment, version, output, agent='codex'):
     if not re.fullmatch(r'sha256:[0-9a-f]{64}', base):
         raise ValueError('Worker base image must be identified by immutable Docker image ID')
     base_tag = 'agent-led-swe-base:' + base[7:]
+    if agent == 'codex':
+        launcher = ("RUN printf '#!/bin/sh\\nexec /opt/agent-runtime/node /opt/agent-runtime/node_modules/"
+                    + adapter.cli_entrypoint + " \"$@\"\\n' > /usr/local/bin/codex && chmod +x /usr/local/bin/codex\n")
+    else:
+        launcher = f'RUN ln -s /opt/agent-runtime/node_modules/{adapter.cli_entrypoint} /usr/local/bin/{adapter.executable}\n'
     (output / 'Dockerfile').write_text(
         'FROM node:22-bookworm-slim AS cli\n'
         f'RUN npm install -g {adapter.npm_package}@{version}\n'
         f'FROM {base_tag}\n'
-        'COPY --from=cli /usr/local/bin/node /usr/local/bin/node\n'
+        'COPY --from=cli /usr/local/bin/node /opt/agent-runtime/node\n'
         f'COPY --from=cli /usr/local/lib/node_modules/{adapter.npm_package.split("/")[0]} '
-        f'/usr/local/lib/node_modules/{adapter.npm_package.split("/")[0]}\n'
-        f'RUN ln -s /usr/local/lib/node_modules/{adapter.cli_entrypoint} /usr/local/bin/{adapter.executable}\n'
-        'RUN apt-get update && apt-get install -y --no-install-recommends git '
-        '&& rm -rf /var/lib/apt/lists/*\n')
+        f'/opt/agent-runtime/node_modules/{adapter.npm_package.split("/")[0]}\n'
+        + launcher +
+        'RUN command -v git >/dev/null || (apt-get update && apt-get install -y --no-install-recommends git '
+        '&& rm -rf /var/lib/apt/lists/*)\n')
     tag = 'agent-led-swe-worker:' + agent + '-' + version + '-' + digest(output / 'Dockerfile')[:16]
     cached = subprocess.run(['docker', 'image', 'inspect', tag, '--format', '{{.Id}}'],
                             capture_output=True, text=True)
@@ -103,7 +109,7 @@ def build_worker_image(environment, version, output, agent='codex'):
         return cached.stdout.strip()
     subprocess.run(['docker', 'tag', base, base_tag], check=True)
     receipt = load_helper(DEFAULT_EVALUATOR / 'scripts/capture.py').capture(
-        output, output.parent / (output.name + '-build-log'), ['docker', 'build', '-t', tag, str(output)], 600)
+        output, output.parent / (output.name + '-build-log'), ['docker', 'build', *(['--platform', environment['platform']] if environment.get('platform') else []), '-t', tag, str(output)], 600)
     if receipt['exit_code'] != 0 or receipt['timed_out']:
         raise RuntimeError('Agent worker image build failed; inspect retained build logs')
     return subprocess.check_output(['docker', 'image', 'inspect', tag, '--format', '{{.Id}}'], text=True).strip()
@@ -180,10 +186,15 @@ def docker_worker(task, workspace, evidence, cli, skill, authenticate,
     agent = cli.get('agent', 'codex')
     adapter = get_adapter(agent)
     image = task['environment']['worker_image']
+    environment = task['environment']
+    workdir = environment.get('workdir', '/testbed')
+    copy_mode = environment.get('workspace_mode') == 'copy'
+    from container_workspace import install_workspace, export_workspace, allow_workspace_owner
     name = 'swe-executor-' + uuid.uuid4().hex[:12]
     argv = ['docker', 'run', '-d', '--init', '--name', name, '--cpus', '2', '--memory', '3g',
             '--network', network, '--cap-drop=ALL', '--cap-add=CHOWN', '--security-opt=no-new-privileges',
-            '-v', f'{workspace}:/testbed', '-w', '/testbed']
+            *(['--platform', environment['platform']] if environment.get('platform') else []),
+            *([] if copy_mode else ['-v', f'{workspace}:{workdir}']), '-w', workdir]
     installed = ('/root/.agents/skills/agent-led-swe' if agent == 'codex'
                  else '/tmp/agent-home/.claude/skills/agent-led-swe')
     if skill:
@@ -210,11 +221,20 @@ def docker_worker(task, workspace, evidence, cli, skill, authenticate,
         argv += [image, 'sleep', '86400']
         subprocess.run(argv, check=True, capture_output=True)
     try:
-        record = load_helper(DEFAULT_EVALUATOR / 'scripts/capture.py').capture(workspace,
-            evidence / 'environment-setup', ['docker', 'exec', name, 'uv', 'pip', 'install',
-            '--python', '/opt/testenv/bin/python', '--offline', '--no-deps', '--no-build-isolation', '-e', '/testbed'], 90)
-        if record['exit_code'] != 0 or record['timed_out']:
-            raise RuntimeError('Worker project installation failed')
+        if copy_mode:
+            install_workspace(name, workspace, workdir)
+        for relative in environment.get('executor_discard_files', []):
+            if Path(relative).is_absolute() or '..' in Path(relative).parts:
+                raise ValueError('Unsafe executor discard path')
+            subprocess.run(['docker', 'exec', name, 'rm', '-f', '--', workdir + '/' + relative],
+                           check=True, capture_output=True)
+        install_argv = environment.get('install_argv', ['uv', 'pip', 'install',
+            '--python', '/opt/testenv/bin/python', '--offline', '--no-deps', '--no-build-isolation', '-e', workdir])
+        if install_argv:
+            record = load_helper(DEFAULT_EVALUATOR / 'scripts/capture.py').capture(workspace,
+                evidence / 'environment-setup', ['docker', 'exec', name, *install_argv], 90)
+            if record['exit_code'] != 0 or record['timed_out']:
+                raise RuntimeError('Worker project installation failed')
         if task['environment'].get('audit_packaging_sources'):
             from packaging_environment import audit_container, clean
             audit = audit_container(name)
@@ -236,8 +256,11 @@ def docker_worker(task, workspace, evidence, cli, skill, authenticate,
             if uid == 0:
                 raise ValueError('Claude Docker worker requires a non-root workspace owner')
             subprocess.run(['docker', 'exec', name, 'mkdir', '-p', '/tmp/agent-home/.claude'], check=True)
-            subprocess.run(['docker', 'exec', name, 'chown', f'{uid}:{gid}',
-                            '/tmp/agent-home', '/tmp/agent-home/.claude'], check=True)
+            # The version probe can create root-owned caches before dropping uid.
+            # Own the disposable HOME, but leave the read-only skill mount alone.
+            allow_workspace_owner(name, '/tmp/agent-home', uid, gid, ['.claude/skills'])
+            if copy_mode:
+                allow_workspace_owner(name, workdir, uid, gid, environment.get('workspace_excludes', []))
             prefix += ['--user', f'{uid}:{gid}']
         write_json(evidence / 'environment.json', {'image': image, 'cli': actual, 'agent': agent,
                    'boundary': 'Docker container; no evaluator materials or Docker socket mounted',
@@ -257,16 +280,23 @@ def docker_worker(task, workspace, evidence, cli, skill, authenticate,
                        'model_providers.evaluation-gateway={name="Evaluation gateway",base_url='
                        + json.dumps(gateway) + ',wire_api="responses",requires_openai_auth=false,env_key="CODEX_GATEWAY_KEY",'
                        'supports_websockets=false}']
-        yield binary, Path('/testbed'), 'danger-full-access', (
+        yield binary, Path(workdir), 'danger-full-access', (
             installed + '/SKILL.md' if skill else None)
         if task['environment'].get('audit_packaging_sources'):
             audit = audit_container(name, import_task=False)
             write_json(evidence / 'environment-source-audit-after.json', audit)
     finally:
-        if agent == 'codex':
-            subprocess.run(['docker', 'cp', f'{name}:/root/.codex/sessions',
-                            str(evidence / 'native-codex-session')], capture_output=True)
-        subprocess.run(['docker', 'rm', '-f', name], capture_output=True)
+        try:
+            if copy_mode:
+                export_workspace(name, workdir, workspace, environment.get('workspace_excludes', []))
+        except (OSError, subprocess.SubprocessError, tarfile.TarError) as exc:
+            write_json(evidence / 'workspace-export-error.json', {'error': str(exc)})
+            raise RuntimeError('Worker artifact export failed; see workspace-export-error.json') from exc
+        finally:
+            if agent == 'codex':
+                subprocess.run(['docker', 'cp', f'{name}:/root/.codex/sessions',
+                                str(evidence / 'native-codex-session')], capture_output=True)
+            subprocess.run(['docker', 'rm', '-f', name], capture_output=True)
 
 
 def resolve_codex():

@@ -236,6 +236,23 @@ print(json.dumps({'type':'result','subtype':'success','is_error':False,
         self.assertIn('Synthetic launch failure', rows[0]['error'])
         self.assertTrue((self.bundle / plan['trials'][0]['id'] / 'after/input.txt').exists())
 
+    def test_finalization_failure_is_not_a_completed_submission(self):
+        original = runtime.execution_environment
+
+        @contextmanager
+        def failed_export(*args, **kwargs):
+            with original(*args, **kwargs) as context:
+                yield context
+            raise RuntimeError('Synthetic artifact export failure')
+
+        with patch.object(run_evaluation, 'execution_environment', side_effect=failed_export):
+            plan = self.run_pair()
+        self.enable_fixture_verifier()
+        with patch.object(evaluate_results, 'validate_task', side_effect=AssertionError('Incomplete artifact')):
+            rows = evaluate_results.evaluate_bundle(self.bundle, self.bundle / 'verification')
+        self.assertTrue(all(r['run_status'] == 'error' and r['task_status'] == 'unknown' for r in rows))
+        self.assertTrue((self.bundle / plan['trials'][0]['id'] / 'capture/stdout.log').exists())
+
     def test_invalid_budgets(self):
         for value in ('0', '-1', 'nan', 'inf'):
             with self.subTest(value=value), self.assertRaises(ValueError):

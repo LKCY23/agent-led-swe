@@ -1,0 +1,38 @@
+{
+  "name": "navidrome",
+  "adapter": "swe-pro-v2",
+  "source": "ScaleAI/SWE-bench_Pro V2",
+  "instance_id": "instance_navidrome__navidrome-55730514ea59d5f1d0b8e3f8745569c29bdbf7b4",
+  "repo": "navidrome/navidrome",
+  "base_commit": "768160b05e9929bf5d82359b7768e67ffffeb9b6",
+  "metadata_sha256": "6c1992716d0fecd767d201193866c59d21c6b4ea55423a6a3d7addb88170e2ff",
+  "verifier_sha256": {
+    "instruction.md": "6d67259be8455dce24942df8387916de51822bef1c1d7ccb44dbff7db350e65c",
+    "solution/gold_patch.diff": "e0ccfa88b1b57ddfdcd6e5f96e584c93484929dd49b0f9953fd09050b882a664",
+    "tests/config.json": "6bb9d186430d48270a5fd45d8bf3302c8f50e06fa33cb2fa33848aaa3571a559",
+    "tests/parser.py": "b1c0279417bc528109d5022e6ac4e0ba27899b09dfc7500e020be0754ee21039",
+    "tests/run_script.sh": "1d0f1fdedd5f3cf3f055024a6b744aa3e3273c54e1cb2aa3c4de51dc8f6102ff",
+    "tests/test.sh": "b6f26eecd87c1696a3702ee115d31f9d42f4704cf2116419cd879f66b60976d0",
+    "tests/test_patch.patch": "5ee8360db7d6d27345ba05ac8c26cadad9ead6b453e733cc1540100b0413b1d3"
+  },
+  "workspace_excludes": [
+    "ui/node_modules",
+    "navidrome"
+  ],
+  "supplemental": [
+    {
+      "id": "PROJECT_REGRESSION",
+      "argv": [
+        "go",
+        "test",
+        "-tags",
+        "netgo",
+        "./cmd",
+        "./conf"
+      ]
+    }
+  ],
+  "executor_discard_files": [
+    "navidrome"
+  ]
+}

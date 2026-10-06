@@ -13,7 +13,9 @@ from evaluation_runtime import digest, snapshot
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SWE_NAMES = ('packaging',)
+from suite_tasks import NAMES as SUITE_NAMES
+
+SWE_NAMES = ('packaging', *SUITE_NAMES)
 PROJECT_REQUIREMENTS = (
     '\n\nAdditional shared project requirements: Read and follow applicable repository guidance '
     '(including AGENTS.md and contributing instructions). Preserve existing compatibility and '
@@ -58,6 +60,9 @@ def prepare_task(case, output):
     name = case['id']
     if name not in SWE_NAMES:
         raise ValueError('Candidate has not qualified for paired execution')
+    if name in SUITE_NAMES:
+        from suite_tasks import prepare_suite_task
+        return prepare_suite_task(case, output)
     spec = json.loads((ROOT / f'tests/cases/swe/{name}.json').read_text())
     report = json.loads((ROOT / 'tests/reports/swe-preflight-2026-10-05.json').read_text())
     receipt = next(r for r in report['cases'] if r['name'] == name)

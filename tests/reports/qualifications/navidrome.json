@@ -1,0 +1,171 @@
+{
+  "task": "navidrome",
+  "qualified": true,
+  "spec_sha256": "c7e519bf2583379f109098fd8f42ddd9be2dbbd358016a77aa07bfa488d9453a",
+  "inputs_sha256": "f0e31c894fe9f3bdc8040b570f8814a4ed61db3e74885e969f126800a6a85fe0",
+  "environment": {
+    "kind": "docker",
+    "image": "sha256:0fde27c0fde4c5a733ba1de0af910a1e0ca9e912cbf6bcae9239d5bf78fcde7e",
+    "network": "none",
+    "workdir": "/app",
+    "platform": "linux/amd64",
+    "workspace_mode": "copy",
+    "workspace_excludes": [
+      "ui/node_modules",
+      "navidrome"
+    ],
+    "install_argv": [],
+    "executor_discard_files": [
+      "navidrome"
+    ]
+  },
+  "validation": {
+    "kind": "swe-pro-v2",
+    "timeout_seconds": 600,
+    "supplemental": [
+      {
+        "id": "PROJECT_REGRESSION",
+        "argv": [
+          "go",
+          "test",
+          "-tags",
+          "netgo",
+          "./cmd",
+          "./conf"
+        ]
+      }
+    ]
+  },
+  "runs": [
+    {
+      "variant": "control",
+      "repetition": 1,
+      "checks": [
+        {
+          "id": "OFFICIAL",
+          "status": "fail",
+          "reason": "Unmodified SWE-bench Pro V2 verifier",
+          "evidence": [
+            "/Users/liyao/agent-led-swe/tests/runs/four-task-preflight-20261006/navidrome-v2/control-1"
+          ],
+          "details": {
+            "exit_code": 1,
+            "timed_out": false,
+            "parsed_tests": 0,
+            "outcome_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        },
+        {
+          "id": "PROJECT_REGRESSION",
+          "status": "pass",
+          "reason": "Supplemental original-project regression; separate from official reward",
+          "evidence": [
+            "/Users/liyao/agent-led-swe/tests/runs/four-task-preflight-20261006/navidrome-v2/control-1/PROJECT_REGRESSION"
+          ],
+          "details": {
+            "exit_code": 0,
+            "timed_out": false
+          }
+        }
+      ]
+    },
+    {
+      "variant": "reference",
+      "repetition": 1,
+      "checks": [
+        {
+          "id": "OFFICIAL",
+          "status": "pass",
+          "reason": "Unmodified SWE-bench Pro V2 verifier",
+          "evidence": [
+            "/Users/liyao/agent-led-swe/tests/runs/four-task-preflight-20261006/navidrome-v2/reference-1"
+          ],
+          "details": {
+            "exit_code": 0,
+            "timed_out": false,
+            "parsed_tests": 1,
+            "outcome_sha256": "ef0252f78865fb1897001bff91b25a9cb178ec5c054497b6cd5cfd3fabb4a3c5"
+          }
+        },
+        {
+          "id": "PROJECT_REGRESSION",
+          "status": "pass",
+          "reason": "Supplemental original-project regression; separate from official reward",
+          "evidence": [
+            "/Users/liyao/agent-led-swe/tests/runs/four-task-preflight-20261006/navidrome-v2/reference-1/PROJECT_REGRESSION"
+          ],
+          "details": {
+            "exit_code": 0,
+            "timed_out": false
+          }
+        }
+      ]
+    },
+    {
+      "variant": "control",
+      "repetition": 2,
+      "checks": [
+        {
+          "id": "OFFICIAL",
+          "status": "fail",
+          "reason": "Unmodified SWE-bench Pro V2 verifier",
+          "evidence": [
+            "/Users/liyao/agent-led-swe/tests/runs/four-task-preflight-20261006/navidrome-v2/control-2"
+          ],
+          "details": {
+            "exit_code": 1,
+            "timed_out": false,
+            "parsed_tests": 0,
+            "outcome_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        },
+        {
+          "id": "PROJECT_REGRESSION",
+          "status": "pass",
+          "reason": "Supplemental original-project regression; separate from official reward",
+          "evidence": [
+            "/Users/liyao/agent-led-swe/tests/runs/four-task-preflight-20261006/navidrome-v2/control-2/PROJECT_REGRESSION"
+          ],
+          "details": {
+            "exit_code": 0,
+            "timed_out": false
+          }
+        }
+      ]
+    },
+    {
+      "variant": "reference",
+      "repetition": 2,
+      "checks": [
+        {
+          "id": "OFFICIAL",
+          "status": "pass",
+          "reason": "Unmodified SWE-bench Pro V2 verifier",
+          "evidence": [
+            "/Users/liyao/agent-led-swe/tests/runs/four-task-preflight-20261006/navidrome-v2/reference-2"
+          ],
+          "details": {
+            "exit_code": 0,
+            "timed_out": false,
+            "parsed_tests": 1,
+            "outcome_sha256": "ef0252f78865fb1897001bff91b25a9cb178ec5c054497b6cd5cfd3fabb4a3c5"
+          }
+        },
+        {
+          "id": "PROJECT_REGRESSION",
+          "status": "pass",
+          "reason": "Supplemental original-project regression; separate from official reward",
+          "evidence": [
+            "/Users/liyao/agent-led-swe/tests/runs/four-task-preflight-20261006/navidrome-v2/reference-2/PROJECT_REGRESSION"
+          ],
+          "details": {
+            "exit_code": 0,
+            "timed_out": false
+          }
+        }
+      ]
+    }
+  ],
+  "model_calls": 0,
+  "reason": "Control failures and reference/regression passes repeated twice"
+}

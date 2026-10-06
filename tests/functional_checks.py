@@ -21,7 +21,7 @@ def run_test_groups(workspace, evidence, environment, groups, timeout=180):
     command = ['docker', 'run', '-d', '--name', container, '--network', environment.get('network', 'none'),
                '--cpus', '2', '--memory', '3g', '-v', f'{workspace}:/testbed',
                '-v', f'{evidence}:/results', '-w', '/testbed',
-               '-e', 'SETUPTOOLS_SCM_PRETEND_VERSION=7.2.0.dev0', environment['image'], 'sleep', '900']
+               environment['image'], 'sleep', '1800']
     subprocess.run(command, check=True, capture_output=True)
     results = []
     try:
@@ -42,6 +42,7 @@ def run_test_groups(workspace, evidence, environment, groups, timeout=180):
             result = {'group': group, 'exit_code': outcome['exit_code'],
                       'timed_out': outcome['timed_out'], 'elapsed_seconds': outcome['elapsed_seconds'],
                       'counts': xml_counts(evidence / f'{group}.xml'),
+                      'skipped_cases': xml_skips(evidence / f'{group}.xml'),
                       'outcome_sha256': xml_fingerprint(evidence / f'{group}.xml')}
             results.append(result)
             write_json(evidence / 'results.json', results)
@@ -52,12 +53,17 @@ def run_test_groups(workspace, evidence, environment, groups, timeout=180):
     return results
 
 
-def functional_status(result):
+def functional_status(result, allowed_skips=()):
     counts = result.get('counts')
     if not counts or not counts['tests'] or result['timed_out']:
         return 'unknown'
+    if counts['tests'] <= counts['skipped'] + counts.get('xfailed', 0):
+        return 'unknown'
     # Test exceptions need diagnosis: they may originate in the submission or environment.
-    if counts['errors'] or counts['skipped'] or result['exit_code'] not in (0, 1):
+    actual_skips = result.get('skipped_cases', [])
+    known_skips = (counts['skipped'] == len(actual_skips)
+                   and all(case in allowed_skips for case in actual_skips))
+    if counts['errors'] or (counts['skipped'] and not known_skips) or result['exit_code'] not in (0, 1):
         return 'unknown'
     if counts['failures']:
         return 'fail'
@@ -71,6 +77,11 @@ def validate_task(task, bundle, artifacts, output):
     validation = task.get('validation')
     if not validation:
         return []
+    if validation['kind'] == 'swe-pro-v2':
+        from swe_pro_verifier import run_pro_checks
+        return run_pro_checks(artifacts, bundle / validation['overlay'], task['environment'],
+                              output, validation.get('supplemental', []),
+                              validation.get('timeout_seconds', 600))
     if validation['kind'] != 'pytest':
         raise ValueError('Unsupported functional validator')
     output.mkdir(parents=True, exist_ok=False)
@@ -91,11 +102,14 @@ def validate_task(task, bundle, artifacts, output):
                 shutil.rmtree(target)
             shutil.copytree(trusted / name, target)
         try:
-            results = run_test_groups(workspace, output / 'run', task['environment'], validation['groups'])
+            results = run_test_groups(workspace, output / 'run', task['environment'], validation['groups'], validation.get('timeout_seconds', 180))
             for group in validation['groups']:
                 result = next((r for r in results if r['group'] == group), None)
-                status = functional_status(result) if result else 'unknown'
+                allowed = validation.get('allowed_skips', {}).get(group, [])
+                status = functional_status(result, allowed) if result else 'unknown'
                 reason = 'Trusted functional check; errors/skips need diagnosis'
+                if status == 'pass' and result['counts']['skipped']:
+                    reason = 'Executed tests passed; explicitly documented source-defined skips retained, not counted as passes'
                 expected = validation.get('expected_outcomes', {}).get(group)
                 if status == 'pass' and expected and result['outcome_sha256'] != expected:
                     status, reason = 'unknown', 'Test identities/outcomes differ from qualified reference'
@@ -116,6 +130,15 @@ def xml_counts(path):
     return {'tests': len(cases), 'failures': len(list(root.iter('failure'))),
             'errors': len(list(root.iter('error'))),
             'skipped': len(list(root.iter('skipped'))) - xfailed, 'xfailed': xfailed}
+
+
+def xml_skips(path):
+    if not path.is_file():
+        return []
+    return [{'classname': case.get('classname', ''), 'name': case.get('name', ''),
+             'message': skip.get('message', '')}
+            for case in ET.parse(path).getroot().iter('testcase')
+            for skip in case.findall('skipped') if skip.get('type') != 'pytest.xfail']
 
 
 

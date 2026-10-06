@@ -14,12 +14,19 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--inputs', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--case', choices=SWE_NAMES, default='packaging')
     args = parser.parse_args()
+    if args.case != 'packaging':
+        from preflight_suite import qualify
+        result = qualify(args.case, args.inputs.resolve(), args.output.resolve())
+        if not result['qualified']:
+            raise SystemExit(1)
+        return
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     report = json.loads((ROOT / 'tests/reports/swe-preflight-2026-10-05.json').read_text())
     results = []
-    for name in SWE_NAMES:
+    for name in ('packaging',):
         bundle = output / name
         bundle.mkdir()
         task = prepare_task(load_task(name, args.inputs), bundle / 'task')

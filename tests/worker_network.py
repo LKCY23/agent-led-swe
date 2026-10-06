@@ -37,13 +37,13 @@ def model_network(image, agent, upstream, evidence, auth_headers=None):
                '--user', f'{os.getuid()}:{os.getgid()}',
                '--security-opt=no-new-privileges', '--read-only', '--memory', '256m',
                '--pids-limit', '64', '-v', f'{Path(__file__).with_name("model_gateway.py")}:/gateway.py:ro',
-               *mounts, '--entrypoint', '/usr/local/bin/python', image, '-u', '/gateway.py',
+               *mounts, '--entrypoint', 'python3', image, '-u', '/gateway.py',
                '--agent', agent, '--upstream', upstream, *auth_args)
         gateway = True
         docker('network', 'connect', '--alias', 'model-gateway', name, name)
         docker('start', name)
         for _ in range(40):
-            ready = subprocess.run(['docker', 'exec', name, 'python', '-c',
+            ready = subprocess.run(['docker', 'exec', name, 'python3', '-c',
                 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8080/health",timeout=1)'],
                 capture_output=True)
             if ready.returncode == 0:
@@ -83,7 +83,7 @@ except urllib.error.HTTPError as exc:
     checks["arbitrary_route_blocked"] = exc.code == 403
 print(json.dumps(checks))
 '''
-    checks = json.loads(docker('exec', container, 'python', '-c', script))
+    checks = json.loads(docker('exec', container, 'python3', '-c', script))
     networks = json.loads(docker('inspect', '--format', '{{json .NetworkSettings.Networks}}', container))
     checks['single_internal_network'] = len(networks) == 1 and all(
         docker('network', 'inspect', '--format', '{{.Internal}}', name) == 'true' for name in networks)

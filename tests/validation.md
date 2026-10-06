@@ -1,3 +1,9 @@
+# Four selected tasks integrated — 2026-10-06
+
+Smolagents, xarray, NodeBB and Navidrome now use the shared runner and verifier entrypoints. Each passed two control/reference qualification rounds; official Pro results remain separate from Navidrome supplemental regression. Original conditional skips/xfails remain explicit. Both CLI workers passed no-model installation, network and artifact capture checks; Node 18 is preserved for NodeBB and Claude HOME cache ownership was repaired for Go tooling. Sixty-one local tests passed. No target skill changes or effect trials. [Report](reports/four-task-integration-results-2026-10-06.md).
+
+---
+
 # Model-only Docker network and task scope — 2026-10-06
 
 Added a fixed model gateway on a separate network, keeping real credentials outside the worker. Native CLI and live model checks, packaging worker checks, and the independent verifier pipeline passed. Removed the retired pytest task and its dedicated history at the user’s request. No skill content or benchmark-effect trial changed. [Current report](reports/network-and-task-scope-2026-10-06.md) records evidence, failed infrastructure attempts, limits and candidate review.

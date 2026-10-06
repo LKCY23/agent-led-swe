@@ -51,6 +51,8 @@ def summarize_runs(runs):
 
 def preflight(spec_path, inputs, output):
     spec = json.loads(spec_path.read_text())
+    if spec.get('adapter'):
+        raise ValueError('Use prepare_suite_task.py and preflight_suite.py for the four-task suite')
     row = inputs / (spec['instance_id'] + '.json')
     metadata = json.loads(row.read_text())
     original = inputs / spec['instance_id'] / 'source'

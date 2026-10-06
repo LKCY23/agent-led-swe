@@ -1,0 +1,107 @@
+{
+  "task": "nodebb",
+  "qualified": true,
+  "spec_sha256": "35c918e2ba73cf49d9cb21d4caa25a24eaf4673cb32475486a0332b7313801c1",
+  "inputs_sha256": "8fb409668ad079fffef1e655913c4f22f8092327518a65f9fddf5996cf8e58db",
+  "environment": {
+    "kind": "docker",
+    "image": "sha256:f61c20fd255ca29979078512ccad8b300833b74b8cb11551a582a5899b6b5f84",
+    "network": "none",
+    "workdir": "/app",
+    "platform": "linux/amd64",
+    "workspace_mode": "copy",
+    "workspace_excludes": [
+      "node_modules"
+    ],
+    "install_argv": []
+  },
+  "validation": {
+    "kind": "swe-pro-v2",
+    "timeout_seconds": 600,
+    "supplemental": []
+  },
+  "runs": [
+    {
+      "variant": "control",
+      "repetition": 1,
+      "checks": [
+        {
+          "id": "OFFICIAL",
+          "status": "fail",
+          "reason": "Unmodified SWE-bench Pro V2 verifier",
+          "evidence": [
+            "/Users/liyao/agent-led-swe/tests/runs/four-task-preflight-20261006/nodebb-v1/control-1"
+          ],
+          "details": {
+            "exit_code": 1,
+            "timed_out": false,
+            "parsed_tests": 197,
+            "outcome_sha256": "71bb5b96473e4b92d35724e6b9516c50ac78bb732cc397b7ec9fadd0a61b46d5"
+          }
+        }
+      ]
+    },
+    {
+      "variant": "reference",
+      "repetition": 1,
+      "checks": [
+        {
+          "id": "OFFICIAL",
+          "status": "pass",
+          "reason": "Unmodified SWE-bench Pro V2 verifier",
+          "evidence": [
+            "/Users/liyao/agent-led-swe/tests/runs/four-task-preflight-20261006/nodebb-v1/reference-1"
+          ],
+          "details": {
+            "exit_code": 0,
+            "timed_out": false,
+            "parsed_tests": 197,
+            "outcome_sha256": "306a8e2560320109aab80cef7c4206c8c2ba3ee05bc856265b616986dc297248"
+          }
+        }
+      ]
+    },
+    {
+      "variant": "control",
+      "repetition": 2,
+      "checks": [
+        {
+          "id": "OFFICIAL",
+          "status": "fail",
+          "reason": "Unmodified SWE-bench Pro V2 verifier",
+          "evidence": [
+            "/Users/liyao/agent-led-swe/tests/runs/four-task-preflight-20261006/nodebb-v1/control-2"
+          ],
+          "details": {
+            "exit_code": 1,
+            "timed_out": false,
+            "parsed_tests": 197,
+            "outcome_sha256": "71bb5b96473e4b92d35724e6b9516c50ac78bb732cc397b7ec9fadd0a61b46d5"
+          }
+        }
+      ]
+    },
+    {
+      "variant": "reference",
+      "repetition": 2,
+      "checks": [
+        {
+          "id": "OFFICIAL",
+          "status": "pass",
+          "reason": "Unmodified SWE-bench Pro V2 verifier",
+          "evidence": [
+            "/Users/liyao/agent-led-swe/tests/runs/four-task-preflight-20261006/nodebb-v1/reference-2"
+          ],
+          "details": {
+            "exit_code": 0,
+            "timed_out": false,
+            "parsed_tests": 197,
+            "outcome_sha256": "306a8e2560320109aab80cef7c4206c8c2ba3ee05bc856265b616986dc297248"
+          }
+        }
+      ]
+    }
+  ],
+  "model_calls": 0,
+  "reason": "Control failures and reference/regression passes repeated twice"
+}

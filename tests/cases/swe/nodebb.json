@@ -1,0 +1,21 @@
+{
+  "name": "nodebb",
+  "adapter": "swe-pro-v2",
+  "source": "ScaleAI/SWE-bench_Pro V2",
+  "instance_id": "instance_NodeBB__NodeBB-087e6020e490b4a1759f38c1ad03869511928263-vf2cf3cbd463b7ad942381f1c6d077626485a1e9e",
+  "repo": "NodeBB/NodeBB",
+  "base_commit": "50517020a28f11a8748e4de66a646e82bb3050e7",
+  "metadata_sha256": "af94d456c3874c153e12f911baba804c8af840fbf7f3bdb850062c4b24562894",
+  "verifier_sha256": {
+    "instruction.md": "f06147a0a955612eba686c60ddeba2212e0ec675f81da2d0c07dad286af33a33",
+    "solution/gold_patch.diff": "b7a8a270c1d7308c4f2e54ed04bcd1809935ecd17586cc9bb6f9af484ff8c8b8",
+    "tests/config.json": "3b0759afec36e867216df0c209d035661bf4959e95d5d2042f4b349bf70f3cb7",
+    "tests/parser.py": "55c2418512e1f11fac1893043e2a588d6c0809071c373b989a6c3d86906cbd97",
+    "tests/run_script.sh": "f7ae8ff66fd6a77a26a909b2812c84cfb5bfc3b369effc1e8bb683e7dfc56a47",
+    "tests/test.sh": "b6f26eecd87c1696a3702ee115d31f9d42f4704cf2116419cd879f66b60976d0",
+    "tests/test_patch.patch": "c29f5caf637d426bbfd1509f42a87530adcf4ce72fcc55cb0290d8684e2d9cee"
+  },
+  "workspace_excludes": [
+    "node_modules"
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "name": "smolagents",
+  "adapter": "featbench-v1",
+  "source": "THU-Agent/FeatBench v1",
+  "instance_id": "huggingface__smolagents-1442",
+  "repo": "huggingface/smolagents",
+  "base_commit": "7113cf6b3987c7f93ea17f9963fc32fd6cee2846",
+  "metadata_sha256": "8d2775a5307ca9512164afd9d877c7325cb5b2c3db65c69636fabbeb2b0e194c",
+  "source_sha256": "a2a441b0a85a936be02378ac4f5f90de5f32c3abda7067cd0581a821e4234aec",
+  "test_roots": [
+    "tests"
+  ],
+  "allowed_skips": {
+    "PASS_TO_PASS": [
+      {
+        "classname": "tests.test_local_python_executor.TestLocalPythonExecutorSecurity",
+        "name": "test_vulnerability_via_sys_for_all_dangerous_modules[pty]",
+        "message": "module not present in sys.modules"
+      },
+      {
+        "classname": "tests.test_local_python_executor.TestLocalPythonExecutorSecurity",
+        "name": "test_vulnerability_via_sys_for_all_dangerous_modules[sys]",
+        "message": "module not present in sys.modules"
+      }
+    ]
+  },
+  "skip_basis": "Original test conditional skips only; missing installable dependencies are not allowed. Names and reasons frozen; repeat control/reference regression fingerprints must match."
+}
