@@ -322,3 +322,8 @@ This is author review, not independent model grading. The static checks do not p
 - Exercise the remaining development scenarios as warranted by first use or further changes.
 - Natural selection/routing, Claude behavior, uncontaminated baseline comparison and measured quality improvement remain untested.
 - Remote publication, marketplace registration and deployment are separate from this local package validation.
+
+
+## Runtime restriction cleanup — 2026-10-07
+
+Removed unsupported per-turn/reply/output/retry/resource limits and restored native solver tools and project guidance. Solver and user share one conversation deadline. Historical user qualification is optional evidence; artifact verification is independent of dialogue completion. Ninety-one local tests passed; both native CLIs passed baseline/skill two-turn checks with a read-only native CC user and preserved project instructions. No real model calls or accepted skill edits. [Report](reports/runtime-restrictions-2026-10-07.md).

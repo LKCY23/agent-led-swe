@@ -30,4 +30,18 @@
 
 ## 验证
 
-先冻结代码，再运行本地回归与真实 CLI＋模拟 API 检查。检查项目指导、原生工具发现、skill 安装调用、两轮接续、只读用户与独立验收；不调用真实模型，也不据此判断 skill 效果。结果在本节补充。
+执行代码冻结于 `98e3a97`；本轮真实模型调用为 0。
+
+- 本地回归 91 项通过；文档检查 72 个 Markdown、19 个章节链接通过，diff 无格式错误。
+- Claude Code 2.1.278：baseline／skill 均通过原生协议检查。
+- Codex 0.160.0：baseline／skill 均通过原生协议检查。
+- 四组均保留项目指导、正确的目标 skill 调用或缺席、两轮原生 session 接续、用户只读检查与结构化回应。
+- CC Solver 实际 init 已恢复默认工具，包括 Skill、Task、Workflow 等；用户实际提供 Read、Glob、Grep、StructuredOutput。
+- 回归覆盖超过旧轮数上限继续运行、用户使用整组剩余预算、历史用户资格不阻塞启动、会话失败后独立验收、导出失败不误用旧产物。
+
+原始证据：
+
+- `/Users/liyao/agent-led-swe/tests/runs/runtime-cleanup-20261007-claude-code/`
+- `/Users/liyao/agent-led-swe/tests/runs/runtime-cleanup-20261007-codex/`
+
+上述结果验证基础设施，不证明真实模型表现或 skill 收益。正式 skill 和旧试跑记录未修改。
