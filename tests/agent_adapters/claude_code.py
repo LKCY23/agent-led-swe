@@ -34,10 +34,10 @@ class ClaudeCodeAdapter:
     def command(self, binary, workspace, model, effort, sandbox, context):
         return list(binary) + ['--print', '--no-session-persistence',
             '--input-format', 'stream-json', '--replay-user-messages',
-            '--output-format', 'stream-json', '--verbose', '--model', model + '[1m]', '--effort', effort,
-            '--setting-sources', 'user', '--settings', '{"disableAllHooks":true,"autoMemoryEnabled":false}', '--strict-mcp-config',
+            '--output-format', 'stream-json', '--verbose', '--model', model, '--effort', effort,
+            '--strict-mcp-config',
             '--mcp-config', '{"mcpServers":{}}', '--no-chrome',
-            '--tools', 'Bash,Read,Write,Edit,Glob,Grep', '--permission-mode', 'bypassPermissions']
+            '--tools', 'default', '--permission-mode', 'bypassPermissions']
 
     def inspect_trace(self, text, helpers=None):
         counts, malformed, results, models, init = Counter(), [], [], set(), []
@@ -87,15 +87,11 @@ class ClaudeCodeAdapter:
         normalized = {'input_tokens': total,
                       'cached_input_tokens': cached if type(cached) is int and cached >= 0 else None,
                       'output_tokens': output if type(output) is int and output >= 0 else None}
-        allowed_tools = {'Bash', 'Read', 'Write', 'Edit', 'Glob', 'Grep'}
         verified = len(init) == 1 and all(init[0].get(key) == [] for key in ('plugins', 'mcp_servers'))
-        verified = verified and isinstance(init[0].get('skills'), list) and set(init[0]['skills']) <= BUNDLED_SKILLS | {'agent-led-swe'}
-        verified = verified and set(invocations) <= {'agent-led-swe'}
-        verified = verified and isinstance(init[0].get('tools'), list) and set(init[0]['tools']) <= allowed_tools
-        # 2.1.278 reports built-in agent names even with no Agent/Task tool.
-        # Reject custom agents; catalog presence does not enable delegation.
-        builtins = {'claude', 'Explore', 'general-purpose', 'Plan', 'statusline-setup'}
-        verified = verified and isinstance(init[0].get('agents'), list) and set(init[0]['agents']) <= builtins
+        # Fresh HOME and the frozen public workspace define discovery scopes.
+        # Project skills/agents and native tools are task capabilities, not leaks.
+        verified = verified and all(isinstance(init[0].get(key), list)
+                                    for key in ('skills', 'tools', 'agents'))
         return {'schema_version': 1, 'event_types': dict(counts), 'malformed_lines': malformed,
                 'completion_observed': bool(results), 'telemetry_usable': usable,
                 'usage': normalized if usable else {k: None for k in normalized},

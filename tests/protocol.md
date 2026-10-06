@@ -31,7 +31,7 @@ FeatureBench 的遮蔽、隐藏测试恢复与其他 benchmark 的正向修复�
 
 当前选择见 [STATUS](STATUS.md)。旧四题和 packaging 已退出推荐组合，适配能力保留；SDK／DSPy 不启用。旧四题的资格仍核对任务定义哈希、冻结输入和不可变镜像 ID；保留 CLI 名称不表示应默认运行。
 
-cattrs 的协作适配独立于单次请求入口：`cattrs_task.py` 准备输入并预检，`collaboration_runtime.py` 组织原生对话接续，`simulated_user.py` 启动只读的原生 CC 用户实例，`run_collaboration.py` 冻结两组并组织独立验收。`check_collaboration_worker.py --with-simulated-user` 用模拟 API 检查完整链路。用户通过 CC 使用 Anthropic Messages，工具循环和结构化输出交给 CC。资格按配置与代码哈希匹配；当前移除用户内部步数限制并恢复搜索工具后，旧用户资格需要刷新。详见[场景](reports/cattrs-collaboration-scenario-2026-10-06.md)和[最新试跑与修复](reports/cattrs-retry-2026-10-07.md)。
+cattrs 的协作适配独立于单次请求入口：`cattrs_task.py` 准备输入并预检，`collaboration_runtime.py` 组织原生对话接续，`simulated_user.py` 启动只读的原生 CC 用户实例，`run_collaboration.py` 冻结两组并组织独立验收。`check_collaboration_worker.py --with-simulated-user` 用模拟 API 检查完整链路。用户通过 CC 使用 Anthropic Messages，工具循环和结构化输出交给 CC。任务／verifier 预检仍核对冻结输入；用户预检仅作为历史证据，不强制重新取得模型资格。协作仅设整组总时长，不额外设置轮数、单轮时间或模型输出额度。详见[场景](reports/cattrs-collaboration-scenario-2026-10-06.md)和[最新试跑与修复](reports/cattrs-retry-2026-10-07.md)。
 
 ## 2. 执行与产物约定
 
@@ -43,7 +43,10 @@ Python 任务在 /testbed 离线注册源码。NodeBB／Navidrome 保留官方�
 
 模型 profile 与 Agent 分开选择，运行前验证组合和 effort。Codex 使用现有 auth.json 中的有效访问凭据；CC 从显式环境变量或被 Git 忽略的 `configs/credentials.local.json` 取密钥。真实凭据仅通过权限为 0600 的临时文件只读挂载给外部网关，worker 只获得无权限的占位值。网关按固定上游替换认证头，退出时删除临时文件。凭据不写入镜像、命令参数或证据，不修改宿主登录，也不读取本机 CC／CC Switch 设置。
 
-skill 组安装原生 skill 并显式调用，baseline 不安装。CC 禁用插件、MCP 和委派工具；固定 CLI 自带的 skills／命令在两组一致保留，额外用户 skill 只允许目标项。init 可以列出内置 Agent 名称，但不得加载自定义 Agent 或暴露委派工具。每次保存原生 init、工具事件、完成事件和 usage；未完成、模型标识不一致、隔离或原生调用未验证的运行不作为有效提交。`[1m]` 是 CC 的上下文设置后缀，规范化模型标识时去除，同时保留原始名称。CC usage 中普通输入与缓存读写合计为 input_tokens，并保留原始 usage；客户端费用估算不作为真实账单，cost 保留 null。
+skill 组安装原生 skill 并显式调用，baseline 不安装。Solver 保留原生工具与项目指导，包括项目技能、Agent 定义和 hooks；新 HOME 不继承宿主配置。外部 MCP／插件连接不加载，直接外网由网络边界禁止。原生 init、工具事件、完成事件和 usage 全部保存；目标 skill 的发现与调用单独核查，不因使用其他项目能力而判无效。
+
+模型名称原样传入，不强制追加 `[1m]`。读取历史 usage 时仍兼容该后缀并保留原始名称。CC 普通输入与缓存读写合计为 input_tokens，并保留原始 usage；客户端费用估算不作为真实账单。运行器不另设输出 token、结构化输出重试、容器 CPU／内存或模型网关请求时间限制；使用原生默认行为与宿主资源边界。每组对话受明确的总时长约束，退出时清理 worker 与网关。
+
 
 ### 正式执行的网络边界
 
@@ -91,7 +94,7 @@ Codex 使用独立的 evaluation-gateway provider 发送 Responses SSE，保留�
 
 SWE-bench Pro V2 的 OFFICIAL 状态核对原生 reward、退出状态和实际测试结果；没有可靠结果或三者不一致时为 unknown。Navidrome 的 PROJECT_REGRESSION 另行记录 cmd／conf 检查，不冒充官方 P2P。任务总状态根据已约定的全部功能检查汇总，官方成绩仍能单独查看。
 
-真实任务执行未完成时，不把起始代码当作已提交成果验收，也不因此判 Agent 功能失败；保留已有产物和错误证据，结果为 unknown。完成执行后，测试项目和结果指纹还应与预检的参考验收对应，缺项不能靠一个成功退出码变为通过。
+无论对话是否完成、用户是否接受，都可对已冻结产物运行 verifier。该结果只说明这份产物的功能表现；运行失败、用户拒绝或实验无效仍分别保留，不能因测试通过改写为完整交付。没有快照、验收失败或验收证据不足时为 unknown。测试项目和结果指纹应与预检对应，缺项不能靠成功退出码变为通过。
 
 后续分析不要求统一文档数量、文件名或固定阶段，不改变任务分数。原 benchmark 功能结果与过程观察分别报告；共享工程／交付要求的改编保留在 provenance 中。详见 [分析指导](analysis.md)。历史 judge 判分不覆盖，新版验证始终创建新目录。
 

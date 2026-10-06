@@ -126,7 +126,7 @@ print(json.dumps({'type':'result','subtype':'success','is_error':False,
 
         def execute(helpers, workspace, evidence, command, timeout, prompt, adapter):
             self.assertNotIn('--bare', command)
-            self.assertIn('deepseek-flash[1m]', command)
+            self.assertIn('deepseek-flash', command)
             return runtime.execute(helpers, workspace, evidence, [str(fake)], timeout, prompt, adapter)
 
         with (patch.object(run_evaluation, 'ROOT', self.target),
@@ -291,6 +291,7 @@ print(json.dumps({'type':'result','subtype':'success','is_error':False,
         def failed_export(*args, **kwargs):
             with original(*args, **kwargs) as context:
                 yield context
+            runtime.write_json(args[2] / 'workspace-export-error.json', {'error': 'Synthetic artifact export failure'})
             raise RuntimeError('Synthetic artifact export failure')
 
         with patch.object(run_evaluation, 'execution_environment', side_effect=failed_export):
@@ -343,24 +344,37 @@ print(json.dumps({'type':'result','subtype':'success','is_error':False,
                 rows = evaluate_results.evaluate_bundle(self.bundle, self.bundle / status)
             self.assertTrue(all(r['task_status'] == status for r in rows))
 
-    def test_incomplete_execution_does_not_become_a_task_failure(self):
+    def test_partial_artifact_is_verified_without_claiming_completed_execution(self):
         plan = self.run_pair()
         self.enable_fixture_verifier()
         for trial in plan['trials']:
             path = self.bundle / trial['id'] / 'result.json'
             row = json.loads(path.read_text()); row['run_status'] = 'timeout'
             runtime.write_json(path, row)
-        with patch.object(evaluate_results, 'validate_task', side_effect=AssertionError('No completed submission')):
+        with patch.object(evaluate_results, 'validate_task', return_value=[{'id': 'check', 'status': 'pass'}]) as verify:
             rows = evaluate_results.evaluate_bundle(self.bundle, self.bundle / 'verification')
-        self.assertTrue(all(r['task_status'] == 'unknown' and r['verifier']['state'] == 'not_run' for r in rows))
+        self.assertEqual(verify.call_count, 2)
+        self.assertTrue(all(r['task_status'] == 'pass' and r['run_status'] == 'timeout'
+                            and r['comparison_validity']['status'] == 'unknown' for r in rows))
 
 
     def test_context_check_rejects_unparsed_skill_instructions(self):
         from subprocess import CompletedProcess
         response = json.dumps([{'content': [{'text': '<skills_instructions>unexpected</skills_instructions>'}]}])
         with patch.object(runtime.subprocess, 'run', return_value=CompletedProcess([], 0, response, '')):
-            with self.assertRaisesRegex(ValueError, 'Unexpected inherited'):
+            with self.assertRaisesRegex(ValueError, 'unrecognized skill catalog'):
                 runtime.isolated_context('codex', self.root, self.root, 'synthetic', 'low', 'read-only')
+
+    def test_context_keeps_project_guidance_and_skills(self):
+        from subprocess import CompletedProcess
+        catalog = ('# AGENTS.md instructions\nProject conventions\n<skills_instructions>\n'
+                   f'- `r0` = `{self.root}/.agents/skills`\n'
+                   '- project-guide (file: r0/project-guide/SKILL.md)\n</skills_instructions>')
+        response = CompletedProcess([], 0, json.dumps([{'content': [{'text': catalog}]}]), '')
+        with patch.object(runtime.subprocess, 'run', return_value=response):
+            receipt = runtime.isolated_context('codex', self.root, self.root, 'synthetic', 'low', 'read-only')
+        self.assertEqual(receipt['disabled_paths'], [])
+        self.assertNotIn('project_doc_max_bytes=0', receipt['overrides'])
 
     def test_context_check_disables_discovered_paths_and_verifies_again(self):
         from subprocess import CompletedProcess

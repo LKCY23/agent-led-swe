@@ -196,7 +196,7 @@ def docker_worker(task, workspace, evidence, cli, skill, authenticate,
         raise ValueError('Read-only workers require a bind mount and no project installation')
     from container_workspace import install_workspace, export_workspace, allow_workspace_owner
     name = 'swe-executor-' + uuid.uuid4().hex[:12]
-    argv = ['docker', 'run', '-d', '--init', '--name', name, '--cpus', '2', '--memory', '3g',
+    argv = ['docker', 'run', '-d', '--init', '--name', name,
             '--network', network, '--cap-drop=ALL', '--cap-add=CHOWN', '--security-opt=no-new-privileges',
             *(['--platform', environment['platform']] if environment.get('platform') else []),
             *([] if copy_mode else ['-v', f'{workspace}:{workdir}' + (':ro' if readonly else '')]), '-w', workdir]
@@ -217,15 +217,13 @@ def docker_worker(task, workspace, evidence, cli, skill, authenticate,
             env = claude_environment(model_profile, 'evaluation-gateway')
             env['ANTHROPIC_BASE_URL'] = gateway
             env.update({'HOME': '/tmp/agent-home', 'CLAUDE_CONFIG_DIR': '/tmp/agent-home/.claude'})
-            if readonly:
-                env.update({'MAX_STRUCTURED_OUTPUT_RETRIES': '1', 'CLAUDE_CODE_MAX_OUTPUT_TOKENS': '4096'})
             env_file = Path(auth_tmp) / 'worker.env'
             if any('\n' in v or '\r' in v for v in env.values()):
                 raise ValueError('Worker environment values must be single-line strings')
             env_file.write_text(''.join(f'{key}={value}\n' for key, value in env.items()))
             env_file.chmod(0o600)
             argv += ['--env-file', str(env_file)]
-        argv += [image, 'sleep', '86400']
+        argv += [image, 'sleep', 'infinity']
         subprocess.run(argv, check=True, capture_output=True)
     try:
         if copy_mode:

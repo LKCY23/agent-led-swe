@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Live native CC user smoke: clarify requirements, then read/review a draft.
 
-No solver rollout. Two replies, each limited to 180 seconds.
+No solver rollout. Two questions share one explicit smoke-test budget.
 """
 import argparse
 import json
 from pathlib import Path
 import shutil
+import time
 
 from cattrs_task import unpack, verify_inputs
 from evaluation_runtime import build_worker_image, digest, file_hashes, write_json
@@ -25,7 +26,10 @@ def main():
     parser.add_argument('--profile', type=Path, required=True)
     parser.add_argument('--credentials', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--total-seconds', type=int, required=True)
     args = parser.parse_args()
+    if args.total_seconds <= 0:
+        parser.error('--total-seconds must be positive')
     inputs, output = args.inputs.resolve(), args.output.resolve()
     verify_inputs(inputs)
     profile = load_profile(args.profile)
@@ -44,8 +48,7 @@ def main():
     for name in ('simulated_user.py', 'model_config.py', 'evaluation_runtime.py', 'check_simulated_user.py'):
         shutil.copyfile(source / name, output / 'tools' / name)
     write_json(output / 'plan.json', {'profile': profile, 'cli': cli, 'environment': environment,
-        'max_seconds_per_reply': 180, 'max_replies': 2,
-        'structured_output_retries': 1, 'questions': QUESTIONS,
+        'total_seconds': args.total_seconds, 'questions': QUESTIONS,
         'scenario_files': file_hashes(output / 'scenario'), 'tool_files': file_hashes(output / 'tools'),
         'requirements_sha256': digest(output / 'requirements.md'),
         'public_archive_sha256': digest(inputs / 'public.tar.gz'),
@@ -54,11 +57,14 @@ def main():
     result = {'protocol_completed': False, 'accepted_flags_correct': False, 'content_review': 'not_reviewed', 'replies': []}
     try:
         with SimulatedUser(profile, (output / 'scenario/user.md').read_text(), (output / 'requirements.md').read_text(),
-                output / 'public', output / 'user', environment, cli, args.credentials,
-                max_replies=2) as user:
+                output / 'public', output / 'user', environment, cli, args.credentials) as user:
+            deadline = time.monotonic() + args.total_seconds
             for index, question in enumerate(QUESTIONS):
                 conversation.append({'role': 'assistant', 'content': question})
-                reply = user(conversation, output / ('public' if index == 0 else 'review'), 180)
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError('User smoke budget exhausted')
+                reply = user(conversation, output / ('public' if index == 0 else 'review'), remaining)
                 result['replies'].append({'reply': reply.text, 'accepted': reply.accepted})
                 conversation.append({'role': 'user', 'content': reply.text})
                 write_json(output / 'conversation.json', conversation)

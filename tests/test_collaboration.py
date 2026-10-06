@@ -56,12 +56,15 @@ class ConversationTest(unittest.TestCase):
 
     def test_default_solver_limit_uses_shared_remaining_budget(self):
         now = [0]
+        user_timeouts = []
         def user(messages, work, timeout):
+            user_timeouts.append(timeout)
             now[0] += 30
             return UserReply('Continue') if len(messages) == 2 else UserReply('Accepted', True)
         result = self.run_conversation(user, timeout=1200, clock=lambda: now[0])
         self.assertEqual(result['status'], 'completed')
         self.assertEqual(self.timeouts, [1200, 1170])
+        self.assertEqual(user_timeouts, [1200, 1170])
 
     def test_no_approval_by_silence_or_invalid_response(self):
         result = self.run_conversation(lambda *args: None)
@@ -77,10 +80,14 @@ class ConversationTest(unittest.TestCase):
         self.assertFalse((self.root / 'output/turn-001/user-reply.json').exists())
 
     def test_budget_ends_unaccepted_conversation(self):
-        result = self.run_conversation(lambda *args: UserReply('Continue'), max_turns=2)
-        self.assertEqual(result['status'], 'turn_limit')
+        now = [0]
+        def user(*args):
+            now[0] += 1
+            return UserReply('Continue')
+        result = self.run_conversation(user, timeout=15, clock=lambda: now[0])
+        self.assertEqual(result['status'], 'timeout')
         self.assertFalse(result['accepted'])
-        self.assertEqual(len(self.prompts), 2)
+        self.assertEqual(len(self.prompts), 15)  # No former 8/12-turn cutoff.
 
     def test_native_error_does_not_reach_user_as_completed_work(self):
         self.status = 'timeout'
@@ -108,7 +115,7 @@ class ConversationTest(unittest.TestCase):
         def user(*args):
             now[0] += 11
             return UserReply('Accepted', True)
-        result = self.run_conversation(user, user_timeout=10, clock=lambda: now[0])
+        result = self.run_conversation(user, timeout=10, clock=lambda: now[0])
         self.assertEqual(result['status'], 'timeout')
         self.assertFalse(result['accepted'])
 

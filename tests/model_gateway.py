@@ -52,8 +52,8 @@ def handler(agent, upstream, auth_headers=None):
                     self.send_error(400, 'Length required')
                     return
                 length = int(self.headers.get('Content-Length', '0'))
-                if not 0 <= length <= 32 * 1024 * 1024:
-                    self.send_error(413)
+                if length < 0:
+                    self.send_error(400, 'Invalid content length')
                     return
                 body = self.rfile.read(length)
                 headers = {k: v for k, v in self.headers.items() if k.lower() not in HOP_HEADERS}
@@ -62,7 +62,9 @@ def handler(agent, upstream, auth_headers=None):
                                if k.lower() not in {'authorization', 'x-api-key', 'chatgpt-account-id'}}
                     headers.update(auth_headers)
                 cls = http.client.HTTPSConnection if endpoint.scheme == 'https' else http.client.HTTPConnection
-                connection = cls(endpoint.hostname, endpoint.port, timeout=120)
+                # The runner owns the conversation deadline and tears down this
+                # gateway with its worker. Do not add a shorter model timeout.
+                connection = cls(endpoint.hostname, endpoint.port, timeout=None)
                 connection.request(self.command, endpoint.path.rstrip('/') + self.path, body, headers)
                 response = connection.getresponse()
                 # Never send a redirect target to the worker or follow one here.

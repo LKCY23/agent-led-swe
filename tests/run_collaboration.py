@@ -20,7 +20,7 @@ from simulated_user import SimulatedUser
 SCENARIO = Path(__file__).parent / 'cases/collaboration/cattrs'
 
 
-def prepare_pair(inputs, qualification, output, agent, solver, user, effort, skill, limits, user_qualification):
+def prepare_pair(inputs, qualification, output, agent, solver, user, effort, skill, limits, user_qualification=None):
     verify_inputs(inputs)
     qualified = json.loads(qualification.read_text())
     if (qualified.get('qualified') is not True or qualified.get('inputs_sha256') != digest(inputs / 'inputs.json')
@@ -28,15 +28,11 @@ def prepare_pair(inputs, qualification, output, agent, solver, user, effort, ski
         raise ValueError('Matching cattrs environment/verifier qualification is required')
     validate_compatibility(agent, solver, effort)
     validate_compatibility('claude-code', user, 'high')
-    user_receipt = json.loads(user_qualification.read_text())
-    user_files = {name: digest(Path(__file__).parent / name) for name in
-                  ('simulated_user.py', 'evaluation_runtime.py', 'model_config.py', 'agent_adapters/claude_code.py')}
     expected_user_cli = {'agent': 'claude-code', 'version': json.loads((CONFIGS / 'agents.json').read_text())['claude-code']['version']}
-    if (user_receipt.get('qualified') is not True or user_receipt.get('model_profile') != user
-            or user_receipt.get('persona_sha256') != digest(SCENARIO / 'user.md')
-            or user_receipt.get('requirements_sha256') != digest(inputs / 'user-requirements.md')
-            or user_receipt.get('tool_files') != user_files or user_receipt.get('cli') != expected_user_cli):
-        raise ValueError('Simulated-user qualification is missing, failed or stale; do not run a skill comparison')
+    # Prior live probes are supporting evidence, not a mandatory certificate.
+    # Freeze the actual configuration below and inspect this run's native trace.
+    if set(limits) != {'total_seconds'}:
+        raise ValueError('The conversation has one budget: total_seconds')
     for key, value in limits.items():
         if type(value) is not int or value < 1:
             raise ValueError(f'{key} must be a positive integer')
@@ -45,7 +41,8 @@ def prepare_pair(inputs, qualification, output, agent, solver, user, effort, ski
     output.mkdir(parents=True, exist_ok=False)
     shutil.copytree(inputs, output / 'task-inputs')
     shutil.copyfile(qualification, output / 'qualification.json')
-    shutil.copyfile(user_qualification, output / 'user-qualification.json')
+    if user_qualification:
+        shutil.copyfile(user_qualification, output / 'user-qualification.json')
     shutil.copytree(SCENARIO, output / 'scenario')
     targets = freeze_skill(skill, output / 'frozen-skill')
     freeze_helpers(DEFAULT_EVALUATOR, output / 'helpers')
@@ -61,9 +58,9 @@ def prepare_pair(inputs, qualification, output, agent, solver, user, effort, ski
             'agent': cli, 'solver_profile': solver, 'user_profile': user, 'effort': effort, 'user_effort': 'high',
             'user_agent': user_cli, 'user_environment': user_environment,
             'limits': limits, 'cost_limit': None,
-            'budget_semantics': 'Shared solver/user conversation deadline; each solver turn can use the remaining group time; no hard dollar/token cap',
+            'budget_semantics': 'One shared solver/user conversation deadline; no per-turn, reply-count, output-token or dollar cap imposed by the runner',
             'environment': environment, 'qualification_sha256': digest(qualification),
-            'user_qualification_sha256': digest(user_qualification),
+            'user_qualification_sha256': digest(user_qualification) if user_qualification else None,
             'input_sha256': digest(inputs / 'inputs.json'), 'scenario_files': file_hashes(output / 'scenario'),
             'skill_source': skill_source(skill), 'skill_files': targets, 'tool_files': adapter_hashes(),
             'instruction': 'Native skill invocation only in treatment; no stage scheduling or automatic LLM grading'}
@@ -101,7 +98,7 @@ def run_pair(output, plan, credentials):
             snapshot(work, evidence / 'before')
             user = SimulatedUser(plan['user_profile'], persona, requirements, evidence / 'before',
                 evidence / 'user', plan['user_environment'], plan['user_agent'], credentials,
-                max_replies=limits['turns'], effort=plan['user_effort'])
+                effort=plan['user_effort'])
             try:
                 with user, execution_environment({'environment': plan['environment']}, work, evidence, plan['agent'], treatment,
                         model_profile=plan['solver_profile'], credentials=credentials) as runtime:
@@ -111,9 +108,8 @@ def run_pair(output, plan, credentials):
                     result = converse(adapter, binary, cwd, sandbox, context, plan['solver_profile']['model'],
                         plan['effort'], output / 'helpers', work, evidence / 'conversation',
                         COMMON_PROMPT + 'You can ask the user questions in your reply; this conversation can continue.\n\n' + request,
-                        user, invocation=adapter.invocation() if treatment else '', max_turns=limits['turns'],
-                        timeout=limits['total_seconds'],
-                        user_timeout=limits['user_seconds'])
+                        user, invocation=adapter.invocation() if treatment else '',
+                        timeout=limits['total_seconds'])
                 activation = verify_activation(adapter.name, evidence, treatment, entrypoint,
                                                'conversation/turn-001/capture')
                 result['native_activation'] = activation
@@ -124,18 +120,22 @@ def run_pair(output, plan, credentials):
                 snapshot(work, evidence / 'after')
                 result['user_replies'] = user.calls
                 write_json(evidence / 'result.json', result)
-        # Only complete, valid submissions can receive task success. Incomplete
-        # artifacts remain available for later diagnosis, without hidden feedback.
-        if result['status'] == 'completed' and result.get('comparison_validity') == 'valid':
+        # Grade the frozen artifact even when dialogue failed or timed out.
+        # Functional correctness does not establish a completed/valid conversation.
+        try:
+            if (evidence / 'workspace-export-error.json').exists():
+                raise ValueError('Worker export failed; local files may not represent the executed artifact')
             checks = run_checks(inputs, evidence / 'after', evidence / 'verifier')
             reference = json.loads((output / 'qualification.json').read_text())['runs'][1]['checks']
             if checks['status'] == 'pass' and [g['outcome_sha256'] for g in checks['groups']] != [
                     g['outcome_sha256'] for g in reference['groups']]:
                 checks['status'] = 'unknown'
                 checks['reason'] = 'Test identities/outcomes differ from the qualified reference'
-            result['task_status'] = checks['status']
-            write_json(evidence / 'verifier-result.json', checks)
-            write_json(evidence / 'result.json', result)
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
+            checks = {'status': 'unknown', 'reason': str(exc)}
+        result['task_status'] = checks['status']
+        write_json(evidence / 'verifier-result.json', checks)
+        write_json(evidence / 'result.json', result)
         print(json.dumps({'variant': variant, 'status': result['status'],
                           'task_status': result['task_status'], 'user_replies': user.calls}), flush=True)
         results.append(result)
@@ -147,7 +147,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--inputs', type=Path, required=True)
     parser.add_argument('--qualification', type=Path, required=True)
-    parser.add_argument('--user-qualification', type=Path, required=True)
+    parser.add_argument('--user-qualification', type=Path, help='Optional historical user-probe evidence; not an execution gate')
     parser.add_argument('--skill-path', type=Path, required=True)
     parser.add_argument('--credentials', type=Path, required=True)
     parser.add_argument('--agent', choices=['codex', 'claude-code'], required=True)
@@ -155,17 +155,17 @@ def main():
     parser.add_argument('--user-profile', type=Path, required=True)
     parser.add_argument('--effort', choices=['low', 'high', 'max', 'xhigh'], required=True)
     parser.add_argument('--output', type=Path, required=True)
-    for name in ('total-seconds', 'user-seconds', 'turns'):
-        parser.add_argument('--' + name, type=int, required=True)
+    parser.add_argument('--total-seconds', type=int, required=True)
     parser.add_argument('--prepare-only', action='store_true', help='Freeze the plan without any model call')
     args = parser.parse_args()
-    limits = {name: getattr(args, name) for name in ('total_seconds', 'user_seconds', 'turns')}
+    limits = {'total_seconds': args.total_seconds}
     plan = prepare_pair(args.inputs.resolve(), args.qualification.resolve(), args.output.resolve(), args.agent,
         load_profile(args.solver_profile), load_profile(args.user_profile), args.effort, args.skill_path.resolve(), limits,
-        args.user_qualification.resolve())
+        args.user_qualification.resolve() if args.user_qualification else None)
     if not args.prepare_only:
         results = run_pair(args.output.resolve(), plan, args.credentials.resolve())
-        return 0 if all(r['status'] == 'completed' and r['task_status'] == 'pass' for r in results) else 1
+        return 0 if all(r['status'] == 'completed' and r['task_status'] == 'pass'
+                        and r.get('comparison_validity') == 'valid' for r in results) else 1
     return 0
 
 

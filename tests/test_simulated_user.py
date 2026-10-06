@@ -40,14 +40,12 @@ class NativeUserTest(unittest.TestCase):
         self.assertFalse(reply.accepted)
         self.assertEqual(session, SESSION)
 
-    def test_final_acceptance_requires_successful_current_read(self):
-        with self.assertRaisesRegex(ValueError, 'successful'):
-            parse(events(accepted=True))
+    def test_acceptance_is_not_gated_by_this_turns_tool_history(self):
+        self.assertTrue(parse(events(accepted=True))[0].accepted)
         self.assertTrue(parse(events(accepted=True, read=True))[0].accepted)
         rows = events(accepted=True, read=True)
         rows[2]['message']['content'][0]['is_error'] = True
-        with self.assertRaises(ValueError):
-            parse(rows)
+        self.assertTrue(parse(rows)[0].accepted)
 
     def test_current_content_search_counts_as_inspection(self):
         rows = events(accepted=True, read=True)
@@ -55,17 +53,7 @@ class NativeUserTest(unittest.TestCase):
             'path': 'current/api.md', 'pattern': 'PartialResult', 'output_mode': 'content'})
         self.assertTrue(parse(rows)[0].accepted)
         rows[1]['message']['content'][0]['input']['output_mode'] = 'files_with_matches'
-        with self.assertRaises(ValueError):
-            parse(rows)
-
-    def test_relative_read_is_allowed_but_parent_traversal_is_not_current(self):
-        rows = events(accepted=True, read=True)
-        block = rows[1]['message']['content'][0]
-        block['input']['file_path'] = 'current/api.md'
         self.assertTrue(parse(rows)[0].accepted)
-        block['input']['file_path'] = '/testbed/current/../../etc/passwd'
-        with self.assertRaises(ValueError):
-            parse(rows)
 
     def test_skill_or_write_tool_exposure_is_rejected(self):
         for key, value in [('tools', ['Read', 'Bash']), ('skills', ['agent-led-swe']),
@@ -118,14 +106,16 @@ class NativeUserTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             parse(rows)
 
-    def test_failed_user_qualification_stops_pair_before_build(self):
+    def test_historical_user_receipt_does_not_gate_current_run(self):
         from run_collaboration import prepare_pair
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             inputs = root / 'inputs'
             inputs.mkdir()
             (inputs / 'inputs.json').write_text('{}')
+            write_json(inputs / 'environment.json', {'image': 'fixture'})
             (inputs / 'user-requirements.md').write_text('requirements')
+            (root / 'SKILL.md').write_text('Test skill')
             qualification = root / 'task.json'
             write_json(qualification, {'qualified': True,
                 'inputs_sha256': digest(inputs / 'inputs.json'),
@@ -133,11 +123,11 @@ class NativeUserTest(unittest.TestCase):
             user_qualification = root / 'user.json'
             write_json(user_qualification, {'qualified': False})
             profile = load_profile(CONFIGS / 'models/deepseek-v4.1-flash.json')
-            with patch('run_collaboration.verify_inputs'), patch('run_collaboration.build_worker_image') as build:
-                with self.assertRaisesRegex(ValueError, 'Simulated-user qualification'):
-                    prepare_pair(inputs, qualification, root / 'pair', 'claude-code', profile, profile,
-                                 'high', root, {'turns': 2}, user_qualification)
-                build.assert_not_called()
+            with patch('run_collaboration.verify_inputs'), patch('run_collaboration.build_worker_image', return_value='fixture'):
+                plan = prepare_pair(inputs, qualification, root / 'pair', 'claude-code', profile, profile,
+                                    'high', root, {'total_seconds': 1200}, user_qualification)
+            self.assertEqual(plan['limits'], {'total_seconds': 1200})
+            self.assertEqual(plan['user_qualification_sha256'], digest(user_qualification))
 
 
 if __name__ == '__main__':

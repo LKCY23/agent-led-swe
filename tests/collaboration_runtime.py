@@ -48,7 +48,7 @@ def completed_turn(agent, raw):
 
 def converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
              helpers, workspace, output, request, responder, *, invocation='',
-             max_turns=12, timeout=3600, turn_timeout=None, user_timeout=120,
+             timeout=3600,
              capture=execute, clock=time.monotonic):
     """A user question/review and a final answer both use normal native turns.
 
@@ -56,19 +56,15 @@ def converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
     I/O timeout. Responses returned after that deadline are never delivered.
     No tool or model call is made by this function except through these drivers.
     """
-    if type(max_turns) is not int or max_turns < 1:
-        raise ValueError('max_turns must be a positive integer')
-    for limit in (timeout, user_timeout):
-        positive_seconds(limit)
-    if turn_timeout is not None:
-        positive_seconds(turn_timeout)
+    positive_seconds(timeout)
     output.mkdir(parents=True, exist_ok=False)
     deadline = clock() + timeout
     messages = [{'role': 'user', 'content': request}]
     session_id, rows = None, []
     result = {'status': 'error', 'accepted': False, 'task_status': 'unknown', 'turns': rows}
     try:
-        for number in range(1, max_turns + 1):
+        while True:
+            number = len(rows) + 1
             remaining = deadline - clock()
             if remaining <= 0:
                 result['status'] = 'timeout'
@@ -79,7 +75,7 @@ def converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
             prompt.write_text((invocation if number == 1 else '') + messages[-1]['content'])
             command = adapter.conversation_command(binary, runtime_cwd, model, effort, sandbox, context, session_id)
             execution = capture(helpers, workspace, turn / 'capture', command,
-                                remaining if turn_timeout is None else min(turn_timeout, remaining), prompt, adapter)
+                                remaining, prompt, adapter)
             row = {'turn': number, 'execution': execution}
             rows.append(row)
             write_json(turn / 'execution.json', execution)
@@ -104,7 +100,7 @@ def converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
             if remaining <= 0:
                 result['status'] = 'timeout'
                 break
-            allowance = min(user_timeout, remaining)
+            allowance = remaining
             started = clock()
             # Pass a copy so the responder cannot rewrite earlier conversation.
             answer = responder([dict(m) for m in messages], turn / 'workspace', allowance)
@@ -121,8 +117,6 @@ def converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
             if answer.accepted:
                 result.update(status='completed', accepted=True)
                 break
-        else:
-            result['status'] = 'turn_limit'
     except TimeoutError as exc:
         result.update(status='timeout', error=str(exc))
     except (OSError, ValueError, RuntimeError) as exc:

@@ -35,8 +35,8 @@ def model_network(image, agent, upstream, evidence, auth_headers=None):
             auth_args = ['--auth-file', '/run/model-auth.json']
         docker('create', '--name', name, '--network', 'bridge', '--cap-drop=ALL',
                '--user', f'{os.getuid()}:{os.getgid()}',
-               '--security-opt=no-new-privileges', '--read-only', '--memory', '256m',
-               '--pids-limit', '64', '-v', f'{Path(__file__).with_name("model_gateway.py")}:/gateway.py:ro',
+               '--security-opt=no-new-privileges', '--read-only',
+               '-v', f'{Path(__file__).with_name("model_gateway.py")}:/gateway.py:ro',
                *mounts, '--entrypoint', 'python3', image, '-u', '/gateway.py',
                '--agent', agent, '--upstream', upstream, *auth_args)
         gateway = True

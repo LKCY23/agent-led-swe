@@ -100,9 +100,9 @@ def main():
                      for p in instruction_files if p.is_file()}
     prompt = ('Use the skill at ' + str(ROOT / 'SKILL.md') + '. Read its entrypoint and only relevant references. '
               'This is a disposable local task. Work only on the supplied fixture and read-only skill references; '
-              'use local shell/file tools only. Do not browse, use connectors, inspect evaluation scripts, '
+              'Do not browse, use connectors, inspect evaluation scripts, '
               'case definitions, grader-only material or sibling evidence, '
-              'invoke other agents, change global settings, or access unrelated projects.\n\n' + case['request'])
+              'change global settings, or access unrelated projects.\n\n' + case['request'])
     (evidence / 'prompt.txt').write_text(prompt)
     (evidence / 'case.json').write_text(json.dumps(case, ensure_ascii=False, indent=2) + '\n')
     with tempfile.TemporaryDirectory(prefix='agent-led-swe-case-') as tmp:
@@ -115,7 +115,7 @@ def main():
         shutil.copytree(fixture, evidence / 'before')
         argv = [binary, 'exec', '--ignore-user-config', '--ephemeral', '--json',
                 '--sandbox', 'workspace-write', '--skip-git-repo-check',
-                '-c', 'agents.enabled=false', '-C', str(fixture)]
+                '-C', str(fixture)]
         for key, value in settings.items():
             argv += ['-c', key + '=' + json.dumps(value)]
         argv += ['-']

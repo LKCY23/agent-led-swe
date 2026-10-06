@@ -26,10 +26,9 @@ from native_skills import verify_activation
 
 
 COMMON_PROMPT = (
-    'Complete the following disposable local task. Use local shell/file tools only. '
-    'Modify only the supplied workspace; read only its inputs and explicitly supplied '
-    'guidance. Do not browse, use connectors or other agents, change global settings, '
-    'or inspect evaluation definitions, grading material, sibling runs or unrelated projects.\n\n')
+    'Complete the following task in the supplied workspace, following its project guidance. '
+    'The isolated environment provides local development tools and dependencies; external network access is unavailable. '
+    'Do not inspect hidden evaluation materials, reference solutions, sibling runs or unrelated projects.\n\n')
 
 
 def freeze_skill(root, destination):

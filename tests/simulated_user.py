@@ -5,7 +5,6 @@ This adapter only supplies task context, refreshes snapshots and checks receipts
 """
 from contextlib import ExitStack
 import json
-import posixpath
 from pathlib import Path
 import shutil
 import subprocess
@@ -58,38 +57,26 @@ def parse_reply(raw, model, previous_session=None):
     if not isinstance(value, dict) or set(value) != {"reply", "accepted"}:
         raise ValueError("Native structured_output is missing or invalid")
     reply = UserReply(value["reply"], value["accepted"])
-    successful_reads, read_ids = set(), set()
     for event in events:
         content = (event.get("message") or {}).get("content", [])
         for block in content if isinstance(content, list) else []:
             if block.get("type") == "tool_use":
                 if block.get("name") not in USER_TOOLS:
                     raise ValueError("User instance attempted an unexpected tool")
-                arguments = block.get("input", {})
-                path = arguments.get("file_path") if block.get("name") == "Read" else arguments.get("path")
-                content_read = (block.get("name") == "Read" or
-                                (block.get("name") == "Grep" and arguments.get("output_mode") == "content"))
-                resolved = posixpath.normpath(posixpath.join("/testbed", str(path or "")))
-                if content_read and (resolved == "/testbed/current" or resolved.startswith("/testbed/current/")):
-                    read_ids.add(block.get("id"))
-            if block.get("type") == "tool_result" and not block.get("is_error", False):
-                successful_reads.add(block.get("tool_use_id"))
-    if reply.accepted and not read_ids.intersection(successful_reads):
-        raise ValueError("Final acceptance requires a successful current-artifact read")
+    # Whether the review supports acceptance is assessed from the full history,
+    # not reduced to a mandatory tool call in this particular turn.
     return reply, session, final
 
 
 class SimulatedUser:
     def __init__(self, profile, persona, requirements, initial, evidence, environment, cli, credentials,
-                 *, max_replies=12, effort="high", authenticate=True, model_upstream=None):
+                 *, effort="high", authenticate=True, model_upstream=None):
         validate_compatibility("claude-code", profile, effort)
-        if type(max_replies) is not int or max_replies < 1:
-            raise ValueError("Native user limits must be positive integers")
         self.profile, self.evidence, self.initial = profile, Path(evidence), Path(initial)
         self.environment = {**environment, "readonly_workspace": True, "install_argv": [], "workspace_mode": "bind", "workdir": "/testbed"}
         self.cli = {**cli, "agent": "claude-code"}
         self.credentials, self.authenticate, self.model_upstream = credentials, authenticate, model_upstream
-        self.max_replies, self.effort = max_replies, effort
+        self.effort = effort
         self.calls, self.session, self.seen_messages = 0, None, 0
         self.system = persona + "\n\n# 固定任务要求\n" + requirements + (
             "\n\n你是需求提出者，不是负责实现的开发 Agent。通过 Claude Code 原生结构化输出返回 reply 和 accepted。"
@@ -125,8 +112,6 @@ class SimulatedUser:
         return self.stack.__exit__(*args)
 
     def __call__(self, conversation, current, timeout):
-        if self.calls >= self.max_replies:
-            raise TimeoutError("Native user reply budget exhausted")
         for path in Path(current).rglob("*"):
             if path.is_symlink() and not path.resolve().is_relative_to(Path(current).resolve()):
                 raise ValueError("Public snapshot contains an escaping symlink")

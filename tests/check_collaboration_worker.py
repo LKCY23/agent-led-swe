@@ -129,6 +129,8 @@ def main():
                 (work / 'probe').mkdir()
                 (work / 'probe/__init__.py').write_text('')
                 (work / 'fixture.txt').write_text('PUBLIC_FIXTURE')
+                for filename in ('AGENTS.md', 'CLAUDE.md'):
+                    (work / filename).write_text('PROJECT_GUIDANCE_TOKEN: follow the local project conventions.\n')
                 treatment = output / 'frozen-skill' if variant == 'skill' else None
                 def responder(messages, current, timeout):
                     if (current / 'fixture.txt').read_text() != 'PUBLIC_FIXTURE':
@@ -153,16 +155,19 @@ def main():
                     context = adapter.prepare_context(binary, cwd, evidence, model, 'high', sandbox, entrypoint)
                     result = converse(adapter, binary, cwd, sandbox, context, model, 'high', output / 'helpers',
                         work, evidence / 'conversation', 'NATIVE_CONVERSATION_PROBE', responder,
-                        invocation=adapter.invocation() if treatment else '', max_turns=3, timeout=180, turn_timeout=60)
+                        invocation=adapter.invocation() if treatment else '', timeout=180)
                 activation = verify_activation(args.agent, evidence, treatment, entrypoint,
                                                'conversation/turn-001/capture')
                 second = [p for p in requests if 'USER_FEEDBACK_TOKEN' in json.dumps(p)]
                 history_preserved = bool(second) and all('REPLY_ONE' in json.dumps(p) for p in second)
                 passed = (result['status'] == 'completed' and len(result['turns']) == 2
                           and history_preserved and activation['status'] == 'verified')
+                project_guidance = bool(requests) and 'PROJECT_GUIDANCE_TOKEN' in json.dumps(requests[0])
+                passed = passed and project_guidance
                 if args.with_simulated_user:
                     passed = passed and len(user_requests) >= 4
                 reports.append({'variant': variant, 'passed': passed, 'history_preserved': history_preserved,
+                                'project_guidance_preserved': project_guidance,
                                 'native_activation': activation, 'result': result})
         finally:
             server.shutdown()

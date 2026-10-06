@@ -6,9 +6,7 @@ import subprocess
 from evaluation_runtime import digest, write_json, load_helper
 
 CONTEXT_OVERRIDES = [
-    'features.plugins=false', 'features.apps=false', 'features.memories=false',
-    'features.hooks=false', 'features.multi_agent=false', 'features.skill_search=false',
-    'project_doc_max_bytes=0', 'developer_instructions=""',
+    'features.plugins=false', 'features.apps=false', 'developer_instructions=""',
 ]
 
 
@@ -44,19 +42,20 @@ def isolated_context(binary, workspace, evidence, model, effort, sandbox, skill_
         if rendered.returncode:
             raise ValueError('Context preflight failed; see saved stderr')
         text, paths = skill_paths(json.loads(rendered.stdout))
-        unexpected = set(paths) - ({str(skill_path)} if skill_path else set())
+        project_paths = {p for p in paths if Path(p).is_relative_to(Path(workspace))}
+        unexpected = set(paths) - project_paths - ({str(skill_path)} if skill_path else set())
         if not unexpected:
-            if ((not skill_path and ('<skills_instructions>' in text or 'agent-led-swe' in text.lower()))
-                    or '# AGENTS.md instructions' in text):
-                raise ValueError('Unexpected inherited instructions remain in rendered context')
+            if not skill_path and ('agent-led-swe' in text.lower() or
+                                   ('<skills_instructions>' in text and not paths)):
+                raise ValueError('Unexpected target skill or unrecognized skill catalog in rendered context')
             if skill_path and str(skill_path) not in paths:
                 raise ValueError('Target skill was not discovered by Codex')
             receipt = {'status': 'verified-discovery', 'disabled_paths': sorted(disabled),
                        'expected_skill': 'agent-led-swe' if skill_path else None,
                        'entrypoint': str(skill_path) if skill_path else None,
                        'overrides': overrides, 'context_sha256': digest(evidence / f'context-{attempt}.json'),
-                       'scope': 'Only the requested installed skill (if any) remains in discovery; '
-                                'no inherited project/developer guidance. Fresh isolated execution; '
+                       'scope': 'Frozen project guidance and skills remain available alongside the target skill, if installed; '
+                                'unrelated external skill catalogs are disabled. Fresh isolated execution; '
                                 'native input injection is checked in the saved session.'}
             write_json(evidence / 'isolation.json', receipt)
             return receipt
@@ -76,7 +75,7 @@ def codex_command(binary, workspace, model, effort, sandbox, overrides=()):
         prefix.pop()
     command = prefix + ['exec', '--ignore-user-config', '--ephemeral', '--json',
             '--sandbox', sandbox, '--skip-git-repo-check', '-C', str(workspace),
-            '-c', 'agents.enabled=false', '-c', 'approval_policy="never"',
+            '-c', 'approval_policy="never"',
             '-c', 'web_search="disabled"', '-c', 'model=' + json.dumps(model),
             '-c', 'model_reasoning_effort=' + json.dumps(effort)]
     return command + [part for value in [*runtime_overrides, *overrides] for part in ('-c', value)]

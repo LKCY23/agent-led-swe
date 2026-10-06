@@ -25,6 +25,8 @@
 
 保留 Codex／Claude Code、Flash／Pro 配置、原生 skill 安装调用、Docker 与模型网关隔离、完整事件和文件快照、独立 verifier。功能结果与流程分析分开，不自动调用 LLM judge。
 
-既有 `run_evaluation.py` 仍用于单次请求；`run_collaboration.py` 提供独立多轮入口。`cattrs-user-cc-flash.json` 对应旧参数，当前用户修复后资格需刷新；旧直连 API 资格只作历史记录。实现约定见 [协议](protocol.md)。
+既有 `run_evaluation.py` 仍用于单次请求；`run_collaboration.py` 提供独立多轮入口。`cattrs-user-cc-flash.json` 对应旧参数，仅作历史证据，不再作为运行门槛；旧直连 API 资格只作历史记录。实现约定见 [协议](protocol.md)。
 
 solver 限时与依赖已修正并完成第二次试跑；发现的用户内部步数限制与搜索能力问题也已修正。旧试跑均保留，尚无完整闭环结果。两次轨迹都没有实现前的项目设计记录；本轮 skill 未读取参考指导，不能沿用前一轮的读取结论。
+
+当前清理：已去掉额外轮数／单轮时限、输出与重试限制、工具裁剪和项目指导屏蔽，验收不再依赖会话完成。检查范围与结果见[限制清理记录](reports/runtime-restrictions-2026-10-07.md)。

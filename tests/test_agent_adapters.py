@@ -45,23 +45,30 @@ class AgentAdapterTest(unittest.TestCase):
         for trace in ('', self.trace(is_error=True), self.trace(subtype='error_max_turns'),
                       self.trace() + '\nnot json', self.trace() + '\n' + self.trace()):
             self.assertFalse(self.adapter.inspect_trace(trace)['telemetry_usable'])
-        self.assertEqual(self.adapter.inspect_trace(self.trace().replace('"skills": []',
-                         '"skills": ["unexpected"]'))['isolation_status'], 'unknown')
-        self.assertEqual(self.adapter.inspect_trace(self.trace().replace('"agents": []',
-                         '"agents": ["custom-agent"]'))['isolation_status'], 'unknown')
+        self.assertEqual(self.adapter.inspect_trace(self.trace().replace('"plugins": []',
+                         '"plugins": ["unexpected"]'))['isolation_status'], 'unknown')
+
+    def test_project_capabilities_and_native_tools_are_not_rejected(self):
+        trace = self.trace().replace('"skills": []', '"skills": ["project-guide"]')
+        trace = trace.replace('"agents": []', '"agents": ["project-reviewer"]')
+        trace = trace.replace('"tools": ["Read", "Bash"]', '"tools": ["Read", "Bash", "Skill", "Agent", "TodoWrite"]')
+        self.assertEqual(self.adapter.inspect_trace(trace)['isolation_status'], 'verified-discovery')
 
     def test_context_suffix_is_not_a_different_provider_model(self):
         trace = self.adapter.inspect_trace(self.trace(modelUsage={'deepseek-flash[1m]': {}}))
         self.assertEqual(trace['models_observed'], ['deepseek-flash'])
         self.assertEqual(trace['native_model_labels'], ['deepseek-flash[1m]'])
 
-    def test_command_disables_extra_tools_and_implicit_configuration(self):
+    def test_command_preserves_native_tools_project_settings_and_model(self):
         command = self.adapter.command(['docker', 'exec', 'container', 'claude'],
                                        Path('/testbed'), 'deepseek-flash', 'high', 'danger-full-access', {})
         self.assertNotIn('--bare', command)
         self.assertNotIn('--disable-slash-commands', command)
         self.assertIn('--replay-user-messages', command)
-        self.assertEqual(command[command.index('--setting-sources') + 1], 'user')
+        self.assertEqual(command[command.index('--tools') + 1], 'default')
+        self.assertEqual(command[command.index('--model') + 1], 'deepseek-flash')
+        self.assertNotIn('--setting-sources', command)
+        self.assertNotIn('--settings', command)
         self.assertNotIn('--fallback-model', command)
 
     def test_model_and_agent_compatibility(self):

@@ -115,12 +115,12 @@ def evaluate_bundle(bundle, output):
         directory = output / f'verify-{number}'
         directory.mkdir()
         checks = []
-        if captured['run_status'] != 'completed':
-            state, reason = 'not_run', 'No completed submission; preserve the partial execution history'
-        elif not case.get('validation'):
+        if not case.get('validation'):
             state, reason = 'not_configured', 'No task verifier is configured; analysis is not a substitute'
         elif not (source / 'after').is_dir():
             state, reason = 'not_run', 'Submitted artifact snapshot is missing'
+        elif (source / 'workspace-export-error.json').exists():
+            state, reason = 'not_run', 'Worker export failed; local files may not represent the executed artifact'
         else:
             checks = validate_task(case, bundle, source / 'after', directory / 'functional')
             state, reason = 'completed', 'Result determined only by the frozen task verifier'

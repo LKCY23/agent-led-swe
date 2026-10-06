@@ -10,9 +10,9 @@ def verify_activation(agent, evidence, source, entrypoint, capture_relative='cap
         trace = json.loads(trace_path.read_text())
         init = trace.get('init_context', [])
         discovered = len(init) == 1 and 'agent-led-swe' in init[0].get('skills', [])
-        invoked = trace.get('native_skill_invocations', []) == ['agent-led-swe']
+        invoked = 'agent-led-swe' in trace.get('native_skill_invocations', [])
         valid = len(init) == 1 and trace.get('isolation_status') == 'verified-discovery' and (
-            (discovered and invoked) if expected else not discovered and not trace.get('native_skill_invocations'))
+            (discovered and invoked) if expected else not discovered and not invoked)
         records = [str(trace_path.relative_to(evidence))]
     else:
         found = False

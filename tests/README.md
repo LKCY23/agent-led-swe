@@ -89,11 +89,15 @@ uv run --locked python tests/check_collaboration_worker.py \
 
 协议检查也支持 `--agent codex`；加 `--with-simulated-user` 可同时检查用户的 HTTP／只读工具接口。它运行真实容器 CLI、原生安装／调用和两轮 session 接续，模型与用户响应均为脚本模拟。
 
-真实多轮入口为 `run_collaboration.py`，所有模型、资格和预算参数必须显式提供。使用 `--prepare-only` 可只冻结计划；`--user-qualification` 需提供与 profile、CLI、用户规则、需求和适配器匹配的通过记录。[原生 CC + Flash 资格](reports/qualifications/cattrs-user-cc-flash.json)对应旧用户参数，当前修改后需刷新；旧直连 API 资格保留为历史。用户预算使用 `--user-seconds`，最大回应次数随 `--turns`；不再使用额外的用户内部步数参数。
+真实多轮入口为 `run_collaboration.py`，显式提供模型、任务／verifier 预检记录、skill 路径与 `--total-seconds`。使用 `--prepare-only` 可只冻结计划。`--user-qualification` 可选，仅附上历史用户检查记录，不再因代码哈希变化强制付费重验。
 
-`--total-seconds` 是每组 solver 与用户共享的协作时长。配对入口不再提供额外的 solver 单轮上限；每轮使用本组剩余时间，避免单轮限制提前截断尚有总预算的实验。
+`--total-seconds` 是每组 Solver 与模拟用户共享的协作时长。两者每轮使用剩余时间，不额外限制单轮时长、回复次数、内部工具步数、输出 tokens 或结构化输出重试。模型和原生 CLI 自身的限制仍然存在。准备环境与独立 verifier 的超时用于检测基础设施故障，不占用该对话预算。
 
-`check_simulated_user.py --inputs <冻结任务输入> --profile <用户模型配置> --credentials <凭据文件> --output <新目录>` 运行原生 CC 用户：需求澄清、读取草案后审阅，共两次回应，各最多 180 秒，不另限内部工具步数。不运行 solver 或 verifier，但会产生真实模型用量。当前用户使用只读容器和工具白名单，不使用会隐藏搜索工具的 bare 模式。见[最新试跑与修复](reports/cattrs-retry-2026-10-07.md)。
+Solver 使用原生工具和项目指导；隔离由独立 HOME、容器、隐藏验证材料与模型专用网络保证。模拟用户保留 Read／Glob／Grep 和只读快照，负责回应与审阅，不执行开发命令。审阅质量留待分析完整轨迹，不以本轮是否读文件作为运行门槛。会话失败或超时后，仍验证已保存产物，分别报告运行状态、用户接受状态和功能结果。
+
+`check_simulated_user.py --inputs <冻结任务输入> --profile <用户模型配置> --credentials <凭据文件> --output <新目录> --total-seconds <预算>` 运行原生 CC 用户：需求澄清、读取草案后审阅，共两个固定问题，共用显式预算。这是测试样例数量，不是正式协作的轮数限制；会产生真实模型用量。
+
+当前修复及检查见[限制清理记录](reports/runtime-restrictions-2026-10-07.md)。
 
 旧 [rubric](rubrics.md)、judge 判分和文档读取模式结果保留为历史材料，不进入新成绩，也不与 native 模式混合比较。不能凭单个任务、单轮通过或耗时下降认定 skill 有效。
 
