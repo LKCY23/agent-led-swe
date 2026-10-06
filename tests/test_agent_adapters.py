@@ -10,6 +10,15 @@ from model_config import credential, load_profile, validate_compatibility, CONFI
 
 
 class AgentAdapterTest(unittest.TestCase):
+    def test_codex_runtime_overrides_reach_exec_parser(self):
+        from agent_adapters.codex import codex_command
+        command = codex_command(['docker', 'exec', '-i', 'worker', 'codex',
+            '-c', 'model_provider="evaluation-gateway"', '-c', 'example=true'],
+            Path('/testbed'), 'gpt-6.1-sol', 'high', 'danger-full-access')
+        exec_index = command.index('exec', command.index('codex'))
+        self.assertGreater(command.index('model_provider="evaluation-gateway"'), exec_index)
+        self.assertGreater(command.index('example=true'), exec_index)
+
     def setUp(self):
         self.adapter = get_adapter('claude-code')
         self.profile = load_profile(CONFIGS / 'models/deepseek-v4.1-flash.json')

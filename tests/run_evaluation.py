@@ -87,6 +87,7 @@ def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
     if adapter.name == 'claude-code' and case['environment']['kind'] != 'docker':
         raise ValueError('Initial Claude Code integration supports Docker SWE tasks only')
     if case['environment']['kind'] == 'docker':
+        case['environment']['execution_network'] = 'internal-model-gateway-v1'
         case['environment']['worker_image'] = build_worker_image(
             case['environment'], cli['version'].split()[-1], output / 'worker-build', adapter.name)
     write_json(output / 'case.json', case)
@@ -168,6 +169,12 @@ def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
             except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
                 result['error'] = str(exc)
             finally:
+                network_audit = evidence / 'network-audit.json'
+                if network_audit.is_file():
+                    checks = json.loads(network_audit.read_text())
+                    result['network_isolation'] = {'status': 'verified' if checks and all(checks.values()) else 'invalid'}
+                result.setdefault('native_files', {}).update({p.name: digest(p) for p in (
+                    evidence / 'network-policy.json', network_audit, evidence / 'model-gateway.log') if p.is_file()})
                 result['fixture_before'] = before
                 result['fixture_after'] = snapshot(workspace, evidence / 'after')
                 previous = before or {}

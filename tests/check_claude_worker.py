@@ -96,7 +96,8 @@ def main():
         try:
             with tempfile.TemporaryDirectory(prefix='cc-worker-check-') as tmp:
                 work = Path(tmp).resolve()
-                (work / 'setup.py').write_text('from setuptools import setup\nsetup(name="probe",version="0.0.0")\n')
+                (work / 'pyproject.toml').write_text('[build-system]\nrequires=["flit_core"]\nbuild-backend="flit_core.buildapi"\n[project]\nname="probe"\nversion="0.0.0"\ndescription="Protocol probe"\n')
+                (work / 'probe.py').write_text('')
                 (work / 'fixture.txt').write_text('PUBLIC_FIXTURE_MARKER\n')
                 skill = output / 'skill-input'
                 if variant == 'skill':
@@ -106,10 +107,11 @@ def main():
                         skill.mkdir()
                         (skill / 'SKILL.md').write_text('---\nname: agent-led-swe\ndescription: Native loading probe\n---\nTREATMENT_SKILL_MARKER\n')
                 with execution_environment(task, work, evidence, cli,
-                        skill if variant == 'skill' else None, authenticate=False, model_profile=profile) as runtime:
+                        skill if variant == 'skill' else None, authenticate=False, model_profile=profile,
+                        model_upstream=f'http://host.docker.internal:{server.server_port}') as runtime:
                     binary, cwd, sandbox, skill_path = runtime
                     # Override ONLY this disposable process with a synthetic endpoint/key.
-                    binary[2:2] = ['-e', f'ANTHROPIC_BASE_URL=http://host.docker.internal:{server.server_port}',
+                    binary[2:2] = ['-e', 'ANTHROPIC_BASE_URL=http://model-gateway:8080',
                                    '-e', 'ANTHROPIC_API_KEY=synthetic-key']
                     context = adapter.prepare_context(binary, cwd, evidence, profile['model'], 'high', sandbox, skill_path)
                     prompt = evidence / 'prompt.txt'

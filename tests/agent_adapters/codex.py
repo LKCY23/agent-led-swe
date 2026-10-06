@@ -67,12 +67,19 @@ def isolated_context(binary, workspace, evidence, model, effort, sandbox, skill_
 
 
 def codex_command(binary, workspace, model, effort, sandbox, overrides=()):
-    command = ([binary] if isinstance(binary, str) else list(binary)) + ['exec', '--ignore-user-config', '--ephemeral', '--json',
+    prefix = [binary] if isinstance(binary, str) else list(binary)
+    runtime_overrides = []
+    # exec has its own config override parser. Overrides before the subcommand
+    # do not configure that parser in the pinned CLI; preserve them after exec.
+    while len(prefix) >= 2 and prefix[-2] == '-c':
+        runtime_overrides.insert(0, prefix.pop())
+        prefix.pop()
+    command = prefix + ['exec', '--ignore-user-config', '--ephemeral', '--json',
             '--sandbox', sandbox, '--skip-git-repo-check', '-C', str(workspace),
             '-c', 'agents.enabled=false', '-c', 'approval_policy="never"',
             '-c', 'web_search="disabled"', '-c', 'model=' + json.dumps(model),
             '-c', 'model_reasoning_effort=' + json.dumps(effort)]
-    return command + [part for value in overrides for part in ('-c', value)]
+    return command + [part for value in [*runtime_overrides, *overrides] for part in ('-c', value)]
 
 
 

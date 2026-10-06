@@ -1,18 +1,17 @@
 # 真实 SWE 候选的环境与验收预检
 
-日期：2026-10-05。结论：pytest、packaging 可进入下一步接入；按用户决定暂缓 SDK，改做 DSPy 预检，但 DSPy 的本机回归尚不稳定。没有调用模型，也没有运行 skill／baseline 对照。
+日期：2026-10-05。结论：packaging 的指定验收预检通过；按用户决定暂缓 SDK，改做 DSPy 预检，但 DSPy 的本机回归尚不稳定。没有调用模型，也没有运行 skill／baseline 对照。
 
 ## 实际结果
 
-最初三个候选的每个条件在独立代码副本中运行两次，下表两轮结果完全一致。F2P 是需要从失败变为通过的目标测试，P2P 是不应退化的回归测试。后续 DSPy 的不同结果单列在下一节。
+下列保留候选的每个条件在独立代码副本中运行两次，下表两轮结果完全一致。F2P 是需要从失败变为通过的目标测试，P2P 是不应退化的回归测试。后续 DSPy 的不同结果单列在下一节。
 
 | 任务 | 起始代码的目标测试 | 参考实现的目标测试 | 回归测试：起始／参考 | 判断 |
 | --- | --- | --- | --- | --- |
-| pytest 日志状态修复 | 1 项失败 | 1 项通过 | 各 15 项通过 | 指定验收预检通过。 |
 | packaging 元数据处理 | 294 项中 284 项失败 | 294 项全部通过 | 各 3,508 项通过 | 指定验收预检通过。 |
 | Agents SDK extra_args | 8 项全部失败 | 8 项全部通过 | 各 349 项通过 | 测试链路通过，但任务描述与参考实现存在冲突。 |
 
-共完成 24 次测试命令，没有超时、collection error 或 skip。SDK 的 331 个 P2P 节点在参数化展开后产生 349 项实际测试；FeatureBench 按文件列出测试，因此不是“只有 1 项目标测试”。两轮一致只支持本次短期复现，不证明长期无波动。
+下表两项任务共完成 16 次测试命令，没有超时、collection error 或 skip。SDK 的 331 个 P2P 节点在参数化展开后产生 349 项实际测试；FeatureBench 按文件列出测试，因此不是“只有 1 项目标测试”。两轮一致只支持本次短期复现，不证明长期无波动。
 
 ## SDK 为什么暂缓
 
@@ -50,9 +49,8 @@
 ## 环境与过程
 
 - 固定到各任务的 base commit；冻结完整数据行、源码归档及其 SHA256，保留参考材料。
-- 本机 Docker 启动后，使用自建 Linux ARM64 依赖镜像。pytest／packaging 为 Python 3.10.20，SDK 为 Python 3.13.14。未使用官方预构建镜像，因此不声称复现官方榜单环境。
-- 依赖通过容器内 uv 安装，原三个任务测试时关闭网络，DSPy 的例外见上节；每次容器限制 2 CPU、3 GB。SDK／DSPy 使用原仓库 uv.lock 约束依赖版本。
-- pytest 的源码归档没有 Git 版本标签，安装时显式提供 setuptools-scm 的开发版本；这属于环境适配，未修改待测源码。
+- 本机 Docker 启动后，使用自建 Linux ARM64 依赖镜像。packaging 为 Python 3.10.20，SDK 为 Python 3.13.14。未使用官方预构建镜像，因此不声称复现官方榜单环境。
+- 依赖通过容器内 uv 安装，下表两项任务测试时关闭网络，DSPy 的例外见上节；每次容器限制 2 CPU、3 GB。SDK／DSPy 使用原仓库 uv.lock 约束依赖版本。
 - SDK 第一次准备遇到适配脚本读取 TOML 层级错误，第二次遇到离线 editable 构建缺少 editables。修复的是适配器与构建依赖，第三次完成全部测试；前两次记录保留，未算作 Agent 或任务失败。
 - FeatureBench 正向 patch 是遮蔽操作，参考实现需要反向恢复；已按官方运行逻辑区分。见 [FeatureBench runtime](https://github.com/LiberCoders/FeatureBench/blob/main/featurebench/harness/runtime.py)。
 
@@ -62,7 +60,6 @@
 
 ```text
 tests/runs/swe-preflight-20261005/
-├── pytest-attempt-1/
 ├── packaging-attempt-1/
 ├── agents-sdk-attempt-1/       # 适配器准备失败
 ├── agents-sdk-attempt-2/       # 离线构建缺少依赖
@@ -72,4 +69,4 @@ tests/runs/swe-preflight-20261005/
 
 DSPy 的完整结果位于同目录下 `dspy-attempt-3/`；其余 `dspy-attempt-1/`、`dspy-attempt-2/`、`dspy-attempt-4/` 保留未完成尝试及中止证据。结构化记录包含这些状态，不将其丢弃或统计为通过。
 
-所有测试容器均已清理，依赖镜像和原始证据保留。当前行为用例 runner 尚不能直接运行这些真实仓库；后续需要连接隔离的 learner 工作区、补丁提取、独立功能验收及工程／文档评审。不能把此次环境预检算作 skill 效果评测，或把第 4 步整体标为完成。
+所有测试容器均已清理，依赖镜像和原始证据保留。packaging 已接入统一运行器；DSPy 与 SDK 仍未启用。这些环境预检不代表 skill 效果。

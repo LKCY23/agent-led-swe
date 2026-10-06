@@ -25,7 +25,7 @@ def adapter_hashes():
     root = Path(__file__).parent
     names = [
         'evaluation_runtime.py', 'run_evaluation.py', 'evaluate_results.py', 'run_smoke.py',
-        'task_adapters.py', 'functional_checks.py', 'model_config.py', 'native_skills.py', 'packaging_environment.py']
+        'task_adapters.py', 'functional_checks.py', 'model_config.py', 'native_skills.py', 'packaging_environment.py', 'worker_network.py', 'model_gateway.py']
     names += [str(p.relative_to(root)) for p in sorted((root / 'agent_adapters').glob('*.py'))]
     return {name: digest(root / name) for name in names}
 
@@ -111,7 +111,7 @@ def build_worker_image(environment, version, output, agent='codex'):
 
 @contextmanager
 def execution_environment(task, workspace, evidence, cli, skill=None, authenticate=True,
-                          model_profile=None, credentials=DEFAULT_CREDENTIALS):
+                          model_profile=None, credentials=DEFAULT_CREDENTIALS, model_upstream=None):
     """Only the public workspace and optional treatment skill reach a Docker executor."""
     agent = cli.get('agent', 'codex')
     adapter = get_adapter(agent)
@@ -143,10 +143,47 @@ def execution_environment(task, workspace, evidence, cli, skill=None, authentica
     image = task['environment'].get('worker_image')
     if not image:
         raise ValueError('Prepared Docker task requires an agent worker image')
+    from worker_network import model_network
+    if model_upstream and authenticate:
+        raise ValueError('Upstream override is only for unauthenticated protocol checks')
+    headers = None
+    if agent == 'claude-code':
+        if model_profile is None:
+            raise ValueError('Claude Code requires an explicit model profile')
+        upstream = model_profile['base_url']
+        if authenticate:
+            headers = {'x-api-key': credential(model_profile, credentials)}
+    else:
+        auth_path = Path(os.environ.get('CODEX_HOME', str(Path.home() / '.codex'))) / 'auth.json'
+        auth_data = json.loads(auth_path.read_text()) if authenticate and auth_path.exists() else {}
+        upstream = ('https://api.openai.com/v1' if auth_data.get('OPENAI_API_KEY')
+                    else 'https://chatgpt.com/backend-api/codex')
+        if authenticate:
+            token = auth_data.get('OPENAI_API_KEY') or auth_data.get('tokens', {}).get('access_token')
+            if not token:
+                raise ValueError('Existing Codex authentication is required')
+            headers = {'Authorization': 'Bearer ' + token}
+            if not auth_data.get('OPENAI_API_KEY'):
+                account = auth_data.get('tokens', {}).get('account_id')
+                if not account:
+                    raise ValueError('Codex ChatGPT authentication has no account ID')
+                headers['chatgpt-account-id'] = account
+    with model_network(image, agent, model_upstream or upstream, evidence, headers) as (network, gateway):
+        with docker_worker(task, workspace, evidence, cli, skill, authenticate,
+                           model_profile, credentials, network, gateway) as runtime:
+            yield runtime
+
+
+@contextmanager
+def docker_worker(task, workspace, evidence, cli, skill, authenticate,
+                  model_profile, credentials, network, gateway):
+    agent = cli.get('agent', 'codex')
+    adapter = get_adapter(agent)
+    image = task['environment']['worker_image']
     name = 'swe-executor-' + uuid.uuid4().hex[:12]
     argv = ['docker', 'run', '-d', '--init', '--name', name, '--cpus', '2', '--memory', '3g',
-            '--network', 'bridge', '-v', f'{workspace}:/testbed', '-w', '/testbed',
-            '-e', 'SETUPTOOLS_SCM_PRETEND_VERSION=7.2.0.dev0']
+            '--network', network, '--cap-drop=ALL', '--cap-add=CHOWN', '--security-opt=no-new-privileges',
+            '-v', f'{workspace}:/testbed', '-w', '/testbed']
     installed = ('/root/.agents/skills/agent-led-swe' if agent == 'codex'
                  else '/tmp/agent-home/.claude/skills/agent-led-swe')
     if skill:
@@ -154,19 +191,15 @@ def execution_environment(task, workspace, evidence, cli, skill=None, authentica
         payload = evidence / 'installed-skill'
         shutil.copytree(skill, payload, ignore=shutil.ignore_patterns('.claude-plugin'))
         argv += ['-v', f'{payload}:{installed}:ro']
-    if authenticate and agent == 'codex':
-        auth = Path(os.environ.get('CODEX_HOME', str(Path.home() / '.codex'))) / 'auth.json'
-        if not auth.is_file():
-            raise ValueError('Container execution requires existing Codex auth.json; no credential is copied to evidence')
-        argv += ['-v', f'{auth}:/root/.codex/auth.json:ro']
     # The temporary env file is outside artifacts and removed as soon as Docker
     # starts. Capture records only argv, never credential values or Docker inspect.
     with tempfile.TemporaryDirectory(prefix='swe-auth-') as auth_tmp:
         if agent == 'claude-code':
             if model_profile is None:
                 raise ValueError('Claude Code requires an explicit model profile')
-            env = claude_environment(model_profile, credential(model_profile, credentials)
-                                     if authenticate else '')
+            # The real credential is mounted only into the external gateway.
+            env = claude_environment(model_profile, 'evaluation-gateway')
+            env['ANTHROPIC_BASE_URL'] = gateway
             env.update({'HOME': '/tmp/agent-home', 'CLAUDE_CONFIG_DIR': '/tmp/agent-home/.claude'})
             env_file = Path(auth_tmp) / 'worker.env'
             if any('\n' in v or '\r' in v for v in env.values()):
@@ -179,7 +212,7 @@ def execution_environment(task, workspace, evidence, cli, skill=None, authentica
     try:
         record = load_helper(DEFAULT_EVALUATOR / 'scripts/capture.py').capture(workspace,
             evidence / 'environment-setup', ['docker', 'exec', name, 'uv', 'pip', 'install',
-            '--python', '/opt/testenv/bin/python', '--no-deps', '--no-build-isolation', '-e', '/testbed'], 90)
+            '--python', '/opt/testenv/bin/python', '--offline', '--no-deps', '--no-build-isolation', '-e', '/testbed'], 90)
         if record['exit_code'] != 0 or record['timed_out']:
             raise RuntimeError('Worker project installation failed')
         if task['environment'].get('audit_packaging_sources'):
@@ -188,6 +221,8 @@ def execution_environment(task, workspace, evidence, cli, skill=None, authentica
             write_json(evidence / 'environment-source-audit-before.json', audit)
             if not clean(audit) or not audit['task_import'].startswith('/testbed/'):
                 raise RuntimeError('Packaging executor still exposes an alternative implementation or imports the wrong task')
+        from worker_network import audit_network
+        audit_network(name, evidence)
         actual = subprocess.check_output(['docker', 'exec', name, adapter.executable, '--version'],
                                          text=True, timeout=20).strip()
         actual_version = re.search(r'\d+\.\d+\.\d+', actual)
@@ -206,13 +241,23 @@ def execution_environment(task, workspace, evidence, cli, skill=None, authentica
             prefix += ['--user', f'{uid}:{gid}']
         write_json(evidence / 'environment.json', {'image': image, 'cli': actual, 'agent': agent,
                    'boundary': 'Docker container; no evaluator materials or Docker socket mounted',
-                   'inner_sandbox': 'danger-full-access', 'skill_mounted': bool(skill)})
+                   'inner_sandbox': 'danger-full-access', 'skill_mounted': bool(skill),
+                   'network': 'internal-model-gateway', 'model_gateway': gateway})
         write_json(evidence / 'skill-installation.json', {
             'mode': 'native', 'agent': agent, 'installed': bool(skill),
             'entrypoint': installed + '/SKILL.md' if skill else None,
             'files': file_hashes(payload) if skill else {}})
         # Docker enforces isolation. No elevated caps or host daemon socket are granted.
-        yield prefix + [name, adapter.executable], Path('/testbed'), 'danger-full-access', (
+        if agent == 'codex':
+            prefix += ['-e', 'CODEX_GATEWAY_KEY=evaluation-gateway']
+        binary = prefix + [name, adapter.executable]
+        if agent == 'codex':
+            binary += ['-c', 'chatgpt_base_url=' + json.dumps(gateway),
+                       '-c', 'model_provider="evaluation-gateway"', '-c',
+                       'model_providers.evaluation-gateway={name="Evaluation gateway",base_url='
+                       + json.dumps(gateway) + ',wire_api="responses",requires_openai_auth=false,env_key="CODEX_GATEWAY_KEY",'
+                       'supports_websockets=false}']
+        yield binary, Path('/testbed'), 'danger-full-access', (
             installed + '/SKILL.md' if skill else None)
         if task['environment'].get('audit_packaging_sources'):
             audit = audit_container(name, import_task=False)

@@ -1,40 +1,36 @@
-# 真实 SWE 任务：候选与环境预检
+# 真实 SWE 任务：选择与接入
 
-pytest 和 packaging 已接入 [统一执行与评价入口](../../protocol.md)。packaging 的本地实现副本已清理，重复 control/reference 检查及 Codex／CC worker 审计通过，资格由 [执行环境记录](../../reports/packaging-execution-environment-2026-10-06.json)锁定；真实 Agent 在清理后的 packaging 任务上尚未重新试跑。pytest 已完成新版原生调用＋verifier-only 对照，见 [修复报告](../../reports/verifier-environment-results-2026-10-06.md)。DSPy 和 SDK 保留为未启用候选。
+本轮先审阅任务是否适合检验 skill，再决定效果试跑。可执行资格与评测适用性分别判断。
 
-| 定义 | 来源与任务 | 当前判断 |
+| 任务 | 当前状态 | 适用范围与限制 |
 | --- | --- | --- |
-| [pytest.json](pytest.json) | SWE-bench Verified，日志清空后的状态一致性 | 两轮环境与指定测试预检通过。 |
-| [packaging.json](packaging.json) | FeatureBench fast / Level 1，包元数据与依赖解析 | 精简执行镜像两轮预检通过，worker 启动前后审计本地副本；完整 verifier 镜像独立保留。 |
-| [dspy.json](dspy.json) | 社区 FeatBench-Verified，异步 ReAct 与同步工具兼容 | 用户选定的替代候选。目标测试可区分起始／参考状态，但本机回归出现服务启动与耗时断言波动，尚未通过稳定性预检。 |
-| [agents-sdk.json](agents-sdk.json) | 社区 FeatBench-Verified，extra_args 跨后端透传 | 用户决定暂缓。保留其需求／参考行为冲突的证据，不进入首批对照。 |
+| [packaging](packaging.json) | 已通过环境预检，统一入口可用；暂未启动新对照 | 多文件实现、需求覆盖、兼容性与交付；接口已经给定，不能充分检验自主接口设计。 |
+| [DSPy](dspy.json) | 未启用，等待稳定性处理与审阅 | 同步／异步 ReAct 与工具协作较接近模块变更；回归存在模拟服务启动、耗时断言和联网资源问题。 |
+| [Agents SDK](agents-sdk.json) | 按用户决定暂缓 | 文字需求与参考实现的 None 过滤行为冲突。 |
 
-这些任务均属于开发／校准样本，不是保留集。当前首批候选是 pytest、packaging、DSPy，其中仅前两项通过预检。结果与限制见 [预检报告](../../reports/swe-preflight-2026-10-05.md)。
+任务选择理由和建议见 [候选审阅](../../reports/task-selection-2026-10-06.md)。现有候选均为开发／校准用例，不是未见验证集。小型修复不足以检验设计、文档和项目管理能力；已退出的 pytest 任务及专属运行历史按用户决定清理。
 
 ## 输入与验收分离
 
-定义文件记录 dataset、split、定位行、任务 ID、base commit、冻结数据与源码归档哈希。行号只用于定位，身份仍以 instance ID 和哈希核对。完整原始数据、源码归档、补丁、容器日志及测试 XML 留在忽略的 `tests/runs/swe-preflight-20261005/`，不向执行 Agent 提供。
+定义文件记录 dataset、split、任务 ID、base commit、冻结数据与源码归档哈希。完整数据、补丁和隐藏测试仅留在评测端；执行 Agent 只获得 learner 工作区。
 
-`preflight_swe.py` 从已准备的冻结输入生成三个目录：
+- learner：任务起始代码，不含参考补丁或隐藏测试。
+- control：起始代码加可信评分测试，确认未实现时失败。
+- reference：参考实现加同一组评分测试，确认验收可通过。
 
-- `learner/`：未来执行 Agent 的起始代码，不包含新增／恢复的隐藏测试或参考补丁文件。
-- `control/`：起始代码加评分测试，用于确认未修复时确实失败。
-- `reference/`：参考实现加相同评分测试，用于检查验收可通过。
+FeatureBench 的 patch 遮蔽实现，参考状态需要反向恢复；其他修复型来源的 patch 正向应用。适配器保留这个差异，不改变统一 verifier 的职责。
 
-FeatureBench 的 patch 用于遮蔽实现、test_patch 用于删除隐藏测试；验收时恢复测试，参考实现反向应用遮蔽补丁。SWE-bench／FeatBench 的 patch 则正向提供修复，test_patch 正向加入评分测试。这两种语义不能混用。
+## 环境与预检
 
-## 本地预检
+依赖在准备镜像时安装。正式 Agent worker 使用内部网络，仅能访问固定模型网关；公开资源应事先冻结准备，不能依赖执行时联网下载。DSPy 旧预检的 bridge 网络是未解决的限制，不是新版 executor 的例外。
 
-需要已经启动的 Docker 和本仓库 uv 环境。当前适配使用 Linux ARM64 容器，pytest／packaging 使用 Python 3.10，DSPy 使用其声明支持的 Python 3.12，SDK 使用 Python 3.13；不是官方镜像结果。安装依赖时联网，测试时默认禁网；DSPy 的原始回归需要下载公开图片和 PDF，明确使用 bridge 网络。所有测试均不传入宿主凭据，相关模型测试使用 mock／容器内模拟服务。依赖通过容器内 uv 管理；SDK／DSPy 受各自 uv.lock 约束。镜像 ID、安装包清单和实际命令均记录在证据目录。
+packaging 使用独立的精简 executor 镜像与完整 verifier 镜像，并审计本地实现副本。[资格记录](../../reports/packaging-execution-environment-2026-10-06.json)锁定任务和镜像。预检结果见 [报告](../../reports/swe-preflight-2026-10-05.md)。
 
-对本机已有的冻结输入，可重新运行：
+已有冻结输入可复验：
 
 ```sh
-uv run --locked python tests/preflight_swe.py tests/cases/swe/pytest.json \
-  --inputs tests/runs/swe-preflight-20261005 \
-  --output tests/runs/pytest-recheck
+uv run --locked python tests/preflight_swe.py tests/cases/swe/packaging.json \
+  --inputs '<冻结输入目录>' --output '<新输出目录>'
 ```
 
-输出目录必须尚不存在。每次预检计划在独立副本上运行 control／reference 各两轮，每轮分别运行 F2P、P2P，最多 8 次测试命令；出现非预期结果时停止后续重复，先检查证据。每次测试最多 180 秒；单容器限制 2 CPU、3 GB，结束后清理容器。依赖镜像与原始证据保留供复查。来源下载仍需先准备冻结输入；已有输入可以由统一入口直接适配、执行和验收。
-
-结果汇总判断运行矩阵是否完整、control 是否暴露失败、reference 和回归是否符合预期、两轮逐项结果是否一致。原测试的 xfail 单独记录，不算通过或普通跳过；目标测试不能靠 xfail 满足要求，回归中的预期失败也不得因参考补丁而增加或变化。它不能证明测试覆盖了全部文字需求。[SDK 诊断脚本](agents_sdk_none_probe.py)用于单独检查已发现的语义缺口，不混入原 benchmark 分数。
+每轮 control/reference 各两次，每次分目标与回归组，最多 8 次测试命令、每次 180 秒、2 CPU、3 GB。首次非预期结果即停止排查，不删除失败测试、不放宽断言、不以重跑替代归因。预检通过只证明既定验收能够稳定运行，不证明覆盖全部文字需求。

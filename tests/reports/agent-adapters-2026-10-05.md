@@ -1,6 +1,6 @@
 # Agent 与模型接入验证
 
-状态：Codex／Claude Code adapter 及独立模型配置已实现。真实 DeepSeek 服务与 CC 容器连通检查已通过；后续的 [pytest 首轮真实配对](pytest-pilot-2026-10-05.md)亦已完成。本报告记录接入验证，任务结果单独报告。
+状态：Codex／Claude Code adapter 及独立模型配置已实现。真实 DeepSeek 服务与 CC 容器连通检查已通过。本报告记录接入验证，任务结果单独报告。
 
 ## 本次改动
 

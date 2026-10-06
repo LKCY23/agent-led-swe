@@ -13,7 +13,7 @@ from evaluation_runtime import digest, snapshot
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SWE_NAMES = ('pytest', 'packaging')
+SWE_NAMES = ('packaging',)
 PROJECT_REQUIREMENTS = (
     '\n\nAdditional shared project requirements: Read and follow applicable repository guidance '
     '(including AGENTS.md and contributing instructions). Preserve existing compatibility and '
@@ -89,7 +89,7 @@ def prepare_task(case, output):
         variants.mkdir()
         control, _ = prepare_variants(source, metadata, variants, spec['patch_mode'] == 'mask')
         snapshot(variants / 'learner', output / 'workspace')
-        test_root = 'testing' if name == 'pytest' else 'tests'
+        test_root = 'tests'
         overlay = output / 'validation'
         overlay.mkdir()
         shutil.copytree(control / test_root, overlay / test_root)
@@ -139,10 +139,6 @@ def prepare_variants(source, metadata, output, mask):
 
 
 def requirements(source, case):
-    if case == 'pytest':
-        return ['uv==0.8.18', 'setuptools==69.5.1', 'setuptools-scm==8.1.0', 'wheel==0.43.0',
-                'attrs==23.2.0', 'iniconfig==2.0.0', 'packaging==23.2', 'pluggy==1.0.0',
-                'py==1.11.0', 'tomli==2.0.1', 'hypothesis==6.98.9', 'mock==5.1.0'], []
     if case == 'packaging':
         return ['uv==0.8.18', 'flit_core==3.12.0', 'pytest==8.3.5', 'pytest-xdist==3.6.1',
                 'pytest-cov==6.1.1', 'pretend==1.0.9', 'tomli==2.2.1', 'tomli_w==1.2.0'], []

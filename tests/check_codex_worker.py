@@ -64,16 +64,20 @@ def main():
         try:
             with tempfile.TemporaryDirectory() as tmp:
                 work = Path(tmp).resolve()
-                (work / 'setup.py').write_text('from setuptools import setup\nsetup(name="probe",version="0.0.0")\n')
+                (work / 'pyproject.toml').write_text('[build-system]\nrequires=["flit_core"]\nbuild-backend="flit_core.buildapi"\n[project]\nname="probe"\nversion="0.0.0"\ndescription="Protocol probe"\n')
+                (work / 'probe.py').write_text('')
                 skill = output / 'frozen-skill' if variant == 'skill' else None
-                with execution_environment(task, work, evidence, cli, skill, authenticate=False) as runtime:
+                with execution_environment(task, work, evidence, cli, skill, authenticate=False,
+                        model_upstream=f'http://host.docker.internal:{server.server_port}/v1' if args.image else None) as runtime:
                     binary, cwd, sandbox, path = runtime
                     context = adapter.prepare_context(binary, cwd, evidence, 'gpt-6.1-sol', 'high', sandbox, path)
                     command = adapter.command(binary, cwd, 'gpt-6.1-sol', 'high', sandbox, context)
-                    host = 'host.docker.internal' if args.image else '127.0.0.1'
-                    command[-1:-1] = ['-c', 'model_provider="probe"', '-c',
-                        'model_providers.probe={name="probe",base_url="http://' + host + ':' + str(server.server_port) +
-                        '/v1",wire_api="responses",requires_openai_auth=false}']
+                    host = 'model-gateway' if args.image else '127.0.0.1'
+                    port = 8080 if args.image else server.server_port
+                    if not args.image:
+                        command[-1:-1] = ['-c', 'model_provider="probe"', '-c',
+                            'model_providers.probe={name="probe",base_url="http://' + host + ':' + str(port) +
+                            '",wire_api="responses",requires_openai_auth=false}']
                     prompt = evidence / 'prompt.txt'
                     prompt.write_text((adapter.invocation() if skill else '') + 'Reply READY without tools.')
                     result = execute(output / 'helpers', work, evidence / 'capture', command, 60, prompt, adapter)

@@ -25,7 +25,8 @@ def main():
         task = prepare_task(load_task(name, args.inputs), bundle / 'task')
         write_json(bundle / 'task.json', task)
         receipt = next(r for r in report['cases'] if r['name'] == name)
-        reference = ROOT / receipt['evidence'] / 'reference'
+        # The frozen preflight data can live outside this tool's worktree.
+        reference = args.inputs.resolve() / Path(receipt['evidence']).name / 'reference'
         for variant in ('unchanged', 'reference'):
             submitted = bundle / variant
             snapshot(bundle / task['workspace'], submitted)

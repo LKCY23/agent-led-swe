@@ -3,13 +3,25 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from evaluate_results import check_bundle, task_status
+from evaluate_results import check_bundle, task_status, comparison_validity
 from evaluation_runtime import digest, file_hashes
 from functional_checks import functional_status
 from task_adapters import load_task, prepare_task
 
 
 class TaskAdapterTest(unittest.TestCase):
+    def test_network_validity_does_not_override_verifier_outcome(self):
+        plan = {'skill_loading_mode': 'native', 'environment': {'kind': 'docker',
+                'execution_network': 'internal-model-gateway-v1'}}
+        result = {'run_status': 'completed', 'isolation': {'status': 'verified-discovery'},
+                  'skill_activation': {'status': 'verified'}}
+        self.assertEqual(comparison_validity(plan, result)['status'], 'invalid')
+        self.assertEqual(task_status([{'status': 'pass'}]), 'pass')
+        result['network_isolation'] = {'status': 'verified'}
+        self.assertEqual(comparison_validity(plan, result)['status'], 'valid')
+        del plan['environment']['execution_network']
+        self.assertEqual(comparison_validity(plan, result)['status'], 'unknown')
+
     def test_behavior_uses_same_workspace_contract_without_exposing_grader(self):
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / 'task'
@@ -21,7 +33,7 @@ class TaskAdapterTest(unittest.TestCase):
             self.assertNotIn('Hidden criterion', (output / 'workspace/a.txt').read_text())
 
     def test_unqualified_cases_are_not_silently_enabled(self):
-        for name in ('dspy', 'agents-sdk'):
+        for name in ('pytest', 'dspy', 'agents-sdk'):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 load_task(name, Path('/unused'))
 

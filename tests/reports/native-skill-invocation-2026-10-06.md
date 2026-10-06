@@ -37,6 +37,6 @@ CC 移除了阻止目标发现的 bare／disable-slash-commands。新 HOME 只�
 
 ## 旧结果与后续
 
-此前 D1、pytest 和候选比较采用路径提示加普通 Read／Bash 的 **document-reading** 模式。记录和原始判分保留，但不能作为 native skill 的效果验收，也不能与新模式混合汇总。候选内容的效果仍待原生模式重新验证。
+此前 D1 和早期候选比较采用路径提示加普通 Read／Bash 的 **document-reading** 模式。保留的记录不能作为 native skill 的效果验收，也不能与新模式混合汇总。候选内容的效果仍待原生模式重新验证。
 
 接入修复不自动解决 packaging 的替代实现暴露或 judge 一致性问题。先保持这些限制可见；后续原生对照另建冻结计划和新证据目录，不能覆盖旧结果或直接接受上一轮候选。

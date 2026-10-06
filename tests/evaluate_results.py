@@ -56,6 +56,11 @@ def comparison_validity(plan, result):
         return {'status': 'invalid', 'reason': 'Discovery isolation was not verified'}
     if result.get('skill_activation', {}).get('status') != 'verified':
         return {'status': 'invalid', 'reason': 'Native target activation/absence was not verified'}
+    if plan.get('environment', {}).get('kind') == 'docker':
+        if plan['environment'].get('execution_network') != 'internal-model-gateway-v1':
+            return {'status': 'unknown', 'reason': 'Historical execution without the model-only network boundary'}
+        if result.get('network_isolation', {}).get('status') != 'verified':
+            return {'status': 'invalid', 'reason': 'Model-only worker network was not verified'}
     if result.get('execution_validity', {}).get('status') == 'invalid':
         return result['execution_validity']
     return {'status': 'valid', 'reason': 'Recorded execution and native invocation checks passed'}
@@ -102,7 +107,7 @@ def evaluate_bundle(bundle, output):
         # Never import historical judge scores or analytical conclusions.
         result = {**trial, **{key: captured.get(key) for key in (
             'run_status', 'usage', 'elapsed_seconds', 'fixture_before', 'fixture_after',
-            'isolation', 'skill_activation', 'execution_validity')}}
+            'isolation', 'skill_activation', 'execution_validity', 'network_isolation')}}
         result['comparison_validity'] = comparison_validity(plan, captured)
         directory = output / f'verify-{number}'
         directory.mkdir()

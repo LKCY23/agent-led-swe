@@ -1,6 +1,6 @@
 # agent-led-swe 测试机制
 
-更新：2026-10-06。测试负责执行、保存完整历史和调用 verifier；后续过程分析独立进行，不决定任务是否通过。当前实现约定见 [协议](protocol.md)。
+更新：2026-10-06。测试负责执行、保存完整历史和调用 verifier；后续过程分析独立进行，不决定任务是否通过。当前实现约定见 [协议](protocol.md)，本轮检查见 [修复记录](reports/network-and-task-scope-2026-10-06.md)。
 
 ## 职责与结果
 
@@ -35,7 +35,7 @@ uv run --locked python tests/check_hosts.py
 开始前固定任务、版本、模型、预算和比较组。下面的执行命令调用模型，验证命令不调用模型：
 
 ```sh
-uv run --locked python tests/run_evaluation.py pytest \
+uv run --locked python tests/run_evaluation.py packaging \
   --swe-inputs '<冻结任务输入目录>' \
   --agent claude-code --model-profile tests/configs/models/deepseek-v4.1-flash.json \
   --credentials '<本地凭据文件>' --skill-path '<被测 skill 路径>' \
@@ -47,14 +47,14 @@ Codex 使用 `--agent codex --model-profile tests/configs/models/codex-gpt-6.1-s
 
 Codex 将 skill 安装到隔离 HOME 的 `.agents/skills/agent-led-swe/`，提示词以 `$agent-led-swe` 开头；CC 安装到 `.claude/skills/agent-led-swe/`，以 `/agent-led-swe` 开头。baseline 不安装目标。发现与原生调用均核查，不以普通 Read 或模型自述代替。[原生接入验证](reports/native-skill-invocation-2026-10-06.md)。
 
-DeepSeek 凭据填在被 Git 忽略的 `tests/configs/credentials.local.json`，可从 `credentials.example.json` 创建；环境变量优先，`--credentials` 可指定其他文件。连通检查使用 `check_model_connection.py`，不改变本机日常配置。
+DeepSeek 凭据填在被 Git 忽略的 `tests/configs/credentials.local.json`，可从 `credentials.example.json` 创建；环境变量优先，`--credentials` 可指定其他文件。直接 API 检查使用 `check_model_connection.py`；受限容器的真实连通检查使用 `check_worker_network.py`（每次一个 Agent 会话、90 秒）。两者都不改变本机日常配置。
 
 ## 任务与环境
 
-- pytest 与 packaging 使用冻结数据、任务工作区和独立可信测试。SDK 暂缓，DSPy 尚未通过稳定性预检；见 [任务目录](cases/swe/README.md)。
+- packaging 使用冻结数据、任务工作区和独立可信测试。SDK 暂缓，DSPy 尚未通过稳定性预检；见 [任务目录](cases/swe/README.md)。
 - packaging 的 verifier 镜像保留完整测试依赖，Agent 使用单独精简的 execution image。已知安装／vendored／缓存副本清除后，需要重复起始／参考检查；实际 worker 安装项目后和执行结束时还会审计。
 - 行为场景见 [场景与状态](scenarios.md)。它们可以执行和分析，但没有程序 verifier 的场景，task_status 保持 unknown。
-- 不挂载私有参考补丁、验收材料或宿主 Docker socket。网络仍用于连接模型；本地来源审计不等同于全面网络隔离。
+- 不挂载私有参考补丁、验收材料或宿主 Docker socket。正式 Docker worker 只通过固定模型网关出站；直接外网与非许可代理路径被阻止，本地来源审计继续保留。
 
 ## 保存与后续分析
 
@@ -73,3 +73,5 @@ DeepSeek 凭据填在被 Git 忽略的 `tests/configs/credentials.local.json`，
 按仓库 AGENTS.md：基准提交 → 独立 worktree → 工具与 skill 分开修改 → 冻结版本 → 有限测试 → 审阅后决定是否合并。当前版本不被候选覆盖；已用于调优的任务不再称为未见验证集。
 
 `check_swe_pipeline.py` 使用未修复／参考产物检查验收链路，不调用模型。`check_codex_worker.py`、`check_claude_worker.py` 以模拟 API 检查真实 CLI 原生接入，不能证明模型或 skill 效果。原始记录索引见 [验证记录](validation.md)。
+
+当前任务筛选见 [候选审阅](reports/task-selection-2026-10-06.md)。示例命令只说明接口，不表示已有新的试跑预算或任务选择决定。
