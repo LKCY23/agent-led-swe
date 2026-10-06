@@ -5,7 +5,7 @@
 ## 版本与工作区
 
 - 正式 skill：`/Users/liyao/agent-led-swe`，接受提交 `1c65c00`。
-- 测试工作区：`/Users/liyao/agent-led-swe-worktrees/verifier-and-environment-20261006`，分支 `chore/test-baseline-cleanup-20261006`。skill 文件已恢复到接受版本，测试工具改进保留。
+- 测试工作区：`/Users/liyao/agent-led-swe-worktrees/verifier-and-environment-20261006`，当前分支 `research/swe-interact-20261006`。工具基线标签为 `test-baseline-2026-10-06`；skill 文件保持接受版本。
 - 未接受候选由 Git 分支与实验快照保留。运行时仍显式指定被测 skill 路径。
 
 ## 任务状态
@@ -17,7 +17,7 @@
 | D1、D4、D7、D10–D13 | 早期需求、协作与文档场景 | 保留专项回归；限制见 [场景说明](scenarios.md) |
 | smolagents、xarray、NodeBB、Navidrome、packaging | 旧单次请求 SWE 校准任务 | 退出当前推荐组合；适配器、输入和资格记录保留，可按名称显式调用 |
 | Agents SDK、DSPy | 未采用的早期候选 | 不启用；定义和结论保留追溯 |
-| SWE-Interact 等多轮任务 | 下一阶段候选 | 尚未接入、预检或执行 |
+| SWE-Interact | cattrs、TOMLKit、HTTPX 三个静态候选 | [源码调研完成](reports/swe-interact-research-2026-10-06.md)；尚未接入、预检或执行 |
 
 当前没有默认运行的完整 SWE benchmark 套件。真实模型测试仍需明确任务、版本、模型、比较方式与预算。
 
@@ -27,4 +27,4 @@
 
 当前执行器主要用于无持续用户介入的任务；六个文件／Shell 工具、关闭 hooks 与自动记忆的配置不等于完整交互式宿主。接多轮任务前，单独明确用户模拟、交互入口、信息隔离和最终验收。实现约定见 [协议](protocol.md)。
 
-先检查少量 SWE-Interact 任务与交互协议，再决定接入方式。新任务预检通过后，才评估删除旧 benchmark 专属适配代码与镜像。
+SWE-Interact 静态调研已完成，建议先对 cattrs 做环境与交互协议预检，再开展有限的 baseline／skill 对照。接入方案尚待审阅；新任务预检通过后，才评估删除旧 benchmark 专属适配代码与镜像。
