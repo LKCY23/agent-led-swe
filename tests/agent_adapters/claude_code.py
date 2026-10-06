@@ -60,7 +60,7 @@ class ClaudeCodeAdapter:
                 if not isinstance(event, dict) or not isinstance(event.get('type'), str):
                     raise ValueError('Not an event')
                 kind = event['type']
-                if event.get('parent_tool_use_id') or (kind == 'system' and event.get('subtype') == 'task_started'
+                if (kind in {'assistant', 'user'} and event.get('parent_tool_use_id')) or (kind == 'system' and event.get('subtype') == 'task_started'
                                                        and event.get('subagent_type')):
                     child_events.append(number)
                 counts[kind] += 1

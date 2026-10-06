@@ -102,6 +102,15 @@ class AgentAdapterTest(unittest.TestCase):
         codex = codex_command('codex', Path('/testbed'), 'fixed', 'high', 'danger-full-access')
         self.assertIn('features.multi_agent=false', codex)
 
+    def test_bash_heartbeat_is_not_a_subagent_message(self):
+        heartbeat = {'type': 'tool_progress', 'tool_name': 'Bash', 'parent_tool_use_id': 'shell',
+                     'heartbeat': True, 'elapsed_time_seconds': 30}
+        text = self.trace() + '\n' + json.dumps(heartbeat)
+        self.assertEqual(self.adapter.inspect_trace(text)['subagent_event_lines'], [])
+        child = {'type': 'assistant', 'parent_tool_use_id': 'agent-call',
+                 'message': {'content': [{'type': 'text', 'text': 'Child result'}]}}
+        self.assertTrue(self.adapter.inspect_trace(text + '\n' + json.dumps(child))['subagent_event_lines'])
+
     def test_model_and_agent_compatibility(self):
         validate_compatibility('claude-code', self.profile, 'high')
         validate_compatibility('claude-code', {**self.profile, 'model': 'deepseek-v4-pro'}, 'high')
