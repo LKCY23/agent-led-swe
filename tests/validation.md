@@ -1,3 +1,9 @@
+# Inline guidance diagnostic — 2026-10-06
+
+Compared accepted skill `1c65c00` with diagnostic `ee58579`, which appends three existing guides without rewriting their rules. Full native expansion passed a real-CLI/synthetic-API check. Two target executions, no retries/judge: current ended with ECONNRESET (task unknown); diagnostic completed and passed the verifier. Comparison is not eligible for complete outcome comparison. Diagnostic said it would create a plan but edited code first; it wrote a work record later and synchronized one subsequent design change. Direct provision alone did not resolve the observed pre-implementation recording gap. [Evidence and limits](reports/inline-guidance-results-2026-10-06.md).
+
+---
+
 # First paired SWE pilot — 2026-10-06
 
 Four real executions completed with accepted skill `1c65c00`, Claude Code 2.1.278 and DeepSeek Flash/high, one baseline/skill pair per task, 1,800 seconds per execution, no retries or model judge. Native invocation and network checks passed. Smolagents: baseline fail, skill pass. Xarray: both fail; both miss the positional mapping form required by trusted tests, while the public request emphasizes keyword mapping. Skill variants passed both regression groups. Process analysis found no supporting skill-guide reads, late work records, and unsupported PR references; these observations do not change verifier scores. No skill/tool changes or merges. [Results and analysis](reports/paired-pilot-2026-10-06.md).
