@@ -21,9 +21,9 @@ def load_profile(path):
         raise ValueError('Unexpected model profile fields; credentials belong in the local credential file')
     if any(not isinstance(v, str) or not v for v in profile.values()):
         raise ValueError('Model profile fields must be nonempty strings')
-    if profile['protocol'] == 'anthropic-messages':
+    if profile['protocol'] in ('anthropic-messages', 'chat-completions'):
         if not {'base_url', 'api_key_env'} <= profile.keys():
-            raise ValueError('Anthropic Messages requires base_url and api_key_env')
+            raise ValueError('HTTP model profiles require base_url and api_key_env')
         endpoint = urlsplit(profile['base_url'])
         if (not endpoint.hostname or endpoint.username or endpoint.password
                 or endpoint.query or endpoint.fragment

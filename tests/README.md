@@ -87,7 +87,9 @@ uv run --locked python tests/check_collaboration_worker.py \
   --skill-path '<已接受 skill 的路径>' --output '<新的协议检查目录>'
 ```
 
-协议检查也支持 `--agent codex`。它运行真实容器 CLI、原生安装／调用和两轮 session 接续，模型与用户响应均为脚本模拟。真实用户模型与配对入口仍待接入；范围与结果见[实施记录](reports/cattrs-integration-results-2026-10-06.md)。
+协议检查也支持 `--agent codex`；加 `--with-simulated-user` 可同时检查用户的 HTTP／只读工具接口。它运行真实容器 CLI、原生安装／调用和两轮 session 接续，模型与用户响应均为脚本模拟。
+
+真实多轮入口为 `run_collaboration.py`，所有模型、资格和预算参数必须显式提供。使用 `--prepare-only` 可只冻结计划；运行前还需 `--user-qualification` 提供与 profile、用户规则、需求和适配器匹配的通过记录。目前 Flash 的[资格记录](reports/qualifications/cattrs-user-flash.json)为失败，不能用于真实配对。详见[用户接入与检查](reports/simulated-user-integration-2026-10-06.md)。
 
 旧 [rubric](rubrics.md)、judge 判分和文档读取模式结果保留为历史材料，不进入新成绩，也不与 native 模式混合比较。不能凭单个任务、单轮通过或耗时下降认定 skill 有效。
 

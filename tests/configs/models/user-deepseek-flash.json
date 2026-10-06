@@ -1,0 +1,8 @@
+{
+  "provider": "deepseek",
+  "model": "deepseek-flash",
+  "version_label": "DeepSeek-V4.1-Flash simulated user",
+  "protocol": "chat-completions",
+  "base_url": "https://api.deepseek.com",
+  "api_key_env": "DEEPSEEK_API_KEY"
+}

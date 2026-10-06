@@ -14,6 +14,7 @@ from evaluation_runtime import (DEFAULT_EVALUATOR, build_worker_image, execution
 from model_config import CONFIGS, load_profile
 from native_skills import verify_activation
 from run_evaluation import freeze_skill
+from simulated_user import SimulatedUser
 
 
 def main():
@@ -22,6 +23,7 @@ def main():
     parser.add_argument('--base-image', required=True)
     parser.add_argument('--skill-path', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--with-simulated-user', action='store_true', help='Exercise the user HTTP/tool adapter against a fake API too')
     args = parser.parse_args()
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
@@ -40,6 +42,7 @@ def main():
         evidence = output / variant
         evidence.mkdir()
         requests = []
+        user_requests = []
 
         class Handler(BaseHTTPRequestHandler):
             def log_message(self, *unused):
@@ -47,6 +50,26 @@ def main():
 
             def do_POST(self):
                 payload = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+                if self.path.endswith('/chat/completions'):
+                    user_requests.append(payload)
+                    write_json(evidence / 'user-requests.json', user_requests)
+                    inspected = any(m['role'] == 'tool' for m in payload['messages'])
+                    finished = 'REPLY_TWO' in json.dumps(payload['messages'])
+                    message = {'role': 'assistant', 'content': None, 'tool_calls': [{
+                        'id': 'reply', 'type': 'function', 'function': {'name': 'respond_to_agent', 'arguments': json.dumps({
+                            'reply': 'Accepted.' if finished else 'USER_FEEDBACK_TOKEN', 'accepted': finished})}}]}
+                    if not inspected:
+                        message.update(content=None, reasoning_content='Inspect public fixture', tool_calls=[{
+                            'id': 'inspect', 'type': 'function', 'function': {
+                                'name': 'read_file', 'arguments': '{"path":"fixture.txt"}'}}])
+                    response = {'model': 'deepseek-flash', 'choices': [{'message': message,
+                        'finish_reason': 'tool_calls'}],
+                        'usage': {'prompt_tokens': 10, 'completion_tokens': 5}}
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps(response).encode())
+                    return
                 requests.append(payload)
                 write_json(evidence / 'requests.json', requests)
                 rendered = json.dumps(payload, ensure_ascii=False)
@@ -110,6 +133,13 @@ def main():
                     if messages[-1]['content'] == 'REPLY_TWO':
                         return UserReply('Accepted.', accepted=True)
                     raise ValueError('Unexpected mock solver reply')
+                if args.with_simulated_user:
+                    from evaluation_runtime import snapshot
+                    snapshot(work, evidence / 'user-initial')
+                    user_profile = load_profile(CONFIGS / 'models/user-deepseek-flash.json')
+                    user_profile['base_url'] = f'http://127.0.0.1:{server.server_port}'
+                    responder = SimulatedUser(user_profile, 'synthetic-key', 'Test user rules',
+                        'Inspect fixture.txt before accepting.', evidence / 'user-initial', evidence / 'user-model')
                 with execution_environment(task, work, evidence, cli, treatment, authenticate=False,
                         model_profile=profile, model_upstream=f'http://host.docker.internal:{server.server_port}') as runtime:
                     binary, cwd, sandbox, entrypoint = runtime
@@ -123,6 +153,8 @@ def main():
                 history_preserved = bool(second) and all('REPLY_ONE' in json.dumps(p) for p in second)
                 passed = (result['status'] == 'completed' and len(result['turns']) == 2
                           and history_preserved and activation['status'] == 'verified')
+                if args.with_simulated_user:
+                    passed = passed and len(user_requests) == 4
                 reports.append({'variant': variant, 'passed': passed, 'history_preserved': history_preserved,
                                 'native_activation': activation, 'result': result})
         finally:

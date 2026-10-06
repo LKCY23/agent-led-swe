@@ -121,7 +121,9 @@ def converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
                 break
         else:
             result['status'] = 'turn_limit'
-    except (OSError, ValueError, RuntimeError, TimeoutError) as exc:
+    except TimeoutError as exc:
+        result.update(status='timeout', error=str(exc))
+    except (OSError, ValueError, RuntimeError) as exc:
         result.update(status='error', error=str(exc))
     finally:
         write_json(output / 'result.json', result)

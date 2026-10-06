@@ -31,7 +31,7 @@ FeatureBench 的遮蔽、隐藏测试恢复与其他 benchmark 的正向修复�
 
 当前选择见 [STATUS](STATUS.md)。旧四题和 packaging 已退出推荐组合，适配能力保留；SDK／DSPy 不启用。旧四题的资格仍核对任务定义哈希、冻结输入和不可变镜像 ID；保留 CLI 名称不表示应默认运行。
 
-cattrs 的协作适配独立于现有单次请求入口：`cattrs_task.py` 准备输入并预检，`collaboration_runtime.py` 组织原生对话接续，`check_collaboration_worker.py` 用模拟 API 检查两种宿主。它尚未接入真实模拟用户和配对入口，不在 `run_evaluation.py` 中启用。详见[场景](reports/cattrs-collaboration-scenario-2026-10-06.md)和[实施结果](reports/cattrs-integration-results-2026-10-06.md)。
+cattrs 的协作适配独立于现有单次请求入口：`cattrs_task.py` 准备输入并预检，`collaboration_runtime.py` 组织原生对话接续，`simulated_user.py` 回答和审阅，`run_collaboration.py` 冻结两组并组织独立验收。`check_collaboration_worker.py --with-simulated-user` 用模拟 API 检查两种宿主的完整传递链路。真实入口需通过任务及用户模型资格；目前 Flash 用户资格失败，不在旧 `run_evaluation.py` 中启用。详见[场景](reports/cattrs-collaboration-scenario-2026-10-06.md)和[当前检查结果](reports/simulated-user-integration-2026-10-06.md)。
 
 ## 2. 执行与产物约定
 

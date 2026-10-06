@@ -1,0 +1,22 @@
+{
+  "qualified": false,
+  "model_profile": {
+    "provider": "deepseek",
+    "model": "deepseek-flash",
+    "version_label": "DeepSeek-V4.1-Flash simulated user",
+    "protocol": "chat-completions",
+    "base_url": "https://api.deepseek.com",
+    "api_key_env": "DEEPSEEK_API_KEY"
+  },
+  "persona_sha256": "765616879749e625218b3caaf00bdd4acb45e7ff71aeaa3c0b22a4d43a183d31",
+  "requirements_sha256": "e152e2b2c2c6ba4429694437fe5a645427c1777ebc9fc1fcd96fe0cc3fd59fcc",
+  "tool_files": {
+    "simulated_user.py": "bfa9ceed29f2b3733840f665566e9bf2d28cb2f8990f2551642e93ae6f1a1494",
+    "chat_completion.py": "c8650e409ff3e7a7d4cb118f0a11d1e0d611a0d04ffd151c4ef3b0d991199876",
+    "model_config.py": "27c658236ad22491a15a956dfff04afffb04e700d198b17ebb4a065412b0331a"
+  },
+  "reason": "Live Flash user smoke did not complete both clarification and design-review turns reliably. Protocol deviations and unrequested requirements need diagnosis before a skill comparison.",
+  "evidence": "/Users/liyao/agent-led-swe/tests/runs/cattrs-user-integration-20261006/smoke-summary.json",
+  "real_api_responses": 24,
+  "completed_two_reply_cases": 0
+}
