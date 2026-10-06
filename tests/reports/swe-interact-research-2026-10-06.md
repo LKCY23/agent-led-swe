@@ -1,5 +1,7 @@
 # SWE-Interact 接入调研
 
+后续调整：源码事实与候选分析保留；下文第 5、6 节的接入建议由 [cattrs 协作场景草案](cattrs-collaboration-scenario-2026-10-06.md)更新。当前方向是保留题目与可信功能测试，重新设计协作过程，不沿用原固定五步。
+
 **建议先选 cattrs 做环境与协议预检，TOMLKit、HTTPX 作后续候选；复用 Harbor 的多步骤与 sidecar 支持，补齐我们的隔离和证据约定。** 本轮仅静态阅读源码，未安装依赖、拉取／构建镜像、运行任务或调用模型。三题尚未取得运行资格。
 
 源码固定为 SWE-Interact `b32f98c3b8f76ca65e84341d1f30e5af7135f85d`、Harbor `c803185a8b7c88c163abe48a22e9cea0bbd95e90`（源码版本 0.24.0，Python ≥3.12）。上游 README 没有固定 Harbor 提交，因此这里核查的是当前公开组合，不代表论文当时的精确运行环境。

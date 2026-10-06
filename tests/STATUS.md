@@ -17,7 +17,7 @@
 | D1、D4、D7、D10–D13 | 早期需求、协作与文档场景 | 保留专项回归；限制见 [场景说明](scenarios.md) |
 | smolagents、xarray、NodeBB、Navidrome、packaging | 旧单次请求 SWE 校准任务 | 退出当前推荐组合；适配器、输入和资格记录保留，可按名称显式调用 |
 | Agents SDK、DSPy | 未采用的早期候选 | 不启用；定义和结论保留追溯 |
-| SWE-Interact | cattrs、TOMLKit、HTTPX 三个静态候选 | [源码调研完成](reports/swe-interact-research-2026-10-06.md)；尚未接入、预检或执行 |
+| SWE-Interact | cattrs 优先，TOMLKit、HTTPX 后续候选 | [源码调研](reports/swe-interact-research-2026-10-06.md)完成；[cattrs 协作场景草案](reports/cattrs-collaboration-scenario-2026-10-06.md)待审阅，尚未接入、预检或执行 |
 
 当前没有默认运行的完整 SWE benchmark 套件。真实模型测试仍需明确任务、版本、模型、比较方式与预算。
 
@@ -27,4 +27,4 @@
 
 当前执行器主要用于无持续用户介入的任务；六个文件／Shell 工具、关闭 hooks 与自动记忆的配置不等于完整交互式宿主。接多轮任务前，单独明确用户模拟、交互入口、信息隔离和最终验收。实现约定见 [协议](protocol.md)。
 
-SWE-Interact 静态调研已完成，建议先对 cattrs 做环境与交互协议预检，再开展有限的 baseline／skill 对照。接入方案尚待审阅；新任务预检通过后，才评估删除旧 benchmark 专属适配代码与镜像。
+先审定 cattrs 协作场景：保留题目与可信功能测试，由 Agent 自主组织开发，不沿用原固定五步。随后开展环境与交互协议预检，再冻结配置与预算进行有限的 baseline／skill 对照。新任务预检通过后，才评估删除旧 benchmark 专属适配代码与镜像。
