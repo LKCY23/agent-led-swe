@@ -82,6 +82,7 @@ def _converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
     deadline = clock() + timeout
     messages = [{'role': 'user', 'content': request}]
     session_id, rows = None, []
+    previous_usage = {'input_tokens': 0, 'cached_input_tokens': 0, 'output_tokens': 0}
     result = {'status': 'error', 'accepted': False, 'task_status': 'unknown', 'turns': rows}
     try:
         while True:
@@ -97,6 +98,14 @@ def _converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
             command = adapter.conversation_command(binary, runtime_cwd, model, effort, sandbox, context, session_id)
             execution = capture(helpers, workspace, turn / 'capture', command,
                                 remaining, prompt, adapter)
+            if execution.get('usage_scope') == 'session_cumulative':
+                cumulative = dict(execution['usage'])
+                execution['session_usage'] = cumulative
+                execution['usage'] = {k: v - previous_usage[k]
+                    if type(v) is int and type(previous_usage[k]) is int and v >= previous_usage[k] else None
+                    for k, v in cumulative.items()}
+                execution['usage_scope'] = 'turn_delta_including_subagents'
+                previous_usage = cumulative
             row = {'turn': number, 'execution': execution}
             rows.append(row)
             write_json(turn / 'execution.json', execution)

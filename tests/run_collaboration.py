@@ -47,6 +47,7 @@ def prepare_pair(inputs, qualification, output, agent, solver, user, effort, ski
     targets = freeze_skill(skill, output / 'frozen-skill')
     freeze_helpers(DEFAULT_EVALUATOR, output / 'helpers')
     environment = json.loads((inputs / 'environment.json').read_text())
+    environment.setdefault('resources', json.loads((CONFIGS / 'runtime.json').read_text())['worker'])
     cli = {'agent': agent, 'version': json.loads((CONFIGS / 'agents.json').read_text())[agent]['version']}
     environment['worker_image'] = build_worker_image(environment, cli['version'], output / 'worker-build', agent)
     user_cli = expected_user_cli

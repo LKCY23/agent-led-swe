@@ -350,6 +350,7 @@ def execute(helpers, workspace, evidence, command, timeout, prompt, adapter=None
               'completed' if record['exit_code'] == 0 and not record['launch_error']
               and trace['telemetry_usable'] else 'error')
     return {'run_status': status, 'usage': trace['usage'],
+            'usage_scope': trace.get('usage_scope', 'native_turn'),
             'elapsed_seconds': record['elapsed_seconds'], 'cost': None,
             'models_observed': trace.get('models_observed', []),
             'isolation_status': trace.get('isolation_status'),

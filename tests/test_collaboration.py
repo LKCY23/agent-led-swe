@@ -142,6 +142,20 @@ class ConversationTest(unittest.TestCase):
         self.assertEqual(completed_turn('claude-code', '\n'.join(map(json.dumps, events))),
                          (SESSION, 'Main answer'))
 
+    def test_resumed_cumulative_usage_is_not_counted_twice(self):
+        capture = self.capture
+        def cumulative(*args):
+            row = capture(*args)
+            total = 40 if len(self.prompts) == 1 else 50
+            row.update(usage_scope='session_cumulative', usage={
+                'input_tokens': total, 'cached_input_tokens': 0, 'output_tokens': total // 5})
+            return row
+        self.capture = cumulative
+        result = self.run_conversation(lambda messages, *args:
+            UserReply('Continue') if len(messages) == 2 else UserReply('Accepted', True))
+        self.assertEqual([r['execution']['usage']['input_tokens'] for r in result['turns']], [40, 10])
+        self.assertEqual(result['turns'][-1]['execution']['session_usage']['input_tokens'], 50)
+
 
 class CattrsVerifierTest(unittest.TestCase):
     def test_collection_errors_or_empty_tests_are_not_passes(self):

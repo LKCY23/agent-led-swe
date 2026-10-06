@@ -2,6 +2,7 @@
 """Real Docker deadline/export checks; no model requests or credentials."""
 import argparse
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -42,8 +43,10 @@ def main():
                           f"subprocess.Popen(['python3','-c',{child!r}]); time.sleep(60)")
                 try:
                     with execution_deadline([binary], 2):
-                        load_helper(DEFAULT_EVALUATOR / 'scripts/capture.py').capture(work,
-                            evidence / 'capture', ['docker', 'exec', binary.container, 'python3', '-c', script], 10)
+                        record = load_helper(DEFAULT_EVALUATOR / 'scripts/capture.py').capture(work,
+                            evidence / 'capture', ['docker', 'exec', '--user', f'{os.getuid()}:{os.getgid()}',
+                                binary.container, 'python3', '-c', script], 10)
+                        assert record['exit_code'] == 137, 'Probe failed before deadline; inspect capture stderr'
                 except TimeoutError:
                     timed_out = True
                 state = json.loads(subprocess.check_output(['docker', 'inspect', '--format', '{{json .State}}', binary.container], text=True))

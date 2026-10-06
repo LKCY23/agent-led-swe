@@ -193,6 +193,8 @@ def main():
                     trace = json.loads((evidence / 'conversation/turn-001/capture/trace.json').read_text())
                     usage = trace['native_model_usage']
                     passed = passed and bool(usage) and all(v.get('contextWindow') == 1000000 for v in usage.values())
+                    passed = passed and sum(row['execution']['usage']['input_tokens'] or 0
+                                            for row in result['turns']) == len(requests) * 10
                 if args.with_simulated_user:
                     passed = passed and len(user_requests) >= 4
                 reports.append({'variant': variant, 'passed': passed, 'history_preserved': history_preserved,

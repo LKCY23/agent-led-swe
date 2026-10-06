@@ -95,6 +95,19 @@ class ClaudeCodeAdapter:
         normalized = {'input_tokens': total,
                       'cached_input_tokens': cached if type(cached) is int and cached >= 0 else None,
                       'output_tokens': output if type(output) is int and output >= 0 else None}
+        scope = 'native_final_result'
+        model_usage = final.get('modelUsage') or {}
+        fields = ('inputTokens', 'outputTokens', 'cacheReadInputTokens', 'cacheCreationInputTokens')
+        if model_usage and all(all(type(v.get(k)) is int and v[k] >= 0 for k in fields)
+                               for v in model_usage.values()):
+            # Includes child calls and native follow-up turns. On resume this
+            # receipt includes earlier calls; the conversation driver takes deltas.
+            normalized = {
+                'input_tokens': sum(v['inputTokens'] + v['cacheReadInputTokens'] + v['cacheCreationInputTokens']
+                                    for v in model_usage.values()),
+                'cached_input_tokens': sum(v['cacheReadInputTokens'] for v in model_usage.values()),
+                'output_tokens': sum(v['outputTokens'] for v in model_usage.values())}
+            scope = 'session_cumulative'
         context_keys = ('session_id', 'model', 'skills', 'tools', 'agents', 'plugins', 'mcp_servers')
         contexts = {json.dumps({key: e.get(key) for key in context_keys}, sort_keys=True) for e in init}
         verified = len(contexts) == 1 and all(init[0].get(key) == [] for key in ('plugins', 'mcp_servers'))
@@ -105,6 +118,7 @@ class ClaudeCodeAdapter:
         return {'schema_version': 1, 'event_types': dict(counts), 'malformed_lines': malformed,
                 'completion_observed': bool(results), 'telemetry_usable': usable,
                 'usage': normalized if usable else {k: None for k in normalized},
+                'usage_scope': scope,
                 'native_usage': usage, 'native_model_labels': sorted(models),
                 'native_model_usage': final.get('modelUsage', {}),
                 'models_observed': sorted({m.removesuffix('[1m]') for m in models}), 'tool_calls': commands,
