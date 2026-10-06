@@ -66,8 +66,8 @@ def validate_compatibility(agent, profile, effort):
             raise ValueError('Unsupported Codex effort')
     elif agent == 'claude-code':
         if (profile['provider'] != 'deepseek' or profile['protocol'] != 'anthropic-messages'
-                or profile['model'] != 'deepseek-flash'):
-            raise ValueError('Initial Claude Code integration supports DeepSeek Flash over Anthropic Messages')
+                or profile['model'] not in ('deepseek-flash', 'deepseek-v4-pro')):
+            raise ValueError('Claude Code supports DeepSeek Flash/Pro over Anthropic Messages')
         if effort not in ('low', 'high', 'max'):
             raise ValueError('Use DeepSeek effort low/high/max to avoid implicit effort alias mapping')
     else:

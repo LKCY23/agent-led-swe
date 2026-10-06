@@ -59,12 +59,18 @@ def skill_source(root):
 
 def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
              model_profile=None, credentials=DEFAULT_CREDENTIALS, skill_path=None,
-             reference_skill_path=None, reverse_order=False, include_baseline=True):
+             reference_skill_path=None, reverse_order=False, include_baseline=True, direct_guidance=None):
     positive_seconds(timeout)
     if type(repetitions) is not int or repetitions <= 0:
         raise ValueError('repetitions must be a positive integer')
     skill_path = Path(skill_path or ROOT).resolve()
     reference_skill_path = Path(reference_skill_path).resolve() if reference_skill_path else None
+    if direct_guidance is not None:
+        if reference_skill_path or not include_baseline or not direct_guidance.strip():
+            raise ValueError('Direct guidance compares direct/skill only and must be nonempty')
+        body = (skill_path / 'SKILL.md').read_text().split('---', 2)[-1].strip()
+        if body != direct_guidance.strip():
+            raise ValueError('Direct guidance must equal the complete skill body')
     if not include_baseline and reference_skill_path is None:
         raise ValueError('Omitting baseline requires a reference skill for a current/candidate comparison')
     for source in (skill_path, reference_skill_path):
@@ -96,6 +102,8 @@ def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
     shutil.copyfile(ROOT / 'tests/rubrics.md', output / 'rubrics.md')
     target = freeze_skill(skill_path, output / 'skill')
     variants = ['baseline', 'current', 'candidate'] if reference_skill_path else ['baseline', 'skill']
+    if direct_guidance is not None:
+        variants = ['direct', 'skill']
     if not include_baseline:
         variants.remove('baseline')
     targets = {variants[-1]: {'directory': 'skill', 'files': target, 'source': skill_source(skill_path)}}
@@ -118,7 +126,9 @@ def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
         'helpers': helpers, 'adapter_files': adapter_hashes(),
         'cli': cli, 'agent': adapter.name, 'model': model, 'model_profile': model_profile, 'effort': effort,
         'timeout_seconds': timeout, 'max_executor_calls': len(trials),
-        'comparison_reference_variant': 'baseline' if include_baseline else 'current',
+        'comparison_reference_variant': ('direct' if direct_guidance is not None else
+                                         'baseline' if include_baseline else 'current'),
+        'comparison_kind': 'instruction-delivery' if direct_guidance is not None else 'skill-effect',
         'token_limit': None, 'cost_limit': None,
         'environment': case['environment'], 'routing': 'native explicit invocation; not an implicit routing test',
         'skill_loading_mode': 'native',
@@ -127,6 +137,9 @@ def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
             'reason': 'Per-trial discovery preflight pending; see each isolation.json and execution trace.'},
         'trials': trials,
     }
+    if direct_guidance is not None:
+        (output / 'direct-guidance.md').write_text(direct_guidance)
+        plan['direct_guidance_sha256'] = digest(output / 'direct-guidance.md')
     # Freeze the complete planned matrix before the first execution, including missing trials.
     write_json(output / 'plan.json', plan)
     for trial in trials:
@@ -146,7 +159,8 @@ def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
                     before = snapshot(workspace, evidence / 'before')
                     guidance = adapter.invocation() if skill_path else ''
                     prompt = evidence / 'prompt.txt'
-                    prompt.write_text(guidance + COMMON_PROMPT + case['request'])
+                    direct = direct_guidance + '\n\n' if trial['variant'] == 'direct' else ''
+                    prompt.write_text(guidance + direct + COMMON_PROMPT + case['request'])
                     result['isolation'] = adapter.prepare_context(binary, runtime_cwd, evidence, model, effort, sandbox, skill_path)
                     command = adapter.command(binary, runtime_cwd, model, effort, sandbox, result['isolation'])
                     result.update(execute(output / 'helpers', workspace, evidence / 'capture',
@@ -210,6 +224,8 @@ def main():
     parser.add_argument('--reverse-order', action='store_true', help='Reverse the first repetition order')
     parser.add_argument('--without-baseline', action='store_true',
                         help='Compare current/candidate only; requires --reference-skill-path')
+    parser.add_argument('--direct-guidance', type=Path,
+                        help='Compare identical guidance in direct prompt vs native skill; body must match')
     parser.add_argument('--output-root', type=Path, default=ROOT / 'tests/runs', help='Parent for a fresh evidence directory')
     parser.add_argument('--evaluator', type=Path, default=DEFAULT_EVALUATOR)
     args = parser.parse_args()
@@ -226,7 +242,7 @@ def main():
             profile = {'provider': 'openai', 'protocol': 'codex-native',
                        'model': args.model, 'version_label': args.model}
         validate_compatibility(args.agent, profile, args.effort)
-        if args.case in SWE_NAMES:
+        if args.case in SWE_NAMES or case.get('environment', {}).get('kind') == 'docker':
             versions = json.loads((CONFIGS / 'agents.json').read_text())
             version = args.agent_version or versions[args.agent]['version']
             cli = {'agent': args.agent, 'version': version, 'source': 'pinned container install'}
@@ -241,7 +257,8 @@ def main():
         plan = run_pair(case, output, cli, profile['model'], args.effort, args.timeout,
                         args.repetitions, args.evaluator.resolve(), profile, args.credentials,
                         args.skill_path, args.reference_skill_path, args.reverse_order,
-                        include_baseline=not args.without_baseline)
+                        include_baseline=not args.without_baseline,
+                        direct_guidance=args.direct_guidance.read_text() if args.direct_guidance else None)
     except (ValueError, OSError) as exc:
         parser.error(str(exc))
     print(output)

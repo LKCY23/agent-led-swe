@@ -55,8 +55,16 @@ def prepare_task(case, output):
                 raise ValueError('Fixture path escapes workspace')
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content)
-        return {**case, 'workspace': 'task/workspace', 'environment': {'kind': 'local'},
-                'validation': None, 'provenance': {'source': 'behavior'}}
+        validation = case.get('validation')
+        if validation:
+            if validation['kind'] != 'pytest' or validation['overlay'] != 'task/validation':
+                raise ValueError('Behavior fixtures support a frozen pytest overlay only')
+            for name in validation['test_roots']:
+                if Path(name).is_absolute() or '..' in Path(name).parts or Path(name) == Path('.'):
+                    raise ValueError('Validation path escapes workspace')
+                shutil.copytree(workspace / name, output / 'validation' / name)
+        return {**case, 'workspace': 'task/workspace', 'environment': case.get('environment', {'kind': 'local'}),
+                'validation': validation, 'provenance': {'source': 'behavior'}}
     name = case['id']
     if name not in SWE_NAMES:
         raise ValueError('Candidate has not qualified for paired execution')

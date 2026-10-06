@@ -25,6 +25,8 @@ def task_status(checks):
 
 
 def check_bundle(bundle, plan):
+    if plan.get('direct_guidance_sha256') and digest(bundle / 'direct-guidance.md') != plan['direct_guidance_sha256']:
+        raise ValueError('Frozen direct guidance changed')
     for name, expected in [('case.json', plan['case_sha256']), ('rubrics.md', plan['rubric_sha256'])]:
         if digest(bundle / name) != expected:
             raise ValueError(f'Frozen input changed: {name}')

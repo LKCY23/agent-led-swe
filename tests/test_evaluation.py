@@ -196,6 +196,28 @@ print(json.dumps({'type':'result','subtype':'success','is_error':False,
                 5, 1, runtime.DEFAULT_EVALUATOR, skill_path=self.target, include_baseline=False)
         self.assertFalse(self.bundle.exists())
 
+    def test_direct_guidance_matches_skill_and_preserves_treatment_absence(self):
+        guidance = 'Frozen skill guidance'
+        with patch.object(run_evaluation, 'ROOT', self.target):
+            plan = run_evaluation.run_pair(self.case, self.bundle, self.cli, 'synthetic', 'low',
+                5, 1, runtime.DEFAULT_EVALUATOR, direct_guidance=guidance)
+        self.assertEqual([t['variant'] for t in plan['trials']], ['direct', 'skill'])
+        direct = self.bundle / 'T1-1-direct'
+        self.assertTrue((direct / 'prompt.txt').read_text().startswith(guidance))
+        self.assertFalse(json.loads((direct / 'skill-activation.json').read_text())['expected'])
+        self.assertTrue((self.bundle / 'T1-1-skill/prompt.txt').read_text().startswith('$agent-led-swe'))
+        results = evaluate_results.evaluate_bundle(self.bundle, self.bundle / 'review')
+        self.assertTrue(evaluate_results.compare(plan, results)['pairs'][0]['comparison_eligible'])
+        (self.bundle / 'direct-guidance.md').write_text('tampered')
+        with self.assertRaisesRegex(ValueError, 'Frozen direct guidance changed'):
+            evaluate_results.check_bundle(self.bundle, plan)
+
+    def test_direct_guidance_mismatch_stops_before_execution(self):
+        with self.assertRaisesRegex(ValueError, 'must equal'):
+            run_evaluation.run_pair(self.case, self.bundle, self.cli, 'synthetic', 'low',
+                5, 1, runtime.DEFAULT_EVALUATOR, skill_path=self.target, direct_guidance='different')
+        self.assertFalse(self.bundle.exists())
+
     def test_invalid_skill_path_stops_before_task_preparation(self):
         with self.assertRaisesRegex(ValueError, 'entrypoint not found'):
             run_evaluation.run_pair(self.case, self.bundle, self.cli, 'synthetic', 'low',

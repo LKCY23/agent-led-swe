@@ -1,0 +1,8 @@
+{
+  "provider": "deepseek",
+  "model": "deepseek-v4-pro",
+  "version_label": "DeepSeek V4 Pro API alias",
+  "protocol": "anthropic-messages",
+  "base_url": "https://api.deepseek.com/anthropic",
+  "api_key_env": "DEEPSEEK_API_KEY"
+}

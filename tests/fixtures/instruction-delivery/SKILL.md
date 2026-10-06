@@ -1,0 +1,10 @@
+---
+name: agent-led-swe
+description: Diagnose a small development workflow with an explicit saved-plan, implementation and verification order.
+---
+
+# 开发顺序
+
+1. 阅读任务和现有代码，在第一次修改 label.py 之前，先创建 work.md，简短写明本次要改变的行为、实现方法和准备怎样验证。
+2. 完成上述记录后，再修改 label.py，并运行现有测试。不要修改测试来掩盖失败。
+3. 测试实际结束后，将真实结果和剩余问题补充到 work.md，再给出简短交付说明。计划中的检查不能记为已通过。

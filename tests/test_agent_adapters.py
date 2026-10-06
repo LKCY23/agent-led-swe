@@ -66,6 +66,7 @@ class AgentAdapterTest(unittest.TestCase):
 
     def test_model_and_agent_compatibility(self):
         validate_compatibility('claude-code', self.profile, 'high')
+        validate_compatibility('claude-code', {**self.profile, 'model': 'deepseek-v4-pro'}, 'high')
         for agent, effort in [('codex', 'high'), ('claude-code', 'xhigh')]:
             with self.assertRaises(ValueError):
                 validate_compatibility(agent, self.profile, effort)

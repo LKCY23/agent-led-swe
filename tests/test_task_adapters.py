@@ -32,6 +32,18 @@ class TaskAdapterTest(unittest.TestCase):
             self.assertEqual(list(file_hashes(output / 'workspace')), ['a.txt'])
             self.assertNotIn('Hidden criterion', (output / 'workspace/a.txt').read_text())
 
+    def test_docker_behavior_freezes_tests_separately_from_submission(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / 'task'
+            environment = {'kind': 'docker', 'image': 'synthetic'}
+            case = {'id': 'T', 'request': 'Task', 'files': {'tests/test_a.py': 'assert False\n'},
+                    'environment': environment, 'validation': {'kind': 'pytest',
+                    'overlay': 'task/validation', 'test_roots': ['tests']}}
+            task = prepare_task(case, output)
+            self.assertEqual(task['environment'], environment)
+            (output / 'workspace/tests/test_a.py').write_text('assert True\n')
+            self.assertEqual((output / 'validation/tests/test_a.py').read_text(), 'assert False\n')
+
     def test_unqualified_cases_are_not_silently_enabled(self):
         for name in ('pytest', 'dspy', 'agents-sdk'):
             with self.subTest(name=name), self.assertRaises(ValueError):
