@@ -31,13 +31,17 @@ def export_workspace(container, workdir, target, exclude=()):
     with tempfile.TemporaryDirectory(prefix='swe-export-') as tmp:
         archive = Path(tmp) / 'workspace.tar'
         with archive.open('wb') as stream:
-            subprocess.run(['docker', 'exec', container, 'tar', '-C', workdir,
-                '--exclude=./.git', *[f'--exclude=./{p}' for p in exclude], '-cf', '-', '.'],
+            # docker cp works after the worker is stopped; exec would require
+            # restarting it and allow background writers to change the artifact.
+            subprocess.run(['docker', 'cp', f'{container}:{workdir}/.', '-'],
                 check=True, stdout=stream, stderr=subprocess.PIPE)
         extracted = Path(tmp) / 'extracted'
         extracted.mkdir()
         with tarfile.open(archive) as tar:
-            tar.extractall(extracted, filter='data')
+            excluded = {'.git', *exclude}
+            members = [m for m in tar if not any(
+                Path(m.name).as_posix() == e or Path(m.name).as_posix().startswith(e + '/') for e in excluded)]
+            tar.extractall(extracted, members=members, filter='data')
         target = Path(target)
         if target.exists():
             shutil.rmtree(target)

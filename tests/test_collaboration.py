@@ -134,6 +134,14 @@ class ConversationTest(unittest.TestCase):
         self.assertIn('--resume', cc)
         self.assertNotIn('--no-session-persistence', cc)
 
+    def test_child_messages_do_not_change_main_conversation_identity(self):
+        events = [
+            {'type': 'system', 'subtype': 'init', 'session_id': SESSION},
+            {'type': 'assistant', 'session_id': OTHER, 'parent_tool_use_id': 'task-1'},
+            {'type': 'result', 'session_id': SESSION, 'subtype': 'success', 'result': 'Main answer'}]
+        self.assertEqual(completed_turn('claude-code', '\n'.join(map(json.dumps, events))),
+                         (SESSION, 'Main answer'))
+
 
 class CattrsVerifierTest(unittest.TestCase):
     def test_collection_errors_or_empty_tests_are_not_passes(self):

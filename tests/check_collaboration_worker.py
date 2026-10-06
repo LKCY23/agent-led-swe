@@ -25,7 +25,10 @@ def main():
     parser.add_argument('--skill-path', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--with-simulated-user', action='store_true', help='Exercise the user HTTP/tool adapter against a fake API too')
+    parser.add_argument('--with-subagent', action='store_true', help='Exercise native CC Task and forwarded child text')
     args = parser.parse_args()
+    if args.with_subagent and args.agent != 'claude-code':
+        parser.error('--with-subagent currently checks the CC Task protocol')
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     versions = json.loads((CONFIGS / 'agents.json').read_text())
@@ -76,6 +79,17 @@ def main():
                               (None, {'type': 'response.completed', 'response': response})]
                 else:
                     block = {'type': 'text', 'text': text}
+                    if args.with_subagent and not is_user:
+                        child = any(m.get('role') == 'user' and 'CHILD_REQUEST_TOKEN' in
+                                    json.dumps(m.get('content')) for m in payload['messages'])
+                        completed = any(b.get('type') == 'tool_result' and b.get('tool_use_id') == 'child-task'
+                            for m in payload['messages'] for b in m.get('content', []) if isinstance(b, dict))
+                        if child:
+                            block = {'type': 'text', 'text': 'CHILD_RESULT_TOKEN'}
+                        elif not completed and text == 'REPLY_ONE':
+                            block = {'type': 'tool_use', 'id': 'child-task', 'name': 'Task', 'input': {
+                                'description': 'Check child trace forwarding', 'subagent_type': 'general-purpose',
+                                'model': 'haiku', 'prompt': 'CHILD_REQUEST_TOKEN: return CHILD_RESULT_TOKEN.'}}
                     if is_user:
                         finished = 'REPLY_TWO' in json.dumps(payload['messages'])
                         suffix = '2' if finished else '1'
@@ -131,6 +145,10 @@ def main():
                 (work / 'fixture.txt').write_text('PUBLIC_FIXTURE')
                 for filename in ('AGENTS.md', 'CLAUDE.md'):
                     (work / filename).write_text('PROJECT_GUIDANCE_TOKEN: follow the local project conventions.\n')
+                if args.agent == 'claude-code':
+                    (work / '.claude').mkdir()
+                    write_json(work / '.claude/settings.json', {'hooks': {'SessionStart': [{
+                        'hooks': [{'type': 'command', 'command': 'echo PROJECT_HOOK_TOKEN > hook-ran.txt'}]}]}})
                 treatment = output / 'frozen-skill' if variant == 'skill' else None
                 def responder(messages, current, timeout):
                     if (current / 'fixture.txt').read_text() != 'PUBLIC_FIXTURE':
@@ -164,10 +182,22 @@ def main():
                           and history_preserved and activation['status'] == 'verified')
                 project_guidance = bool(requests) and 'PROJECT_GUIDANCE_TOKEN' in json.dumps(requests[0])
                 passed = passed and project_guidance
+                child_forwarded = None
+                if args.with_subagent:
+                    rows = [json.loads(line) for line in (evidence / 'conversation/turn-001/capture/stdout.log').read_text().splitlines()]
+                    child_forwarded = any(e.get('parent_tool_use_id') and 'CHILD_RESULT_TOKEN' in json.dumps(e)
+                                          for e in rows)
+                    passed = passed and child_forwarded
+                if args.agent == 'claude-code':
+                    passed = passed and (work / 'hook-ran.txt').read_text().strip() == 'PROJECT_HOOK_TOKEN'
+                    trace = json.loads((evidence / 'conversation/turn-001/capture/trace.json').read_text())
+                    usage = trace['native_model_usage']
+                    passed = passed and bool(usage) and all(v.get('contextWindow') == 1000000 for v in usage.values())
                 if args.with_simulated_user:
                     passed = passed and len(user_requests) >= 4
                 reports.append({'variant': variant, 'passed': passed, 'history_preserved': history_preserved,
                                 'project_guidance_preserved': project_guidance,
+                                'child_text_forwarded': child_forwarded,
                                 'native_activation': activation, 'result': result})
         finally:
             server.shutdown()

@@ -126,7 +126,7 @@ print(json.dumps({'type':'result','subtype':'success','is_error':False,
 
         def execute(helpers, workspace, evidence, command, timeout, prompt, adapter):
             self.assertNotIn('--bare', command)
-            self.assertIn('deepseek-flash', command)
+            self.assertIn('deepseek-flash[1m]', command)
             return runtime.execute(helpers, workspace, evidence, [str(fake)], timeout, prompt, adapter)
 
         with (patch.object(run_evaluation, 'ROOT', self.target),

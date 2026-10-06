@@ -162,8 +162,10 @@ def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
                     prompt.write_text(guidance + direct + COMMON_PROMPT + case['request'])
                     result['isolation'] = adapter.prepare_context(binary, runtime_cwd, evidence, model, effort, sandbox, skill_path)
                     command = adapter.command(binary, runtime_cwd, model, effort, sandbox, result['isolation'])
-                    result.update(execute(output / 'helpers', workspace, evidence / 'capture',
-                                          command, timeout, prompt, adapter))
+                    from worker_control import execution_deadline
+                    with execution_deadline([binary], timeout):
+                        result.update(execute(output / 'helpers', workspace, evidence / 'capture',
+                                              command, timeout, prompt, adapter))
                     if adapter.name == 'claude-code':
                         result['isolation']['status'] = result.get('isolation_status') or 'unknown'
                         write_json(evidence / 'isolation.json', result['isolation'])
@@ -185,7 +187,7 @@ def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
                         result['execution_validity'] = {'status': 'invalid', 'reason': 'Alternative packaging implementation appeared during execution'}
                     result['native_files'].update({p.name: digest(p) for p in evidence.glob('environment-source-audit-*.json')})
             except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
-                result['run_status'] = 'error'
+                result['run_status'] = 'timeout' if isinstance(exc, TimeoutError) else 'error'
                 result['error'] = str(exc)
             finally:
                 network_audit = evidence / 'network-audit.json'

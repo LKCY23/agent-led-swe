@@ -17,6 +17,7 @@ from collaboration_runtime import UserReply
 from evaluation_runtime import (DEFAULT_EVALUATOR, execution_environment, file_hashes,
                                 freeze_helpers, load_helper, snapshot, write_json)
 from model_config import validate_compatibility
+from worker_control import execution_deadline
 
 REPLY_SCHEMA = {"type": "object", "properties": {
     "reply": {"type": "string"}, "accepted": {"type": "boolean"}},
@@ -129,7 +130,8 @@ class SimulatedUser:
         command = user_command(self.binary, self.cwd, self.profile["model"], self.effort,
                                self.system, self.session)
         capture = load_helper(self.evidence / "helpers/capture.py").capture
-        record = capture(self.work, turn / "capture", command, timeout, prompt)
+        with execution_deadline([self.binary], timeout):
+            record = capture(self.work, turn / "capture", command, timeout, prompt)
         if record["timed_out"]:
             raise TimeoutError("Native user turn timed out")
         if record["exit_code"] != 0 or record["launch_error"]:

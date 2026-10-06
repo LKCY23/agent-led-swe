@@ -2,6 +2,7 @@
 from collections import Counter
 import json
 import re
+from model_config import claude_model
 
 
 # Bundled commands in the pinned 2.1.278 CLI, present in both comparison arms.
@@ -34,7 +35,8 @@ class ClaudeCodeAdapter:
     def command(self, binary, workspace, model, effort, sandbox, context):
         return list(binary) + ['--print', '--no-session-persistence',
             '--input-format', 'stream-json', '--replay-user-messages',
-            '--output-format', 'stream-json', '--verbose', '--model', model, '--effort', effort,
+            '--output-format', 'stream-json', '--verbose', '--forward-subagent-text',
+            '--model', claude_model(model), '--effort', effort,
             '--strict-mcp-config',
             '--mcp-config', '{"mcpServers":{}}', '--no-chrome',
             '--tools', 'default', '--permission-mode', 'bypassPermissions']
@@ -53,9 +55,9 @@ class ClaudeCodeAdapter:
                     raise ValueError('Not an event')
                 kind = event['type']
                 counts[kind] += 1
-                if kind == 'system' and event.get('subtype') == 'init':
+                if kind == 'system' and event.get('subtype') == 'init' and not event.get('parent_tool_use_id'):
                     init.append(event)
-                if kind == 'result':
+                if kind == 'result' and not event.get('parent_tool_use_id'):
                     results.append(event)
                     models.update((event.get('modelUsage') or {}).keys())
                 if kind == 'user' and event.get('isReplay') is True:
@@ -96,6 +98,7 @@ class ClaudeCodeAdapter:
                 'completion_observed': bool(results), 'telemetry_usable': usable,
                 'usage': normalized if usable else {k: None for k in normalized},
                 'native_usage': usage, 'native_model_labels': sorted(models),
+                'native_model_usage': final.get('modelUsage', {}),
                 'models_observed': sorted({m.removesuffix('[1m]') for m in models}), 'tool_calls': commands,
                 'init_context': init,
                 'native_skill_invocations': invocations,

@@ -11,6 +11,7 @@ import time
 from uuid import UUID
 
 from evaluation_runtime import execute, file_hashes, positive_seconds, snapshot, write_json
+from worker_control import execution_deadline, stable_workspace
 
 
 @dataclass(frozen=True)
@@ -29,6 +30,8 @@ def completed_turn(agent, raw):
     ids, replies = set(), []
     if agent == 'claude-code':
         for event in events:
+            if event.get('parent_tool_use_id'):
+                continue
             if event.get('session_id'):
                 ids.add(event['session_id'])
             if event.get('type') == 'result' and event.get('subtype') == 'success' and not event.get('is_error'):
@@ -48,8 +51,26 @@ def completed_turn(agent, raw):
 
 def converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
              helpers, workspace, output, request, responder, *, invocation='',
+             timeout=3600, capture=execute, clock=time.monotonic):
+    positive_seconds(timeout)
+    try:
+        with execution_deadline([binary, getattr(responder, 'binary', None)], timeout) as check:
+            return _converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
+                helpers, workspace, output, request, responder, invocation=invocation,
+                timeout=timeout, capture=capture, clock=clock, deadline_check=check)
+    except (TimeoutError, RuntimeError) as exc:
+        path = output / 'result.json'
+        result = json.loads(path.read_text()) if path.exists() else {'turns': [], 'task_status': 'unknown'}
+        result.update(status='timeout' if isinstance(exc, TimeoutError) else 'error',
+                      accepted=False, error=str(exc))
+        write_json(path, result)
+        return result
+
+
+def _converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
+             helpers, workspace, output, request, responder, *, invocation='',
              timeout=3600,
-             capture=execute, clock=time.monotonic):
+             capture=execute, clock=time.monotonic, deadline_check=lambda: None):
     """A user question/review and a final answer both use normal native turns.
 
     responder(messages, snapshot_path, timeout_seconds) must enforce its own
@@ -79,10 +100,12 @@ def converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
             row = {'turn': number, 'execution': execution}
             rows.append(row)
             write_json(turn / 'execution.json', execution)
+            deadline_check()
             for path in workspace.rglob('*'):
                 if path.is_symlink() and not path.resolve().is_relative_to(workspace.resolve()):
                     raise ValueError('Workspace symlink escapes the public snapshot')
-            snapshot_hashes = snapshot(workspace, turn / 'workspace')
+            with stable_workspace(binary):
+                snapshot_hashes = snapshot(workspace, turn / 'workspace')
             if execution['run_status'] != 'completed':
                 result['status'] = execution['run_status']
                 break
@@ -104,6 +127,7 @@ def converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
             started = clock()
             # Pass a copy so the responder cannot rewrite earlier conversation.
             answer = responder([dict(m) for m in messages], turn / 'workspace', allowance)
+            deadline_check()
             if file_hashes(turn / 'workspace') != snapshot_hashes:
                 raise ValueError('User responder modified its evidence snapshot')
             if clock() - started > allowance or clock() >= deadline:

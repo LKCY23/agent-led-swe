@@ -17,9 +17,11 @@ import tarfile
 
 from agent_adapters import get_adapter
 from model_config import credential, claude_environment, DEFAULT_CREDENTIALS
+from worker_control import WorkerCommand, execution_deadline
 
 
 DEFAULT_EVALUATOR = Path.home() / '.codex/skills/skill-evaluator'
+RUNTIME_CONFIG = Path(__file__).parent / 'configs/runtime.json'
 
 
 def adapter_hashes():
@@ -28,7 +30,8 @@ def adapter_hashes():
         'evaluation_runtime.py', 'run_evaluation.py', 'evaluate_results.py', 'run_smoke.py',
         'task_adapters.py', 'functional_checks.py', 'model_config.py', 'native_skills.py', 'packaging_environment.py', 'worker_network.py', 'model_gateway.py', 'suite_tasks.py', 'swe_pro_verifier.py', 'container_workspace.py',
         'cattrs_task.py', 'collaboration_runtime.py', 'check_collaboration_worker.py',
-        'simulated_user.py', 'run_collaboration.py', 'check_simulated_user.py']
+        'simulated_user.py', 'run_collaboration.py', 'check_simulated_user.py',
+        'worker_control.py', 'configs/runtime.json']
     names += [str(p.relative_to(root)) for p in sorted((root / 'agent_adapters').glob('*.py'))]
     return {name: digest(root / name) for name in names}
 
@@ -95,7 +98,7 @@ def build_worker_image(environment, version, output, agent='codex'):
     else:
         launcher = f'RUN ln -s /opt/agent-runtime/node_modules/{adapter.cli_entrypoint} /usr/local/bin/{adapter.executable}\n'
     (output / 'Dockerfile').write_text(
-        'FROM node:22-bookworm-slim AS cli\n'
+        'FROM ' + json.loads(RUNTIME_CONFIG.read_text())['node_image'] + ' AS cli\n'
         f'RUN npm install -g {adapter.npm_package}@{version}\n'
         f'FROM {base_tag}\n'
         'COPY --from=cli /usr/local/bin/node /opt/agent-runtime/node\n'
@@ -192,11 +195,13 @@ def docker_worker(task, workspace, evidence, cli, skill, authenticate,
     workdir = environment.get('workdir', '/testbed')
     copy_mode = environment.get('workspace_mode') == 'copy'
     readonly = environment.get('readonly_workspace', False)
+    resources = environment.get('resources', json.loads(RUNTIME_CONFIG.read_text())['worker'])
     if readonly and (copy_mode or environment.get('install_argv') != []):
         raise ValueError('Read-only workers require a bind mount and no project installation')
     from container_workspace import install_workspace, export_workspace, allow_workspace_owner
     name = 'swe-executor-' + uuid.uuid4().hex[:12]
     argv = ['docker', 'run', '-d', '--init', '--name', name,
+            '--cpus', str(resources['cpus']), '--memory', resources['memory'],
             '--network', network, '--cap-drop=ALL', '--cap-add=CHOWN', '--security-opt=no-new-privileges',
             *(['--platform', environment['platform']] if environment.get('platform') else []),
             *([] if copy_mode else ['-v', f'{workspace}:{workdir}' + (':ro' if readonly else '')]), '-w', workdir]
@@ -271,6 +276,7 @@ def docker_worker(task, workspace, evidence, cli, skill, authenticate,
                    'boundary': 'Docker container; no evaluator materials or Docker socket mounted',
                    'inner_sandbox': 'danger-full-access', 'skill_mounted': bool(skill),
                    'readonly_workspace': readonly,
+                   'resources': resources,
                    'network': 'internal-model-gateway', 'model_gateway': gateway})
         write_json(evidence / 'skill-installation.json', {
             'mode': 'native', 'agent': agent, 'installed': bool(skill),
@@ -286,6 +292,7 @@ def docker_worker(task, workspace, evidence, cli, skill, authenticate,
                        'model_providers.evaluation-gateway={name="Evaluation gateway",base_url='
                        + json.dumps(gateway) + ',wire_api="responses",requires_openai_auth=false,env_key="CODEX_GATEWAY_KEY",'
                        'supports_websockets=false}']
+        binary = WorkerCommand(binary, name, network, evidence)
         yield binary, Path(workdir), 'danger-full-access', (
             installed + '/SKILL.md' if skill else None)
         if task['environment'].get('audit_packaging_sources'):
@@ -293,15 +300,29 @@ def docker_worker(task, workspace, evidence, cli, skill, authenticate,
             write_json(evidence / 'environment-source-audit-after.json', audit)
     finally:
         try:
+            # Stop every container process before copying any final artifact.
+            WorkerCommand([], name, network, evidence).stop()
+            state = json.loads((evidence / 'worker-stop.json').read_text())
+            actual_resources = json.loads(subprocess.check_output(['docker', 'inspect', '--format',
+                '{{json .HostConfig}}', name], text=True, timeout=30))
+            write_json(evidence / 'resource-result.json', {'limits': resources,
+                'oom_killed': state.get('OOMKilled'), 'exit_code': state.get('ExitCode'),
+                'memory_limit_bytes': actual_resources['Memory'],
+                'nano_cpus': actual_resources['NanoCpus']})
             if copy_mode:
                 export_workspace(name, workdir, workspace, environment.get('workspace_excludes', []))
-        except (OSError, subprocess.SubprocessError, tarfile.TarError) as exc:
+        except (OSError, RuntimeError, ValueError, subprocess.SubprocessError, tarfile.TarError) as exc:
             write_json(evidence / 'workspace-export-error.json', {'error': str(exc)})
             raise RuntimeError('Worker artifact export failed; see workspace-export-error.json') from exc
         finally:
             if agent == 'codex':
                 subprocess.run(['docker', 'cp', f'{name}:/root/.codex/sessions',
                                 str(evidence / 'native-codex-session')], capture_output=True)
+            else:
+                exported = subprocess.run(['docker', 'cp', f'{name}:/tmp/agent-home/.claude/projects',
+                    str(evidence / 'native-claude-projects')], capture_output=True, text=True, timeout=30)
+                write_json(evidence / 'native-session-export.json', {'exit_code': exported.returncode,
+                    'stderr': exported.stderr})
             subprocess.run(['docker', 'rm', '-f', name], capture_output=True)
 
 

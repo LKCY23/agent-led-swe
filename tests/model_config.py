@@ -77,9 +77,19 @@ def validate_compatibility(agent, profile, effort):
 def claude_environment(profile, key):
     """Explicitly pin all Claude model slots to the same provider model."""
     return {'ANTHROPIC_API_KEY': key, 'ANTHROPIC_BASE_URL': profile['base_url'],
-            'ANTHROPIC_MODEL': profile['model'],
-            **{f'ANTHROPIC_DEFAULT_{slot}_MODEL': profile['model']
+            'ANTHROPIC_MODEL': claude_model(profile['model']),
+            **{f'ANTHROPIC_DEFAULT_{slot}_MODEL': claude_model(profile['model'])
                for slot in ('OPUS', 'SONNET', 'HAIKU', 'FABLE')},
-            'CLAUDE_CODE_SUBAGENT_MODEL': profile['model'],
+            'CLAUDE_CODE_SUBAGENT_MODEL': claude_model(profile['model']),
             'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC': '1',
             'DISABLE_AUTOUPDATER': '1'}
+
+
+def claude_model(model):
+    """CC context declaration for the supported DeepSeek models, not an API ID.
+
+    DeepSeek's CC integration declares 1M context. Without this annotation the
+    pinned CLI assumes 200K for these custom IDs. CC strips it on the wire.
+    Do not apply this capability to arbitrary future models.
+    """
+    return model + '[1m]' if model in {'deepseek-flash', 'deepseek-v4-pro'} else model

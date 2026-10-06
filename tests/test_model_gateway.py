@@ -1,13 +1,80 @@
 """Exercise actual proxy I/O, streaming and denied routes without model calls."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import http.client
-from threading import Thread
+from threading import Thread, Event
 import unittest
 
 from model_gateway import handler, permitted
 
 
 class GatewayTest(unittest.TestCase):
+    def test_disconnected_client_cancels_waiting_upstream(self):
+        started, cancelled = Event(), Event()
+        class WaitingUpstream(BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+            def do_POST(self):
+                self.rfile.read(int(self.headers['Content-Length']))
+                started.set()
+                self.connection.settimeout(3)
+                try:
+                    if not self.connection.recv(1):
+                        cancelled.set()
+                except OSError:
+                    pass
+        upstream = ThreadingHTTPServer(('127.0.0.1', 0), WaitingUpstream)
+        proxy = ThreadingHTTPServer(('127.0.0.1', 0), handler('codex',
+            f'http://127.0.0.1:{upstream.server_port}'))
+        for server in (upstream, proxy):
+            Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            client = http.client.HTTPConnection('127.0.0.1', proxy.server_port, timeout=3)
+            client.request('POST', '/responses', b'payload')
+            self.assertTrue(started.wait(2))
+            client.close()
+            self.assertTrue(cancelled.wait(2), 'Gateway left upstream waiting after client disconnect')
+        finally:
+            for server in (proxy, upstream):
+                server.shutdown()
+                server.server_close()
+
+    def test_large_request_is_forwarded_without_the_old_size_cutoff(self):
+        size, received = 33 * 1024 * 1024, []
+        class Upstream(BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+            def do_POST(self):
+                remaining = int(self.headers['Content-Length'])
+                total = 0
+                while remaining:
+                    part = self.rfile.read(min(65536, remaining))
+                    if not part:
+                        break
+                    total += len(part)
+                    remaining -= len(part)
+                received.append(total)
+                self.send_response(200)
+                self.end_headers()
+        upstream = ThreadingHTTPServer(('127.0.0.1', 0), Upstream)
+        proxy = ThreadingHTTPServer(('127.0.0.1', 0), handler('codex',
+            f'http://127.0.0.1:{upstream.server_port}'))
+        for server in (upstream, proxy):
+            Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            client = http.client.HTTPConnection('127.0.0.1', proxy.server_port, timeout=10)
+            client.putrequest('POST', '/responses')
+            client.putheader('Content-Length', str(size))
+            client.endheaders()
+            for _ in range(size // 65536):
+                client.send(b'x' * 65536)
+            self.assertEqual(client.getresponse().status, 200)
+            client.close()
+            self.assertEqual(received, [size])
+        finally:
+            for server in (proxy, upstream):
+                server.shutdown()
+                server.server_close()
+
     def test_only_fixed_protocol_routes_are_allowed(self):
         self.assertTrue(permitted('claude-code', 'POST', '/v1/messages?beta=true'))
         self.assertTrue(permitted('codex', 'POST', '/responses'))

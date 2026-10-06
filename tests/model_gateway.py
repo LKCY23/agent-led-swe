@@ -7,6 +7,9 @@ import argparse
 import http.client
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import select
+import socket
+from threading import Event, Thread
 from pathlib import Path
 from urllib.parse import urlsplit, parse_qs
 
@@ -45,6 +48,7 @@ def handler(agent, upstream, auth_headers=None):
                 self.send_error(403, 'Model route only')
                 return
             connection = None
+            done, watcher = Event(), None
             try:
                 # Both pinned clients send length-delimited requests. Fail closed
                 # on other framing rather than ambiguously parsing a proxy request.
@@ -55,17 +59,44 @@ def handler(agent, upstream, auth_headers=None):
                 if length < 0:
                     self.send_error(400, 'Invalid content length')
                     return
-                body = self.rfile.read(length)
                 headers = {k: v for k, v in self.headers.items() if k.lower() not in HOP_HEADERS}
                 if auth_headers:
                     headers = {k: v for k, v in headers.items()
                                if k.lower() not in {'authorization', 'x-api-key', 'chatgpt-account-id'}}
                     headers.update(auth_headers)
                 cls = http.client.HTTPSConnection if endpoint.scheme == 'https' else http.client.HTTPConnection
-                # The runner owns the conversation deadline and tears down this
-                # gateway with its worker. Do not add a shorter model timeout.
-                connection = cls(endpoint.hostname, endpoint.port, timeout=None)
-                connection.request(self.command, endpoint.path.rstrip('/') + self.path, body, headers)
+                # Bound connection establishment, not inference/stream duration.
+                connection = cls(endpoint.hostname, endpoint.port, timeout=30)
+                connection.connect()
+                upstream_socket = connection.sock
+                upstream_socket.settimeout(None)
+
+                def watch_disconnect():
+                    # A closed downstream must not leave a request waiting for
+                    # upstream tokens. The group deadline also kills this gateway.
+                    while not done.wait(.1):
+                        try:
+                            ready, _, _ = select.select([self.connection], [], [], 0)
+                            if ready and not self.connection.recv(1, socket.MSG_PEEK):
+                                upstream_socket.shutdown(socket.SHUT_RDWR)
+                                return
+                        except OSError:
+                            return
+
+                connection.putrequest(self.command, endpoint.path.rstrip('/') + self.path)
+                for key, value in headers.items():
+                    connection.putheader(key, value)
+                connection.putheader('Content-Length', str(length))
+                connection.endheaders()
+                remaining = length
+                while remaining:
+                    chunk = self.rfile.read(min(65536, remaining))
+                    if not chunk:
+                        raise ConnectionError('Incomplete request body')
+                    connection.send(chunk)
+                    remaining -= len(chunk)
+                watcher = Thread(target=watch_disconnect, daemon=True)
+                watcher.start()
                 response = connection.getresponse()
                 # Never send a redirect target to the worker or follow one here.
                 if 300 <= response.status < 400:
@@ -87,8 +118,11 @@ def handler(agent, upstream, auth_headers=None):
                 print(json.dumps({'event': 'upstream_or_client_error'}), flush=True)
                 self.close_connection = True
             finally:
+                done.set()
                 if connection:
                     connection.close()
+                if watcher:
+                    watcher.join()
 
         do_GET = relay
         do_POST = relay

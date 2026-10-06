@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch
 
 from agent_adapters import get_adapter
-from model_config import credential, load_profile, validate_compatibility, CONFIGS
+from model_config import credential, load_profile, validate_compatibility, CONFIGS, claude_environment, claude_model
 
 
 class AgentAdapterTest(unittest.TestCase):
@@ -66,10 +66,19 @@ class AgentAdapterTest(unittest.TestCase):
         self.assertNotIn('--disable-slash-commands', command)
         self.assertIn('--replay-user-messages', command)
         self.assertEqual(command[command.index('--tools') + 1], 'default')
-        self.assertEqual(command[command.index('--model') + 1], 'deepseek-flash')
+        self.assertEqual(command[command.index('--model') + 1], 'deepseek-flash[1m]')
+        self.assertIn('--forward-subagent-text', command)
         self.assertNotIn('--setting-sources', command)
         self.assertNotIn('--settings', command)
         self.assertNotIn('--fallback-model', command)
+
+    def test_context_capability_reaches_all_model_slots(self):
+        env = claude_environment(self.profile, 'placeholder')
+        for key in ('ANTHROPIC_MODEL', 'CLAUDE_CODE_SUBAGENT_MODEL',
+                    'ANTHROPIC_DEFAULT_OPUS_MODEL', 'ANTHROPIC_DEFAULT_SONNET_MODEL',
+                    'ANTHROPIC_DEFAULT_HAIKU_MODEL', 'ANTHROPIC_DEFAULT_FABLE_MODEL'):
+            self.assertEqual(env[key], 'deepseek-flash[1m]')
+        self.assertEqual(claude_model('unknown-model'), 'unknown-model')
 
     def test_model_and_agent_compatibility(self):
         validate_compatibility('claude-code', self.profile, 'high')
