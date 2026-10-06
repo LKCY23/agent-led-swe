@@ -31,7 +31,7 @@ FeatureBench 的遮蔽、隐藏测试恢复与其他 benchmark 的正向修复�
 
 当前选择见 [STATUS](STATUS.md)。旧四题和 packaging 已退出推荐组合，适配能力保留；SDK／DSPy 不启用。旧四题的资格仍核对任务定义哈希、冻结输入和不可变镜像 ID；保留 CLI 名称不表示应默认运行。
 
-cattrs 的协作适配独立于单次请求入口：`cattrs_task.py` 准备输入并预检，`collaboration_runtime.py` 组织原生对话接续，`simulated_user.py` 启动只读的原生 CC 用户实例，`run_collaboration.py` 冻结两组并组织独立验收。`check_collaboration_worker.py --with-simulated-user` 用模拟 API 检查完整链路。用户现在通过 CC 使用 Anthropic Messages，工具循环和结构化输出交给 CC；当前资格为 `cattrs-user-cc-flash.json`。详见[场景](reports/cattrs-collaboration-scenario-2026-10-06.md)和[接入结果](reports/native-cc-user-2026-10-06.md)。
+cattrs 的协作适配独立于单次请求入口：`cattrs_task.py` 准备输入并预检，`collaboration_runtime.py` 组织原生对话接续，`simulated_user.py` 启动只读的原生 CC 用户实例，`run_collaboration.py` 冻结两组并组织独立验收。`check_collaboration_worker.py --with-simulated-user` 用模拟 API 检查完整链路。用户通过 CC 使用 Anthropic Messages，工具循环和结构化输出交给 CC。资格按配置与代码哈希匹配；当前移除用户内部步数限制并恢复搜索工具后，旧用户资格需要刷新。详见[场景](reports/cattrs-collaboration-scenario-2026-10-06.md)和[最新试跑与修复](reports/cattrs-retry-2026-10-07.md)。
 
 ## 2. 执行与产物约定
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Live native CC user smoke: clarify requirements, then read/review a draft.
 
-No solver rollout. Two replies, each limited to 8 native turns and 180 seconds.
+No solver rollout. Two replies, each limited to 180 seconds.
 """
 import argparse
 import json
@@ -44,7 +44,7 @@ def main():
     for name in ('simulated_user.py', 'model_config.py', 'evaluation_runtime.py', 'check_simulated_user.py'):
         shutil.copyfile(source / name, output / 'tools' / name)
     write_json(output / 'plan.json', {'profile': profile, 'cli': cli, 'environment': environment,
-        'native_max_turns_per_reply': 8, 'max_seconds_per_reply': 180, 'max_replies': 2,
+        'max_seconds_per_reply': 180, 'max_replies': 2,
         'structured_output_retries': 1, 'questions': QUESTIONS,
         'scenario_files': file_hashes(output / 'scenario'), 'tool_files': file_hashes(output / 'tools'),
         'requirements_sha256': digest(output / 'requirements.md'),
@@ -55,7 +55,7 @@ def main():
     try:
         with SimulatedUser(profile, (output / 'scenario/user.md').read_text(), (output / 'requirements.md').read_text(),
                 output / 'public', output / 'user', environment, cli, args.credentials,
-                max_replies=2, max_turns=8) as user:
+                max_replies=2) as user:
             for index, question in enumerate(QUESTIONS):
                 conversation.append({'role': 'assistant', 'content': question})
                 reply = user(conversation, output / ('public' if index == 0 else 'review'), 180)

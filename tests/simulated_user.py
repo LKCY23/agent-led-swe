@@ -5,6 +5,7 @@ This adapter only supplies task context, refreshes snapshots and checks receipts
 """
 from contextlib import ExitStack
 import json
+import posixpath
 from pathlib import Path
 import shutil
 import subprocess
@@ -24,14 +25,13 @@ REPLY_SCHEMA = {"type": "object", "properties": {
 USER_TOOLS = {"Read", "Glob", "Grep", "StructuredOutput"}
 
 
-def user_command(binary, cwd, model, effort, system, max_turns, session_id=None):
+def user_command(binary, cwd, model, effort, system, session_id=None):
     command = get_adapter("claude-code").conversation_command(
         binary, cwd, model, effort, "danger-full-access", {}, session_id)
     command[command.index("--tools") + 1] = "Read,Glob,Grep"
     command[command.index("--permission-mode") + 1] = "dontAsk"
-    return command + ["--bare", "--allowedTools", "Read,Glob,Grep,StructuredOutput",
-        "--system-prompt", system, "--json-schema", json.dumps(REPLY_SCHEMA),
-        "--max-turns", str(max_turns)]
+    return command + ["--allowedTools", "Read,Glob,Grep,StructuredOutput",
+        "--system-prompt", system, "--json-schema", json.dumps(REPLY_SCHEMA)]
 
 
 def parse_reply(raw, model, previous_session=None):
@@ -44,8 +44,8 @@ def parse_reply(raw, model, previous_session=None):
     if (any(init.get(k) != [] for k in ("plugins", "mcp_servers"))
             or not isinstance(init.get("skills"), list) or not set(init["skills"]) <= BUNDLED_SKILLS):
         raise ValueError("User instance loaded unexpected skills, plugins or MCP servers")
-    if not isinstance(init.get("tools"), list) or not set(init["tools"]) <= USER_TOOLS:
-        raise ValueError("User instance exposed non-read-only tools")
+    if not isinstance(init.get("tools"), list) or set(init["tools"]) != USER_TOOLS:
+        raise ValueError("Native user tools must be Read, Glob, Grep and StructuredOutput")
     models = {m.removesuffix("[1m]") for m in (final.get("modelUsage") or {})}
     if models != {model}:
         raise ValueError("Native user model differs from the frozen profile")
@@ -65,7 +65,12 @@ def parse_reply(raw, model, previous_session=None):
             if block.get("type") == "tool_use":
                 if block.get("name") not in USER_TOOLS:
                     raise ValueError("User instance attempted an unexpected tool")
-                if block.get("name") == "Read" and str(block.get("input", {}).get("file_path", "")).startswith("/testbed/current/"):
+                arguments = block.get("input", {})
+                path = arguments.get("file_path") if block.get("name") == "Read" else arguments.get("path")
+                content_read = (block.get("name") == "Read" or
+                                (block.get("name") == "Grep" and arguments.get("output_mode") == "content"))
+                resolved = posixpath.normpath(posixpath.join("/testbed", str(path or "")))
+                if content_read and (resolved == "/testbed/current" or resolved.startswith("/testbed/current/")):
                     read_ids.add(block.get("id"))
             if block.get("type") == "tool_result" and not block.get("is_error", False):
                 successful_reads.add(block.get("tool_use_id"))
@@ -76,15 +81,15 @@ def parse_reply(raw, model, previous_session=None):
 
 class SimulatedUser:
     def __init__(self, profile, persona, requirements, initial, evidence, environment, cli, credentials,
-                 *, max_replies=12, max_turns=8, effort="high", authenticate=True, model_upstream=None):
+                 *, max_replies=12, effort="high", authenticate=True, model_upstream=None):
         validate_compatibility("claude-code", profile, effort)
-        if any(type(v) is not int or v < 1 for v in (max_replies, max_turns)):
+        if type(max_replies) is not int or max_replies < 1:
             raise ValueError("Native user limits must be positive integers")
         self.profile, self.evidence, self.initial = profile, Path(evidence), Path(initial)
         self.environment = {**environment, "readonly_workspace": True, "install_argv": [], "workspace_mode": "bind", "workdir": "/testbed"}
         self.cli = {**cli, "agent": "claude-code"}
         self.credentials, self.authenticate, self.model_upstream = credentials, authenticate, model_upstream
-        self.max_replies, self.max_turns, self.effort = max_replies, max_turns, effort
+        self.max_replies, self.effort = max_replies, effort
         self.calls, self.session, self.seen_messages = 0, None, 0
         self.system = persona + "\n\n# 固定任务要求\n" + requirements + (
             "\n\n你是需求提出者，不是负责实现的开发 Agent。通过 Claude Code 原生结构化输出返回 reply 和 accepted。"
@@ -137,7 +142,7 @@ class SimulatedUser:
         content = "以下是新增的公开对话，请以需求提出者身份回应最后一条开发 Agent 消息。\n" + json.dumps(messages, ensure_ascii=False)
         prompt.write_text(json.dumps({"type": "user", "message": {"role": "user", "content": content}}, ensure_ascii=False) + "\n")
         command = user_command(self.binary, self.cwd, self.profile["model"], self.effort,
-                               self.system, self.max_turns, self.session)
+                               self.system, self.session)
         capture = load_helper(self.evidence / "helpers/capture.py").capture
         record = capture(self.work, turn / "capture", command, timeout, prompt)
         if record["timed_out"]:

@@ -16,7 +16,7 @@ SESSION = '00112233-4455-6677-8899-aabbccddeeff'
 def events(accepted=False, read=False):
     init = {'type': 'system', 'subtype': 'init', 'session_id': SESSION,
             'skills': sorted(BUNDLED_SKILLS), 'plugins': [], 'mcp_servers': [],
-            'tools': ['Read', 'StructuredOutput']}
+            'tools': ['Read', 'Glob', 'Grep', 'StructuredOutput']}
     rows = [init]
     if read:
         rows += [
@@ -46,6 +46,24 @@ class NativeUserTest(unittest.TestCase):
         self.assertTrue(parse(events(accepted=True, read=True))[0].accepted)
         rows = events(accepted=True, read=True)
         rows[2]['message']['content'][0]['is_error'] = True
+        with self.assertRaises(ValueError):
+            parse(rows)
+
+    def test_current_content_search_counts_as_inspection(self):
+        rows = events(accepted=True, read=True)
+        rows[1]['message']['content'][0].update(name='Grep', input={
+            'path': 'current/api.md', 'pattern': 'PartialResult', 'output_mode': 'content'})
+        self.assertTrue(parse(rows)[0].accepted)
+        rows[1]['message']['content'][0]['input']['output_mode'] = 'files_with_matches'
+        with self.assertRaises(ValueError):
+            parse(rows)
+
+    def test_relative_read_is_allowed_but_parent_traversal_is_not_current(self):
+        rows = events(accepted=True, read=True)
+        block = rows[1]['message']['content'][0]
+        block['input']['file_path'] = 'current/api.md'
+        self.assertTrue(parse(rows)[0].accepted)
+        block['input']['file_path'] = '/testbed/current/../../etc/passwd'
         with self.assertRaises(ValueError):
             parse(rows)
 
@@ -83,8 +101,9 @@ class NativeUserTest(unittest.TestCase):
 
     def test_native_command_owns_tools_schema_and_resume(self):
         command = user_command(['docker', 'exec', 'user', 'claude'], Path('/testbed'),
-            'deepseek-flash', 'high', 'USER_ROLE', 8, SESSION)
-        self.assertIn('--bare', command)
+            'deepseek-flash', 'high', 'USER_ROLE', SESSION)
+        self.assertNotIn('--bare', command)
+        self.assertNotIn('--max-turns', command)
         self.assertIn('--json-schema', command)
         self.assertEqual(command[command.index('--permission-mode') + 1], 'dontAsk')
         self.assertEqual(command[command.index('--tools') + 1], 'Read,Glob,Grep')
@@ -92,6 +111,12 @@ class NativeUserTest(unittest.TestCase):
         self.assertNotIn('--no-session-persistence', command)
         self.assertNotIn('respond_to_agent', ' '.join(command))
         self.assertNotIn('tool_choice', ' '.join(command))
+
+    def test_missing_native_search_tools_is_rejected(self):
+        rows = events()
+        rows[0]['tools'] = ['Read', 'StructuredOutput']
+        with self.assertRaises(ValueError):
+            parse(rows)
 
     def test_failed_user_qualification_stops_pair_before_build(self):
         from run_collaboration import prepare_pair

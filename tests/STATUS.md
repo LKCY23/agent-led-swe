@@ -1,6 +1,6 @@
 # 当前测试状态
 
-更新：2026-10-06。本页维护当前任务选择；过往预算与实验见 [历史索引](history.md)，不作为新的执行指令。
+更新：2026-10-07。本页维护当前任务选择；过往预算与实验见 [历史索引](history.md)，不作为新的执行指令。
 
 ## 版本与工作区
 
@@ -17,7 +17,7 @@
 | D1、D4、D7、D10–D13 | 早期需求、协作与文档场景 | 保留专项回归；限制见 [场景说明](scenarios.md) |
 | smolagents、xarray、NodeBB、Navidrome、packaging | 旧单次请求 SWE 校准任务 | 退出当前推荐组合；适配器、输入和资格记录保留，可按名称显式调用 |
 | Agents SDK、DSPy | 未采用的早期候选 | 不启用；定义和结论保留追溯 |
-| SWE-Interact 适配 | cattrs 优先，TOMLKit、HTTPX 后续候选 | 已执行一对真实试跑，但两组均被单轮 300 秒限制截断，用户回应为 0；完整多轮评测未完成。见[试跑结果](reports/cattrs-pair-native-2026-10-06.md) |
+| SWE-Interact 适配 | cattrs 优先，TOMLKit、HTTPX 后续候选 | 第二次已进入反馈，两组最终被用户内部步数限制中断。已修正用户限制和搜索工具，修复后未重跑真实模型。见[第二次结果](reports/cattrs-retry-2026-10-07.md) |
 
 当前没有默认运行的完整 SWE benchmark 套件。真实模型测试仍需明确任务、版本、模型、比较方式与预算。
 
@@ -25,6 +25,6 @@
 
 保留 Codex／Claude Code、Flash／Pro 配置、原生 skill 安装调用、Docker 与模型网关隔离、完整事件和文件快照、独立 verifier。功能结果与流程分析分开，不自动调用 LLM judge。
 
-既有 `run_evaluation.py` 仍用于单次请求；`run_collaboration.py` 提供独立多轮入口。当前可用用户资格为 `cattrs-user-cc-flash.json`，旧直连 API 的失败资格只作历史记录。实现约定见 [协议](protocol.md)。
+既有 `run_evaluation.py` 仍用于单次请求；`run_collaboration.py` 提供独立多轮入口。`cattrs-user-cc-flash.json` 对应旧参数，当前用户修复后资格需刷新；旧直连 API 资格只作历史记录。实现约定见 [协议](protocol.md)。
 
-自写用户工具循环已移除。首次对照没有自动重跑；下一轮需先修正单轮限制与总预算的关系，并处理检查环境的缺口。现有轨迹能确认 skill 已加载／读指导但没有先形成设计记录，不能评价完整用户协作与最终文档。
+solver 限时与依赖已修正并完成第二次试跑；发现的用户内部步数限制与搜索能力问题也已修正。旧试跑均保留，尚无完整闭环结果。两次轨迹都没有实现前的项目设计记录；本轮 skill 未读取参考指导，不能沿用前一轮的读取结论。

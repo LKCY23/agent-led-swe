@@ -101,7 +101,7 @@ def run_pair(output, plan, credentials):
             snapshot(work, evidence / 'before')
             user = SimulatedUser(plan['user_profile'], persona, requirements, evidence / 'before',
                 evidence / 'user', plan['user_environment'], plan['user_agent'], credentials,
-                max_replies=limits['turns'], max_turns=limits['user_max_turns'], effort=plan['user_effort'])
+                max_replies=limits['turns'], effort=plan['user_effort'])
             try:
                 with user, execution_environment({'environment': plan['environment']}, work, evidence, plan['agent'], treatment,
                         model_profile=plan['solver_profile'], credentials=credentials) as runtime:
@@ -155,11 +155,11 @@ def main():
     parser.add_argument('--user-profile', type=Path, required=True)
     parser.add_argument('--effort', choices=['low', 'high', 'max', 'xhigh'], required=True)
     parser.add_argument('--output', type=Path, required=True)
-    for name in ('total-seconds', 'user-seconds', 'turns', 'user-max-turns'):
+    for name in ('total-seconds', 'user-seconds', 'turns'):
         parser.add_argument('--' + name, type=int, required=True)
     parser.add_argument('--prepare-only', action='store_true', help='Freeze the plan without any model call')
     args = parser.parse_args()
-    limits = {name: getattr(args, name) for name in ('total_seconds', 'user_seconds', 'turns', 'user_max_turns')}
+    limits = {name: getattr(args, name) for name in ('total_seconds', 'user_seconds', 'turns')}
     plan = prepare_pair(args.inputs.resolve(), args.qualification.resolve(), args.output.resolve(), args.agent,
         load_profile(args.solver_profile), load_profile(args.user_profile), args.effort, args.skill_path.resolve(), limits,
         args.user_qualification.resolve())
