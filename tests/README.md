@@ -56,7 +56,7 @@ DeepSeek 凭据填在被 Git 忽略的 `tests/configs/credentials.local.json`，
 
 ## 任务与环境
 
-- D14 保留快速诊断。旧 SWE 任务退出当前推荐组合，适配器、输入和资格记录保留供显式回归；见 [状态](STATUS.md)与[旧任务目录](cases/swe/README.md)。多轮 benchmark 尚未接入。
+- D14 保留快速诊断。旧 SWE 任务退出当前推荐组合，适配器、输入和资格记录保留供显式回归；见 [状态](STATUS.md)与[旧任务目录](cases/swe/README.md)。cattrs 环境／verifier 与原生两轮协议已预检，真实多轮开发对照尚未启用。
 - packaging 的 verifier 镜像保留完整测试依赖，Agent 使用单独精简的 execution image。已知安装／vendored／缓存副本清除后，需要重复起始／参考检查；实际 worker 安装项目后和执行结束时还会审计。
 - 行为场景见 [场景与状态](scenarios.md)。它们可以执行和分析，但没有程序 verifier 的场景，task_status 保持 unknown。
 - 不挂载私有参考补丁、验收材料或宿主 Docker socket。正式 Docker worker 只通过固定模型网关出站；直接外网与非许可代理路径被阻止，本地来源审计继续保留。
@@ -69,7 +69,25 @@ DeepSeek 凭据填在被 Git 忽略的 `tests/configs/credentials.local.json`，
 - 全部文件前后快照、变化清单、用量及失败／超时记录；
 - verifier 的测试副本、安装与运行日志、XML、原始计数、结果与汇总。
 
-重新验证使用新目录，不覆盖原记录。分析按 [测试历史分析](analysis.md)进行，单独保存观察、证据、归因假设、反证和建议。小任务不要求完整文档套件；涉及人类决策或长期维护时，用实际协作记录分析，不虚构 simulated user。
+重新验证使用新目录，不覆盖原记录。分析按 [测试历史分析](analysis.md)进行，单独保存观察、证据、归因假设、反证和建议。小任务不要求完整文档套件；涉及人类决策或长期维护时，区分真实用户、实际运行的模拟用户与脚本响应，不把模拟交互等同于真实使用验证。
+
+## cattrs 协作接入预检
+
+以下入口均不调用真实模型。先用 Docker 构建 `cases/swe/environments/cattrs/` 的依赖镜像，并取得不可变 image ID；依赖已锁定，不把源码或参考实现放入镜像。
+
+```sh
+uv run --locked python tests/cattrs_task.py prepare \
+  --benchmark '<固定版本的 SWE-Interact 源码目录>' \
+  --source-archive '<固定 cattrs commit 的源码归档>' \
+  --image '<不可变 image ID>' --output '<新的私有输入目录>'
+uv run --locked python tests/cattrs_task.py preflight \
+  --inputs '<上一步输入目录>' --output '<新的预检结果目录>'
+uv run --locked python tests/check_collaboration_worker.py \
+  --agent claude-code --base-image '<不可变 image ID>' \
+  --skill-path '<已接受 skill 的路径>' --output '<新的协议检查目录>'
+```
+
+协议检查也支持 `--agent codex`。它运行真实容器 CLI、原生安装／调用和两轮 session 接续，模型与用户响应均为脚本模拟。真实用户模型与配对入口仍待接入；范围与结果见[实施记录](reports/cattrs-integration-results-2026-10-06.md)。
 
 旧 [rubric](rubrics.md)、judge 判分和文档读取模式结果保留为历史材料，不进入新成绩，也不与 native 模式混合比较。不能凭单个任务、单轮通过或耗时下降认定 skill 有效。
 

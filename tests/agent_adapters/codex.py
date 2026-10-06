@@ -104,3 +104,17 @@ class CodexAdapter:
 
     def inspect_trace(self, text, helpers):
         return load_helper(helpers / 'inspect_codex_trace.py').inspect_trace(text)
+
+    def conversation_command(self, binary, workspace, model, effort, sandbox, context, session_id=None):
+        command = self.command(binary, workspace, model, effort, sandbox, context)
+        if session_id:
+            from uuid import UUID
+            # exec resume has its own option set. Keep provider/context config
+            # after the subcommand; never resume the ambient "last" session.
+            index = len(command) - 1 - command[::-1].index('exec')
+            command.insert(index + 1, 'resume')
+            for flag in ('-C', '--sandbox'):
+                index = command.index(flag)
+                del command[index:index + 2]
+            command[-1:] = ['-c', 'sandbox_mode=' + json.dumps(sandbox), str(UUID(session_id)), '-']
+        return command

@@ -2,17 +2,18 @@
 import json
 
 
-def verify_activation(agent, evidence, source, entrypoint):
+def verify_activation(agent, evidence, source, entrypoint, capture_relative='capture'):
     expected = source is not None
     records = []
     if agent == 'claude-code':
-        trace = json.loads((evidence / 'capture/trace.json').read_text())
+        trace_path = evidence / capture_relative / 'trace.json'
+        trace = json.loads(trace_path.read_text())
         init = trace.get('init_context', [])
         discovered = len(init) == 1 and 'agent-led-swe' in init[0].get('skills', [])
         invoked = trace.get('native_skill_invocations', []) == ['agent-led-swe']
         valid = len(init) == 1 and trace.get('isolation_status') == 'verified-discovery' and (
             (discovered and invoked) if expected else not discovered and not trace.get('native_skill_invocations'))
-        records = ['capture/trace.json']
+        records = [str(trace_path.relative_to(evidence))]
     else:
         found = False
         body = (source / 'SKILL.md').read_text() if expected else None

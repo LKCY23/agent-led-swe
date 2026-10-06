@@ -106,3 +106,11 @@ class ClaudeCodeAdapter:
                 'isolation_status': 'verified-discovery' if verified else 'unknown',
                 'client_cost_estimate_usd': final.get('total_cost_usd'),
                 'task_status': 'unknown'}
+
+    def conversation_command(self, binary, workspace, model, effort, sandbox, context, session_id=None):
+        command = self.command(binary, workspace, model, effort, sandbox, context)
+        command.remove('--no-session-persistence')
+        if session_id:
+            from uuid import UUID
+            command += ['--resume', str(UUID(session_id))]
+        return command

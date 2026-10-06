@@ -31,6 +31,8 @@ FeatureBench 的遮蔽、隐藏测试恢复与其他 benchmark 的正向修复�
 
 当前选择见 [STATUS](STATUS.md)。旧四题和 packaging 已退出推荐组合，适配能力保留；SDK／DSPy 不启用。旧四题的资格仍核对任务定义哈希、冻结输入和不可变镜像 ID；保留 CLI 名称不表示应默认运行。
 
+cattrs 的协作适配独立于现有单次请求入口：`cattrs_task.py` 准备输入并预检，`collaboration_runtime.py` 组织原生对话接续，`check_collaboration_worker.py` 用模拟 API 检查两种宿主。它尚未接入真实模拟用户和配对入口，不在 `run_evaluation.py` 中启用。详见[场景](reports/cattrs-collaboration-scenario-2026-10-06.md)和[实施结果](reports/cattrs-integration-results-2026-10-06.md)。
+
 ## 2. 执行与产物约定
 
 每轮先冻结任务、skill、rubric、模型／预算和运行矩阵。Baseline 与 skill 使用相同的任务、环境、工程要求和权限；只有 skill 组获得目标指导。项目规范仍是双方共同任务输入，不因禁用全局 skills 而被取消。

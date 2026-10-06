@@ -26,7 +26,8 @@ def adapter_hashes():
     root = Path(__file__).parent
     names = [
         'evaluation_runtime.py', 'run_evaluation.py', 'evaluate_results.py', 'run_smoke.py',
-        'task_adapters.py', 'functional_checks.py', 'model_config.py', 'native_skills.py', 'packaging_environment.py', 'worker_network.py', 'model_gateway.py', 'suite_tasks.py', 'swe_pro_verifier.py', 'container_workspace.py']
+        'task_adapters.py', 'functional_checks.py', 'model_config.py', 'native_skills.py', 'packaging_environment.py', 'worker_network.py', 'model_gateway.py', 'suite_tasks.py', 'swe_pro_verifier.py', 'container_workspace.py',
+        'cattrs_task.py', 'collaboration_runtime.py', 'check_collaboration_worker.py']
     names += [str(p.relative_to(root)) for p in sorted((root / 'agent_adapters').glob('*.py'))]
     return {name: digest(root / name) for name in names}
 
