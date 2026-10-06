@@ -332,3 +332,8 @@ Removed unsupported per-turn/reply/output/retry/resource limits and restored nat
 ## Configuration corrections — 2026-10-07
 
 Restored the supported DeepSeek context declaration across CC model slots, explicit container resources and a pinned build image. Added container-level deadlines, stopped-container export, bounded-memory gateway forwarding and disconnect cancellation. Native CC Task testing revealed repeated init/result events and cumulative child-inclusive model usage; parsing and resumed deltas were corrected. 97 local tests, CC baseline/skill with native child/user, Codex baseline/skill, and bind/copy deadline/export checks passed. Initial failed probes remain in the history. No real model calls or accepted skill edits. [Report](reports/runtime-correction-2026-10-07.md).
+
+
+## Single-developer-agent comparison — 2026-10-07
+
+Disabled native development delegation in both arms while retaining the simulated user and existing skill. Both native CLI mock pairs passed; the real CC/Flash cattrs pair completed three user interactions per arm. Verifier: baseline 7/7 base and 64/69 new; skill 7/7 base and 66/69 new. Both were accepted by the user but failed functional acceptance. A Bash-heartbeat false positive in delegation detection was fixed after execution and reviewed in a separate hashed receipt without changing raw results or rerunning the model. All 99 local tests passed. [Report](reports/cattrs-single-agent-2026-10-07.md).

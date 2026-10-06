@@ -32,3 +32,6 @@ solver 限时与依赖已修正并完成第二次试跑；发现的用户内部�
 当前清理：已去掉额外轮数／单轮时限、输出与重试限制、工具裁剪和项目指导屏蔽，验收不再依赖会话完成。91 项回归与两种原生 CLI 的四组模拟 API 检查均通过；尚未重跑真实模型。检查范围与结果见[限制清理记录](reports/runtime-restrictions-2026-10-07.md)。
 
 当前配置已按逐项审查再次修正：恢复 DeepSeek 1M 客户端声明、明确资源条件、确认容器停止后导出、补齐 CC 子 Agent 记录和用量增量。97 项本地回归、CC 子 Agent／用户接续、Codex 接续、bind／copy 停止与快照检查均通过；未追加真实模型运行。见[配置修正记录](reports/runtime-correction-2026-10-07.md)。
+
+
+最新真实对照：单开发 Agent（模拟用户保留），CC＋Flash high，正式 skill 不变；baseline／skill 均完成三轮并被用户接受，独立 verifier 为基础 7/7、功能分别 64/69 与 66/69，均未完全通过。记录器的 Bash 心跳误报在运行结束后独立修正复核，原始记录保留。详见[本轮结果](reports/cattrs-single-agent-2026-10-07.md)。
