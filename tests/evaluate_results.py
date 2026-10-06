@@ -71,7 +71,8 @@ def compare(plan, results):
     pairs = []
     for repetition in sorted({t['repetition'] for t in plan['trials']}):
         rows = {r['variant']: r for r in results if r['repetition'] == repetition}
-        base = rows.get('baseline', {}).get('fixture_before')
+        reference = plan.get('comparison_reference_variant', 'baseline')
+        base = rows.get(reference, {}).get('fixture_before')
         fixtures_match = (None if base is None or any(r.get('fixture_before') is None for r in rows.values())
                           else all(r['fixture_before'] == base for r in rows.values()))
         pairs.append({'repetition': repetition,

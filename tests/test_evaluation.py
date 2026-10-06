@@ -170,6 +170,32 @@ print(json.dumps({'type':'result','subtype':'success','is_error':False,
         with self.assertRaisesRegex(ValueError, 'Frozen skill snapshot changed'):
             evaluate_results.check_bundle(self.bundle, plan)
 
+    def test_current_candidate_only_preserves_native_loading_and_fixture_comparison(self):
+        candidate = self.root / 'candidate'
+        candidate.mkdir()
+        (candidate / 'SKILL.md').write_text('Candidate guidance')
+        with patch.object(run_evaluation, 'ROOT', self.target):
+            plan = run_evaluation.run_pair(self.case, self.bundle, self.cli, 'synthetic', 'low',
+                5, 1, runtime.DEFAULT_EVALUATOR, skill_path=candidate,
+                reference_skill_path=self.target, include_baseline=False)
+        self.assertEqual([t['variant'] for t in plan['trials']], ['current', 'candidate'])
+        self.assertEqual(plan['max_executor_calls'], 2)
+        self.assertFalse((self.bundle / 'T1-1-baseline').exists())
+        results = evaluate_results.evaluate_bundle(self.bundle, self.bundle / 'review')
+        self.assertTrue(all(r['skill_activation']['status'] == 'verified' for r in results))
+        pair = evaluate_results.compare(plan, results)['pairs'][0]
+        self.assertTrue(pair['comparison_eligible'])
+        results[1]['fixture_before'] = {'different.txt': 'different'}
+        pair = evaluate_results.compare(plan, results)['pairs'][0]
+        self.assertFalse(pair['fixtures_match'])
+        self.assertFalse(pair['comparison_eligible'])
+
+    def test_omitting_baseline_requires_reference_before_preparation(self):
+        with self.assertRaisesRegex(ValueError, 'requires a reference skill'):
+            run_evaluation.run_pair(self.case, self.bundle, self.cli, 'synthetic', 'low',
+                5, 1, runtime.DEFAULT_EVALUATOR, skill_path=self.target, include_baseline=False)
+        self.assertFalse(self.bundle.exists())
+
     def test_invalid_skill_path_stops_before_task_preparation(self):
         with self.assertRaisesRegex(ValueError, 'entrypoint not found'):
             run_evaluation.run_pair(self.case, self.bundle, self.cli, 'synthetic', 'low',

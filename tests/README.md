@@ -45,6 +45,8 @@ uv run --locked python tests/evaluate_results.py '<上一步运行目录>'
 
 Codex 使用 `--agent codex --model-profile tests/configs/models/codex-gpt-6.1-sol.json`。支持 baseline／skill 两组；加 `--reference-skill-path` 则比较 baseline／current／candidate。每组每轮新建工作区与会话，默认每组一次、不自动重跑；`--repetitions` 和 `--reverse-order` 控制已记录的重复与顺序。
 
+仅比较两个 skill 版本时，同时使用 `--reference-skill-path` 和 `--without-baseline`，执行 current／candidate 两组；计划以 current 为初始文件一致性检查的参照，不运行无 skill 组。
+
 Codex 将 skill 安装到隔离 HOME 的 `.agents/skills/agent-led-swe/`，提示词以 `$agent-led-swe` 开头；CC 安装到 `.claude/skills/agent-led-swe/`，以 `/agent-led-swe` 开头。baseline 不安装目标。发现与原生调用均核查，不以普通 Read 或模型自述代替。[原生接入验证](reports/native-skill-invocation-2026-10-06.md)。
 
 DeepSeek 凭据填在被 Git 忽略的 `tests/configs/credentials.local.json`，可从 `credentials.example.json` 创建；环境变量优先，`--credentials` 可指定其他文件。直接 API 检查使用 `check_model_connection.py`；受限容器的真实连通检查使用 `check_worker_network.py`（每次一个 Agent 会话、90 秒）。两者都不改变本机日常配置。

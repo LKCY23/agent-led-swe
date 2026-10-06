@@ -59,12 +59,14 @@ def skill_source(root):
 
 def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
              model_profile=None, credentials=DEFAULT_CREDENTIALS, skill_path=None,
-             reference_skill_path=None, reverse_order=False):
+             reference_skill_path=None, reverse_order=False, include_baseline=True):
     positive_seconds(timeout)
     if type(repetitions) is not int or repetitions <= 0:
         raise ValueError('repetitions must be a positive integer')
     skill_path = Path(skill_path or ROOT).resolve()
     reference_skill_path = Path(reference_skill_path).resolve() if reference_skill_path else None
+    if not include_baseline and reference_skill_path is None:
+        raise ValueError('Omitting baseline requires a reference skill for a current/candidate comparison')
     for source in (skill_path, reference_skill_path):
         if source is not None and not (source / 'SKILL.md').is_file():
             raise ValueError(f'Skill entrypoint not found: {source}')
@@ -94,6 +96,8 @@ def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
     shutil.copyfile(ROOT / 'tests/rubrics.md', output / 'rubrics.md')
     target = freeze_skill(skill_path, output / 'skill')
     variants = ['baseline', 'current', 'candidate'] if reference_skill_path else ['baseline', 'skill']
+    if not include_baseline:
+        variants.remove('baseline')
     targets = {variants[-1]: {'directory': 'skill', 'files': target, 'source': skill_source(skill_path)}}
     if reference_skill_path:
         targets['current'] = {'directory': 'reference-skill',
@@ -114,6 +118,7 @@ def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
         'helpers': helpers, 'adapter_files': adapter_hashes(),
         'cli': cli, 'agent': adapter.name, 'model': model, 'model_profile': model_profile, 'effort': effort,
         'timeout_seconds': timeout, 'max_executor_calls': len(trials),
+        'comparison_reference_variant': 'baseline' if include_baseline else 'current',
         'token_limit': None, 'cost_limit': None,
         'environment': case['environment'], 'routing': 'native explicit invocation; not an implicit routing test',
         'skill_loading_mode': 'native',
@@ -203,6 +208,8 @@ def main():
     parser.add_argument('--skill-path', type=Path, default=ROOT, help='Candidate/target skill source to freeze')
     parser.add_argument('--reference-skill-path', type=Path, help='Add a current-version arm alongside baseline and candidate')
     parser.add_argument('--reverse-order', action='store_true', help='Reverse the first repetition order')
+    parser.add_argument('--without-baseline', action='store_true',
+                        help='Compare current/candidate only; requires --reference-skill-path')
     parser.add_argument('--output-root', type=Path, default=ROOT / 'tests/runs', help='Parent for a fresh evidence directory')
     parser.add_argument('--evaluator', type=Path, default=DEFAULT_EVALUATOR)
     args = parser.parse_args()
@@ -233,7 +240,8 @@ def main():
         output = args.output_root.resolve() / f'pair-{args.case}-{stamp}'
         plan = run_pair(case, output, cli, profile['model'], args.effort, args.timeout,
                         args.repetitions, args.evaluator.resolve(), profile, args.credentials,
-                        args.skill_path, args.reference_skill_path, args.reverse_order)
+                        args.skill_path, args.reference_skill_path, args.reverse_order,
+                        include_baseline=not args.without_baseline)
     except (ValueError, OSError) as exc:
         parser.error(str(exc))
     print(output)
