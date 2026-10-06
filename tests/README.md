@@ -1,6 +1,6 @@
 # agent-led-swe 测试机制
 
-更新：2026-10-06。测试负责执行、保存完整历史和调用 verifier；后续过程分析独立进行，不决定任务是否通过。当前实现约定见 [协议](protocol.md)，本轮检查见 [修复记录](reports/network-and-task-scope-2026-10-06.md)。
+更新：2026-10-06。测试负责执行、保存完整历史和调用 verifier；后续过程分析独立进行，不决定任务是否通过。先看 [当前状态](STATUS.md)，实现约定见 [协议](protocol.md)，既往实验见 [历史索引](history.md)。
 
 ## 职责与结果
 
@@ -35,11 +35,12 @@ uv run --locked python tests/check_hosts.py
 开始前固定任务、版本、模型、预算和比较组。下面的执行命令调用模型，验证命令不调用模型：
 
 ```sh
-uv run --locked python tests/run_evaluation.py smolagents \
-  --swe-inputs '<冻结任务输入目录>' \
+uv run --locked python tests/run_evaluation.py D14 \
   --agent claude-code --model-profile tests/configs/models/deepseek-v4.1-flash.json \
-  --credentials '<本地凭据文件>' --skill-path '<被测 skill 路径>' \
-  --output-root '<独立运行目录>' --effort high --timeout 300
+  --credentials '<本地凭据文件>' \
+  --skill-path tests/fixtures/instruction-delivery \
+  --direct-guidance tests/fixtures/instruction-delivery/guidance.md \
+  --output-root '<独立运行目录>' --effort high --timeout 180
 uv run --locked python tests/evaluate_results.py '<上一步运行目录>'
 ```
 
@@ -55,7 +56,7 @@ DeepSeek 凭据填在被 Git 忽略的 `tests/configs/credentials.local.json`，
 
 ## 任务与环境
 
-- 主任务为 smolagents、xarray、NodeBB、Navidrome，均已通过两轮资格预检；packaging 保留辅助，SDK／DSPy 暂不启用。见 [任务目录](cases/swe/README.md)和[本轮结果](reports/four-task-integration-results-2026-10-06.md)。
+- D14 保留快速诊断。旧 SWE 任务退出当前推荐组合，适配器、输入和资格记录保留供显式回归；见 [状态](STATUS.md)与[旧任务目录](cases/swe/README.md)。多轮 benchmark 尚未接入。
 - packaging 的 verifier 镜像保留完整测试依赖，Agent 使用单独精简的 execution image。已知安装／vendored／缓存副本清除后，需要重复起始／参考检查；实际 worker 安装项目后和执行结束时还会审计。
 - 行为场景见 [场景与状态](scenarios.md)。它们可以执行和分析，但没有程序 verifier 的场景，task_status 保持 unknown。
 - 不挂载私有参考补丁、验收材料或宿主 Docker socket。正式 Docker worker 只通过固定模型网关出站；直接外网与非许可代理路径被阻止，本地来源审计继续保留。
@@ -78,6 +79,4 @@ DeepSeek 凭据填在被 Git 忽略的 `tests/configs/credentials.local.json`，
 
 `check_swe_pipeline.py` 使用未修复／参考产物检查验收链路，不调用模型。`check_codex_worker.py`、`check_claude_worker.py` 以模拟 API 检查真实 CLI 原生接入，不能证明模型或 skill 效果。原始记录索引见 [验证记录](validation.md)。
 
-当前任务组合见 [已确认的四题](reports/sample-suite-candidates-2026-10-06.md)。示例命令只说明接口，不表示已有新的试跑预算或任务选择决定。
-
-四题共用 run_evaluation.py 与 evaluate_results.py。准备和资格检查使用 prepare_suite_task.py、preflight_suite.py；check_suite_workers.py 检查实际 worker，均不调用模型。正式效果对照的模型与预算需另行固定，本轮未启动。
+当前任务选择以 [STATUS](STATUS.md) 为准。示例命令只说明接口，不表示已授权新的模型运行。旧四题的准备、预检与 worker 检查入口继续保留，相关历史不作为当前默认测试安排。

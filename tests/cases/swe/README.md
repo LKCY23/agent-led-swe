@@ -1,6 +1,6 @@
-# 真实 SWE 任务
+# 旧 SWE 校准任务
 
-用户已确认并接入以下四题。每题均已完成两轮起始／参考预检，失败记录保留；这不代表 skill 效果已经验证。
+以下四题已接入并完成两轮起始／参考预检，现已退出当前推荐测试组合。定义、适配器、规范冻结输入和资格记录保留供显式回归。当前状态见 [STATUS](../../STATUS.md)，效果与限制见 [历史索引](../../history.md)。
 
 | CLI 名称 | 来源与任务 | 验收与环境 |
 | --- | --- | --- |
@@ -30,7 +30,7 @@
     inputs.json       输入文件哈希
 ```
 
-执行 Agent 只获得公共工作区和任务要求。参考补丁与 validator 不放入 worker；验收在独立副本／新容器中进行。原始来源和准备日志位于此前的 `four-task-inputs-20261006/`。Python 环境配方保存在 [environments](environments/README.md)。
+执行 Agent 只获得公共工作区和任务要求。参考补丁与 validator 不放入 worker；验收在独立副本／新容器中进行。原始来源和准备日志位于此前的 `four-task-inputs-20261006/`，其中重复 `public/` 展开副本已清理，压缩包与元数据保留。Python 环境配方保存在 [environments](environments/README.md)。
 
 ## 准备与资格检查
 
@@ -54,4 +54,4 @@ SWE-bench Pro 的原生脚本、parser 和评分清单保持原样。Navidrome �
 
 ## 其他任务
 
-packaging 保留为辅助用例，继续使用旧的冻结输入和 [独立环境资格](../../reports/packaging-execution-environment-2026-10-06.json)。DSPy、Agents SDK 暂不启用。pytest benchmark 已按用户决定退出并清理；pytest 测试工具仍用于 Python 项目的正常验收。
+packaging 同样退出当前推荐组合，旧冻结输入和 [独立环境资格](../../reports/packaging-execution-environment-2026-10-06.json)保留。DSPy、Agents SDK 不启用。pytest benchmark 已退出并清理；pytest 测试工具仍用于 Python 项目的正常验收。

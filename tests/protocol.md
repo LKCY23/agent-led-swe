@@ -29,7 +29,7 @@ FeatureBench 的遮蔽、隐藏测试恢复与其他 benchmark 的正向修复�
 
 参考实现用于预检与测试框架自检，不保存在正式任务的公共工作区中。正式功能评价检查提交产物，不比较 Agent 是否复刻参考代码。
 
-主任务是已通过资格检查的 smolagents、xarray、NodeBB、Navidrome；packaging 保留辅助。SDK／DSPy 暂不启用。新四题的资格同时核对任务定义哈希、冻结输入和不可变镜像 ID；不能只将名字加入 CLI。
+当前选择见 [STATUS](STATUS.md)。旧四题和 packaging 已退出推荐组合，适配能力保留；SDK／DSPy 不启用。旧四题的资格仍核对任务定义哈希、冻结输入和不可变镜像 ID；保留 CLI 名称不表示应默认运行。
 
 ## 2. 执行与产物约定
 

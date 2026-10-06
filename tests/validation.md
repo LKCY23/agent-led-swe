@@ -1,3 +1,15 @@
+# 当前入口
+
+任务选择见 [STATUS](STATUS.md)，按主题查阅 [历史索引](history.md)。以下条目是各轮实际记录，旧的任务选择与预算不自动延续到新一轮。
+
+# Benchmark transition cleanup — 2026-10-06
+
+Retired the old SWE tasks from the recommended suite while retaining adapters, qualified inputs, images and D14 diagnostics. Restored accepted skill content in the test worktree; main remains unchanged. Deleted 45 reproducible source-copy directories (~1.59 GiB allocated file space), retained all model histories and verified 30,846 evidence-file hashes unchanged. Removed three clean idle checkouts while retaining their branches. [Cleanup details](reports/test-cleanup-2026-10-06.md).
+
+Final checks passed: 66 local tests; package links (60 Markdown files, 19 fragments); all four canonical frozen-input manifests; D14 preparation; byte-for-byte equality of the test worktree's skill package to the accepted main package. No real model calls. Baseline tagged `test-baseline-2026-10-06` on the cleanup branch; no merge into main.
+
+---
+
 # Minimal instruction delivery probe — 2026-10-06
 
 Compared identical three-step guidance in a direct request vs a native short skill, with Claude Code fixed and Flash/Pro as the model factor. All four valid runs wrote a plan before code edits and actual results after tests; each passed six trusted functional checks. This does not evaluate the complete skill or isolate task complexity from instruction specificity. Two earlier model executions were mistakenly launched before a failed fixture preflight was inspected; the invalid fixture and both histories are retained and excluded from the corrected comparison. Actual total: six model executions, zero judges. [Report](reports/instruction-delivery-probe-2026-10-06.md).
