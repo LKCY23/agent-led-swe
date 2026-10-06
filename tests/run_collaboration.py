@@ -61,7 +61,7 @@ def prepare_pair(inputs, qualification, output, agent, solver, user, effort, ski
             'agent': cli, 'solver_profile': solver, 'user_profile': user, 'effort': effort, 'user_effort': 'high',
             'user_agent': user_cli, 'user_environment': user_environment,
             'limits': limits, 'cost_limit': None,
-            'budget_semantics': 'Wall time and turn/model-call counts; no hard dollar/token cap for solver',
+            'budget_semantics': 'Shared solver/user conversation deadline; each solver turn can use the remaining group time; no hard dollar/token cap',
             'environment': environment, 'qualification_sha256': digest(qualification),
             'user_qualification_sha256': digest(user_qualification),
             'input_sha256': digest(inputs / 'inputs.json'), 'scenario_files': file_hashes(output / 'scenario'),
@@ -112,7 +112,7 @@ def run_pair(output, plan, credentials):
                         plan['effort'], output / 'helpers', work, evidence / 'conversation',
                         COMMON_PROMPT + 'You can ask the user questions in your reply; this conversation can continue.\n\n' + request,
                         user, invocation=adapter.invocation() if treatment else '', max_turns=limits['turns'],
-                        timeout=limits['total_seconds'], turn_timeout=limits['turn_seconds'],
+                        timeout=limits['total_seconds'],
                         user_timeout=limits['user_seconds'])
                 activation = verify_activation(adapter.name, evidence, treatment, entrypoint,
                                                'conversation/turn-001/capture')
@@ -155,11 +155,11 @@ def main():
     parser.add_argument('--user-profile', type=Path, required=True)
     parser.add_argument('--effort', choices=['low', 'high', 'max', 'xhigh'], required=True)
     parser.add_argument('--output', type=Path, required=True)
-    for name in ('total-seconds', 'turn-seconds', 'user-seconds', 'turns', 'user-max-turns'):
+    for name in ('total-seconds', 'user-seconds', 'turns', 'user-max-turns'):
         parser.add_argument('--' + name, type=int, required=True)
     parser.add_argument('--prepare-only', action='store_true', help='Freeze the plan without any model call')
     args = parser.parse_args()
-    limits = {name: getattr(args, name) for name in ('total_seconds', 'turn_seconds', 'user_seconds', 'turns', 'user_max_turns')}
+    limits = {name: getattr(args, name) for name in ('total_seconds', 'user_seconds', 'turns', 'user_max_turns')}
     plan = prepare_pair(args.inputs.resolve(), args.qualification.resolve(), args.output.resolve(), args.agent,
         load_profile(args.solver_profile), load_profile(args.user_profile), args.effort, args.skill_path.resolve(), limits,
         args.user_qualification.resolve())

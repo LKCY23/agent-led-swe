@@ -91,6 +91,8 @@ uv run --locked python tests/check_collaboration_worker.py \
 
 真实多轮入口为 `run_collaboration.py`，所有模型、资格和预算参数必须显式提供。使用 `--prepare-only` 可只冻结计划；`--user-qualification` 需提供与 profile、CLI、用户规则、需求和适配器匹配的通过记录。当前使用[原生 CC + Flash 资格](reports/qualifications/cattrs-user-cc-flash.json)，旧直连 API 资格保留为历史。用户预算使用 `--user-seconds` 和 `--user-max-turns`，最大回应次数随 `--turns`；不再使用旧的 HTTP 调用数参数。
 
+`--total-seconds` 是每组 solver 与用户共享的协作时长。配对入口不再提供额外的 solver 单轮上限；每轮使用本组剩余时间，避免单轮限制提前截断尚有总预算的实验。
+
 `check_simulated_user.py --inputs <冻结任务输入> --profile <用户模型配置> --credentials <凭据文件> --output <新目录>` 运行原生 CC 用户：需求澄清、读取草案后审阅，共两次回应，各最多 8 个原生 turns、180 秒。不运行 solver 或 verifier，但会产生真实模型用量。见[原生用户验证](reports/native-cc-user-2026-10-06.md)。
 
 旧 [rubric](rubrics.md)、judge 判分和文档读取模式结果保留为历史材料，不进入新成绩，也不与 native 模式混合比较。不能凭单个任务、单轮通过或耗时下降认定 skill 有效。

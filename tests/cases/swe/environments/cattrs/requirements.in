@@ -11,3 +11,16 @@ pytest-xdist==3.8.0
 hatchling==1.27.0
 hatch-vcs==0.5.0
 editables==0.5
+# Lint group and optional serialization backends from the same source uv.lock.
+black==25.1.0
+ruff==0.12.2
+ujson==5.10.0
+orjson==3.11.3
+msgpack==1.1.1
+PyYAML==6.0.2
+tomlkit==0.13.3
+cbor2==5.6.5
+pymongo==4.13.2
+msgspec==0.19.0
+tomli-w==1.2.0
+pendulum==3.1.0

@@ -22,12 +22,14 @@ class ConversationTest(unittest.TestCase):
         self.work.mkdir()
         (self.work / 'existing.md').write_text('Existing decision')
         self.prompts, self.commands = [], []
+        self.timeouts = []
         self.session = SESSION
         self.status = 'completed'
 
     def capture(self, helpers, workspace, evidence, command, timeout, prompt, adapter):
         self.prompts.append(prompt.read_text())
         self.commands.append(command)
+        self.timeouts.append(timeout)
         evidence.mkdir()
         events = [{'type': 'thread.started', 'thread_id': self.session},
                   {'type': 'item.completed', 'item': {'type': 'agent_message', 'text': 'Review this result'}}]
@@ -51,6 +53,15 @@ class ConversationTest(unittest.TestCase):
         self.assertIn(SESSION, self.commands[1])
         self.assertIn('resume', self.commands[1])
         self.assertNotIn('--last', self.commands[1])
+
+    def test_default_solver_limit_uses_shared_remaining_budget(self):
+        now = [0]
+        def user(messages, work, timeout):
+            now[0] += 30
+            return UserReply('Continue') if len(messages) == 2 else UserReply('Accepted', True)
+        result = self.run_conversation(user, timeout=1200, clock=lambda: now[0])
+        self.assertEqual(result['status'], 'completed')
+        self.assertEqual(self.timeouts, [1200, 1170])
 
     def test_no_approval_by_silence_or_invalid_response(self):
         result = self.run_conversation(lambda *args: None)

@@ -48,7 +48,7 @@ def completed_turn(agent, raw):
 
 def converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
              helpers, workspace, output, request, responder, *, invocation='',
-             max_turns=12, timeout=3600, turn_timeout=600, user_timeout=120,
+             max_turns=12, timeout=3600, turn_timeout=None, user_timeout=120,
              capture=execute, clock=time.monotonic):
     """A user question/review and a final answer both use normal native turns.
 
@@ -58,8 +58,10 @@ def converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
     """
     if type(max_turns) is not int or max_turns < 1:
         raise ValueError('max_turns must be a positive integer')
-    for limit in (timeout, turn_timeout, user_timeout):
+    for limit in (timeout, user_timeout):
         positive_seconds(limit)
+    if turn_timeout is not None:
+        positive_seconds(turn_timeout)
     output.mkdir(parents=True, exist_ok=False)
     deadline = clock() + timeout
     messages = [{'role': 'user', 'content': request}]
@@ -77,7 +79,7 @@ def converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
             prompt.write_text((invocation if number == 1 else '') + messages[-1]['content'])
             command = adapter.conversation_command(binary, runtime_cwd, model, effort, sandbox, context, session_id)
             execution = capture(helpers, workspace, turn / 'capture', command,
-                                min(turn_timeout, remaining), prompt, adapter)
+                                remaining if turn_timeout is None else min(turn_timeout, remaining), prompt, adapter)
             row = {'turn': number, 'execution': execution}
             rows.append(row)
             write_json(turn / 'execution.json', execution)
