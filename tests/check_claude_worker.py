@@ -96,7 +96,7 @@ def main():
         try:
             with tempfile.TemporaryDirectory(prefix='cc-worker-check-') as tmp:
                 work = Path(tmp).resolve()
-                (work / 'pyproject.toml').write_text('[build-system]\nrequires=["flit_core"]\nbuild-backend="flit_core.buildapi"\n[project]\nname="probe"\nversion="0.0.0"\ndescription="Protocol probe"\n')
+                (work / 'pyproject.toml').write_text('[build-system]\nrequires=["setuptools"]\nbuild-backend="setuptools.build_meta"\n[project]\nname="probe"\nversion="0.0.0"\ndescription="Protocol probe"\n[tool.setuptools]\npy-modules=["probe"]\n')
                 (work / 'probe.py').write_text('')
                 (work / 'fixture.txt').write_text('PUBLIC_FIXTURE_MARKER\n')
                 skill = output / 'skill-input'
