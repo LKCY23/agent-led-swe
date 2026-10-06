@@ -181,3 +181,8 @@ uv run --locked python tests/run_evaluation.py packaging \
 默认首轮按上述顺序，后续 repetition 反序；`--reverse-order` 可反转首轮。顺序记录在 plan 中，不声称单轮已经消除了顺序或服务波动。证据写入全新的输出目录，凭据与原始历史运行不复制进 worktree 或 Git。评测工具和候选内容分开提交，审阅接受前不合并候选。
 
 四题的命令、冻结输入位置和资格状态见 [任务目录](cases/swe/README.md)。check_suite_workers.py 对实际任务检查两种 CLI、skill 安装、模型网关、任务工具及产物回收，不调用模型。
+
+
+## 当前主实验的委派条件
+
+`configs/runtime.json: allow_subagents=false` 明确选择单个开发 Agent。两组共同禁用原生开发委派，禁止 forked skill 和额外模型／Agent 进程；独立模拟用户继续承担需求与审阅。CC 使用 disallowedTools 禁用 Task、Agent、Workflow，Codex 在发现与执行时均关闭多 Agent 配置。原生协议检查核对实际工具曝光；CC 正式运行还核对子 Agent 事件和会话产物。保留 Bash 等正常开发工具，因此这是实验条件与行为核查，不宣称恶意程序无法绕过。结论限于该条件，不能推广为委派开发效果。

@@ -110,3 +110,6 @@ Solver 使用原生工具和项目指导；隔离由独立 HOME、容器、隐�
 当前任务选择以 [STATUS](STATUS.md) 为准。示例命令只说明接口，不表示已授权新的模型运行。旧四题的准备、预检与 worker 检查入口继续保留，相关历史不作为当前默认测试安排。
 
 资源与固定构建镜像见 `configs/runtime.json`；截止停止由 `worker_control.py` 管理。可用 `check_worker_control.py --worker-image <已构建镜像 ID> --output <新目录>` 检查真实容器停止与导出；在 CC 协议检查中增加 `--with-subagent`，可检查原生 Task 回传、上下文和用量。这些检查不调用真实模型。
+
+
+当前主实验在 configs/runtime.json 中设 `allow_subagents=false`：baseline／skill 均使用单个开发 Agent，模拟用户独立保留。CC 禁用 Task／Agent／Workflow，Codex 关闭多 Agent 能力；共同请求也明确不通过 forked skill 或额外 Agent／模型进程绕过实验条件。子 Agent 接入与记录保留，专门的 CC 协议检查仍可用 `--with-subagent` 验证扩展模式。该条件用于归因，不是通用开发规范或防恶意绕过的安全边界。
