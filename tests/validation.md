@@ -1,3 +1,9 @@
+# Minimal instruction delivery probe — 2026-10-06
+
+Compared identical three-step guidance in a direct request vs a native short skill, with Claude Code fixed and Flash/Pro as the model factor. All four valid runs wrote a plan before code edits and actual results after tests; each passed six trusted functional checks. This does not evaluate the complete skill or isolate task complexity from instruction specificity. Two earlier model executions were mistakenly launched before a failed fixture preflight was inspected; the invalid fixture and both histories are retained and excluded from the corrected comparison. Actual total: six model executions, zero judges. [Report](reports/instruction-delivery-probe-2026-10-06.md).
+
+---
+
 # Action-sequence candidate — 2026-10-06
 
 Tested accepted `1c65c00` against candidate `dbdf29b`, changing only the entrypoint implementation sequence and commitment-based completion check. Both real executions completed with native loading and network checks verified. Both edited code before recording new design/work agreements and wrote migration records after implementation/testing; the intended process improvement was not observed. Original verifier results: current fail (local MCP connection timeout), candidate pass. Do not attribute that timeout difference to the skill. No retries/judge/merge. [Results](reports/action-sequence-results-2026-10-06.md).
