@@ -45,7 +45,15 @@ Python 任务在 /testbed 离线注册源码。NodeBB／Navidrome 保留官方�
 
 skill 组安装原生 skill 并显式调用，baseline 不安装。Solver 保留原生工具与项目指导，包括项目技能、Agent 定义和 hooks；新 HOME 不继承宿主配置。外部 MCP／插件连接不加载，直接外网由网络边界禁止。原生 init、工具事件、完成事件和 usage 全部保存；目标 skill 的发现与调用单独核查，不因使用其他项目能力而判无效。
 
-模型名称原样传入，不强制追加 `[1m]`。读取历史 usage 时仍兼容该后缀并保留原始名称。CC 普通输入与缓存读写合计为 input_tokens，并保留原始 usage；客户端费用估算不作为真实账单。运行器不另设输出 token、结构化输出重试、容器 CPU／内存或模型网关请求时间限制；使用原生默认行为与宿主资源边界。每组对话受明确的总时长约束，退出时清理 worker 与网关。
+API 模型 ID 保持不变；目前支持的 DeepSeek Flash／Pro 在 CC 的主模型、别名和子 Agent 默认模型上统一声明 `[1m]`，避免 CLI 将未知模型按 200K 处理。不会把这一能力自动应用到任意新模型。`version_label` 是实验标签，不是供应商固定版本证明。
+
+CC 启用 `--forward-subagent-text`，并导出原生 projects／子会话记录。后台任务通知可能在同一进程产生多次 init/result；允许同一 session、相同能力配置的正常重复事件，保留原始事件。有效的 `modelUsage` 包含子 Agent 调用且跨 resume 累计，因此按相邻累计值计算每轮增量，不能把各轮累计值相加。客户端费用估算不当作真实账单。
+
+容器资源与构建基础镜像在 `configs/runtime.json` 明确记录。当前 worker（包括模拟用户）使用此前 cattrs 已跑通的 2 CPU／3 GiB，网关内存为 256 MiB；任务可在 environment.resources 声明不同 worker 需求，两组保持一致。保存实际 Docker 限额、OOM 状态及可获取的 cgroup 内存峰值；这不是对其他任务资源需求的保证。
+
+每组对话只有一个开发总时长；不额外设置回复次数、生成单轮时间、输出 token 或结构化输出重试额度。到期由独立计时器停止 Solver、用户容器和网关，确认退出后收集产物。轮间快照复制期间暂停 worker 的后台写入，复制后恢复。最终导出从停止的容器读取，失败时不得以旧副本判分。模型网关按 64 KiB 分块转发请求体，连接建立保留 30 秒故障超时，生成阶段受整组截止与客户端断开控制。
+
+交互继续使用文字回复与明确 session 的 resume，不声明已经接通交互式 UI 回调。项目指导与 hooks 可执行；启动前审阅任务实际配置，运行记录核对模型与能力，发现偏离不能当作正常对照。当前模拟检查覆盖了项目 SessionStart hook、CC Task、两种 CLI 的轮间接续；没有覆盖任意 hook、任意子 Agent 配置或原生 UI 回调。
 
 
 ### 正式执行的网络边界
@@ -105,7 +113,7 @@ SWE-bench Pro V2 的 OFFICIAL 状态核对原生 reward、退出状态和实际�
 | `task_adapters.py` | 来源加载、任务准备、补丁语义与验证材料整理。 |
 | `agent_adapters/` | 各 Agent 的启动参数、上下文检查和原生事件解析。 |
 | `model_config.py`、`configs/` | 独立的模型／Agent 配置、兼容性检查与本地凭据读取。 |
-| `evaluation_runtime.py` | 容器构建与生命周期、进程采集及快照。 |
+| `evaluation_runtime.py`、`worker_control.py` | 容器构建、资源、截止停止、进程采集与稳定快照。 |
 | `worker_network.py`、`model_gateway.py` | 独立内部网络、固定模型转发、网络探测与清理。 |
 | `run_evaluation.py` | 冻结条件，组织 baseline／skill 的配对执行。 |
 | `functional_checks.py` | 在独立副本运行可信检查，输出功能结果。 |

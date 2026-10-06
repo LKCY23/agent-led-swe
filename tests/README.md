@@ -56,7 +56,7 @@ DeepSeek 凭据填在被 Git 忽略的 `tests/configs/credentials.local.json`，
 
 ## 任务与环境
 
-- D14 保留快速诊断。旧 SWE 任务退出当前推荐组合，适配器、输入和资格记录保留供显式回归；见 [状态](STATUS.md)与[旧任务目录](cases/swe/README.md)。cattrs 环境／verifier 与原生两轮协议已预检，真实多轮开发对照尚未启用。
+- D14 保留快速诊断。旧 SWE 任务退出当前推荐组合，适配器、输入和资格记录保留供显式回归；见 [状态](STATUS.md)与[旧任务目录](cases/swe/README.md)。cattrs 环境／verifier 与原生两轮协议已预检，已有两轮真实开发试跑，均未形成完整闭环；当前状态见 STATUS。
 - packaging 的 verifier 镜像保留完整测试依赖，Agent 使用单独精简的 execution image。已知安装／vendored／缓存副本清除后，需要重复起始／参考检查；实际 worker 安装项目后和执行结束时还会审计。
 - 行为场景见 [场景与状态](scenarios.md)。它们可以执行和分析，但没有程序 verifier 的场景，task_status 保持 unknown。
 - 不挂载私有参考补丁、验收材料或宿主 Docker socket。正式 Docker worker 只通过固定模型网关出站；直接外网与非许可代理路径被阻止，本地来源审计继续保留。
@@ -97,7 +97,7 @@ Solver 使用原生工具和项目指导；隔离由独立 HOME、容器、隐�
 
 `check_simulated_user.py --inputs <冻结任务输入> --profile <用户模型配置> --credentials <凭据文件> --output <新目录> --total-seconds <预算>` 运行原生 CC 用户：需求澄清、读取草案后审阅，共两个固定问题，共用显式预算。这是测试样例数量，不是正式协作的轮数限制；会产生真实模型用量。
 
-当前修复及检查见[限制清理记录](reports/runtime-restrictions-2026-10-07.md)。
+当前配置依据、修正和检查见[配置修正记录](reports/runtime-correction-2026-10-07.md)。前一轮[限制清理记录](reports/runtime-restrictions-2026-10-07.md)保留为历史，其中长上下文和资源处理已被纠正。
 
 旧 [rubric](rubrics.md)、judge 判分和文档读取模式结果保留为历史材料，不进入新成绩，也不与 native 模式混合比较。不能凭单个任务、单轮通过或耗时下降认定 skill 有效。
 
@@ -108,3 +108,5 @@ Solver 使用原生工具和项目指导；隔离由独立 HOME、容器、隐�
 `check_swe_pipeline.py` 使用未修复／参考产物检查验收链路，不调用模型。`check_codex_worker.py`、`check_claude_worker.py` 以模拟 API 检查真实 CLI 原生接入，不能证明模型或 skill 效果。原始记录索引见 [验证记录](validation.md)。
 
 当前任务选择以 [STATUS](STATUS.md) 为准。示例命令只说明接口，不表示已授权新的模型运行。旧四题的准备、预检与 worker 检查入口继续保留，相关历史不作为当前默认测试安排。
+
+资源与固定构建镜像见 `configs/runtime.json`；截止停止由 `worker_control.py` 管理。可用 `check_worker_control.py --worker-image <已构建镜像 ID> --output <新目录>` 检查真实容器停止与导出；在 CC 协议检查中增加 `--with-subagent`，可检查原生 Task 回传、上下文和用量。这些检查不调用真实模型。

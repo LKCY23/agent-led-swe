@@ -327,3 +327,8 @@ This is author review, not independent model grading. The static checks do not p
 ## Runtime restriction cleanup — 2026-10-07
 
 Removed unsupported per-turn/reply/output/retry/resource limits and restored native solver tools and project guidance. Solver and user share one conversation deadline. Historical user qualification is optional evidence; artifact verification is independent of dialogue completion. Ninety-one local tests passed; both native CLIs passed baseline/skill two-turn checks with a read-only native CC user and preserved project instructions. No real model calls or accepted skill edits. [Report](reports/runtime-restrictions-2026-10-07.md).
+
+
+## Configuration corrections — 2026-10-07
+
+Restored the supported DeepSeek context declaration across CC model slots, explicit container resources and a pinned build image. Added container-level deadlines, stopped-container export, bounded-memory gateway forwarding and disconnect cancellation. Native CC Task testing revealed repeated init/result events and cumulative child-inclusive model usage; parsing and resumed deltas were corrected. 97 local tests, CC baseline/skill with native child/user, Codex baseline/skill, and bind/copy deadline/export checks passed. Initial failed probes remain in the history. No real model calls or accepted skill edits. [Report](reports/runtime-correction-2026-10-07.md).
