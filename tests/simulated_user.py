@@ -1,227 +1,154 @@
-"""Task-grounded simulated user with read-only snapshot tools; never a grader."""
-import difflib
+"""Simulated user hosted by native Claude Code, with an isolated read-only view.
+
+Claude Code owns model calls, built-in tools, session state and structured output.
+This adapter only supplies task context, refreshes snapshots and checks receipts.
+"""
+from contextlib import ExitStack
 import json
 from pathlib import Path
-import time
+import shutil
+import subprocess
+import tempfile
+from uuid import UUID
 
-from chat_completion import complete
+from agent_adapters import get_adapter
+from agent_adapters.claude_code import BUNDLED_SKILLS
 from collaboration_runtime import UserReply
-from evaluation_runtime import digest, write_json
+from evaluation_runtime import (DEFAULT_EVALUATOR, execution_environment, file_hashes,
+                                freeze_helpers, load_helper, snapshot, write_json)
+from model_config import validate_compatibility
+
+REPLY_SCHEMA = {"type": "object", "properties": {
+    "reply": {"type": "string"}, "accepted": {"type": "boolean"}},
+    "required": ["reply", "accepted"], "additionalProperties": False}
+USER_TOOLS = {"Read", "Glob", "Grep", "StructuredOutput"}
 
 
-def tool(name, description, properties=None, required=()):
-    return {'type': 'function', 'function': {'name': name, 'description': description,
-        'parameters': {'type': 'object', 'properties': properties or {}, 'required': list(required), 'additionalProperties': False}}}
+def user_command(binary, cwd, model, effort, system, max_turns, session_id=None):
+    command = get_adapter("claude-code").conversation_command(
+        binary, cwd, model, effort, "danger-full-access", {}, session_id)
+    command[command.index("--tools") + 1] = "Read,Glob,Grep"
+    command[command.index("--permission-mode") + 1] = "dontAsk"
+    return command + ["--bare", "--allowedTools", "Read,Glob,Grep,StructuredOutput",
+        "--system-prompt", system, "--json-schema", json.dumps(REPLY_SCHEMA),
+        "--max-turns", str(max_turns)]
 
 
-TOOLS = [
-    tool('list_files', '列出当前公开工作区文件；offset 用于分页。',
-         {'prefix': {'type': 'string'}, 'offset': {'type': 'integer'}}),
-    tool('list_changes', '列出相对初始工作区新增、删除和修改的文件。'),
-    tool('read_file', '按行读取当前文件。仅可读工作区相对路径。',
-         {'path': {'type': 'string'}, 'start': {'type': 'integer'}, 'lines': {'type': 'integer'}}, ('path',)),
-    tool('read_diff', '读取一个文件相对初始工作区的 unified diff，offset 按字符分页。',
-         {'path': {'type': 'string'}, 'offset': {'type': 'integer'}}, ('path',)),
-    tool('respond_to_agent', '发送本轮最终回复。accepted 仅表示接受最终交付并结束整个协作；同意方案或允许继续必须为 false。',
-         {'reply': {'type': 'string'}, 'accepted': {'type': 'boolean'}}, ('reply', 'accepted')),
-]
-EXCLUDED = {'.git', '.venv', '__pycache__', '.pytest_cache', '.hypothesis', '.benchmarks'}
-
-
-def normalize_calls(calls):
-    """Handle the observed DeepSeek call(function=..., ...) wrapper explicitly.
-
-    Only declared tool names are normalized; argument validation remains unchanged.
-    Raw API responses and this normalized representation are both retained.
-    """
-    names = {entry['function']['name'] for entry in TOOLS}
-    result = []
-    for entry in calls:
-        function = entry['function']
-        if function['name'] == 'call':
-            arguments = json.loads(function['arguments'])
-            if isinstance(arguments, dict) and arguments.get('function') in names:
-                arguments = dict(arguments)
-                name = arguments.pop('function')
-                entry = {**entry, 'function': {'name': name, 'arguments': json.dumps(arguments)}}
-        result.append(entry)
-    return result
-
-
-class SnapshotReader:
-    def __init__(self, initial, current):
-        self.initial, self.current = Path(initial).resolve(), Path(current).resolve()
-        self.read_count = 0
-
-    def path(self, root, name):
-        if not isinstance(name, str) or not name or Path(name).is_absolute():
-            raise ValueError('Only nonempty relative paths are allowed')
-        rel = Path(name)
-        if '..' in rel.parts or EXCLUDED.intersection(rel.parts):
-            raise ValueError('Path is outside the public file view')
-        path = root / rel
-        if not path.resolve().is_relative_to(root) or any(p.is_symlink() for p in [path, *path.parents] if p != root):
-            raise ValueError('Symlink access is not supported')
-        return path
-
-    def files(self, root):
-        files = {}
-        for p in root.rglob('*'):
-            relative = p.relative_to(root)
-            if EXCLUDED.intersection(relative.parts) or p.is_symlink() or not p.is_file():
-                continue
-            self.path(root, str(relative))
-            files[str(relative)] = digest(p)
-        return files
-
-    def text(self, root, name, missing=False):
-        path = self.path(root, name)
-        if missing and not path.exists():
-            return ''
-        if not path.is_file() or path.stat().st_size > 2 * 1024 * 1024:
-            raise ValueError('File unavailable or exceeds the 2 MiB read limit')
-        return path.read_text(encoding='utf-8')
-
-    def call(self, name, args):
-        if not isinstance(args, dict):
-            raise ValueError('Tool arguments must be an object')
-        allowed = {'list_files': {'prefix', 'offset'}, 'list_changes': set(),
-                   'read_file': {'path', 'start', 'lines'}, 'read_diff': {'path', 'offset'}}
-        if name not in allowed or args.keys() - allowed[name]:
-            raise ValueError('Unknown tool or arguments')
-        for key in ('offset', 'start', 'lines'):
-            if key in args and (type(args[key]) is not int or args[key] < (1 if key in ('start', 'lines') else 0)):
-                raise ValueError('Invalid range')
-        if name == 'list_files':
-            prefix = args.get('prefix', '')
-            if not isinstance(prefix, str):
-                raise ValueError('prefix must be a string')
-            values = [p for p in sorted(self.files(self.current)) if p.startswith(prefix)]
-            offset = args.get('offset', 0)
-            return {'files': values[offset:offset+200], 'total': len(values), 'next_offset': offset+200 if offset+200 < len(values) else None}
-        if name == 'list_changes':
-            before, after = self.files(self.initial), self.files(self.current)
-            return {'added': sorted(after.keys()-before.keys()), 'removed': sorted(before.keys()-after.keys()),
-                    'modified': sorted(k for k in before.keys() & after.keys() if before[k] != after[k])}
-        path = args.get('path')
-        if name == 'read_file':
-            lines = self.text(self.current, path).splitlines()
-            start, count = args.get('start', 1), min(args.get('lines', 160), 300)
-            selected, size = [], 0
-            for index in range(start-1, min(len(lines), start-1+count)):
-                line = f'{index+1}: {lines[index]}'
-                if size + len(line) > 16000:
-                    break
-                selected.append(line)
-                size += len(line)
-            self.read_count += 1
-            next_line = start + len(selected)
-            return {'path': path, 'content': '\n'.join(selected), 'total_lines': len(lines),
-                    'next_line': next_line if next_line <= len(lines) else None}
-        before, after = self.text(self.initial, path, True), self.text(self.current, path, True)
-        diff = ''.join(difflib.unified_diff(before.splitlines(True), after.splitlines(True), fromfile='before/'+path, tofile='current/'+path))
-        offset = args.get('offset', 0)
-        self.read_count += 1
-        return {'path': path, 'diff': diff[offset:offset+16000],
-                'next_offset': offset+16000 if offset+16000 < len(diff) else None}
+def parse_reply(raw, model, previous_session=None):
+    events = [json.loads(line) for line in raw.splitlines() if line.strip()]
+    initial = [e for e in events if e.get("type") == "system" and e.get("subtype") == "init"]
+    results = [e for e in events if e.get("type") == "result"]
+    if len(initial) != 1 or len(results) != 1:
+        raise ValueError("Missing native initialization or final result")
+    init, final = initial[0], results[0]
+    if (any(init.get(k) != [] for k in ("plugins", "mcp_servers"))
+            or not isinstance(init.get("skills"), list) or not set(init["skills"]) <= BUNDLED_SKILLS):
+        raise ValueError("User instance loaded unexpected skills, plugins or MCP servers")
+    if not isinstance(init.get("tools"), list) or not set(init["tools"]) <= USER_TOOLS:
+        raise ValueError("User instance exposed non-read-only tools")
+    models = {m.removesuffix("[1m]") for m in (final.get("modelUsage") or {})}
+    if models != {model}:
+        raise ValueError("Native user model differs from the frozen profile")
+    session = str(UUID(final["session_id"]))
+    if init.get("session_id") != session or (previous_session and session != previous_session):
+        raise ValueError("Native user session changed unexpectedly")
+    if final.get("subtype") != "success" or final.get("is_error") is not False:
+        raise ValueError("Native user turn did not complete successfully")
+    value = final.get("structured_output")
+    if not isinstance(value, dict) or set(value) != {"reply", "accepted"}:
+        raise ValueError("Native structured_output is missing or invalid")
+    reply = UserReply(value["reply"], value["accepted"])
+    successful_reads, read_ids = set(), set()
+    for event in events:
+        content = (event.get("message") or {}).get("content", [])
+        for block in content if isinstance(content, list) else []:
+            if block.get("type") == "tool_use":
+                if block.get("name") not in USER_TOOLS:
+                    raise ValueError("User instance attempted an unexpected tool")
+                if block.get("name") == "Read" and str(block.get("input", {}).get("file_path", "")).startswith("/testbed/current/"):
+                    read_ids.add(block.get("id"))
+            if block.get("type") == "tool_result" and not block.get("is_error", False):
+                successful_reads.add(block.get("tool_use_id"))
+    if reply.accepted and not read_ids.intersection(successful_reads):
+        raise ValueError("Final acceptance requires a successful current-artifact read")
+    return reply, session, final
 
 
 class SimulatedUser:
-    def __init__(self, profile, key, persona, requirements, initial, evidence, *,
-                 max_calls=40, max_calls_per_reply=5, max_tokens=4096, effort='none', transport=complete):
-        if profile['protocol'] != 'chat-completions':
-            raise ValueError('Simulated user requires a Chat Completions profile')
-        if profile['provider'] != 'deepseek' or effort != 'none':
-            raise ValueError('Typed user replies require DeepSeek non-thinking mode with required tool choice')
-        for value in (max_calls, max_calls_per_reply, max_tokens):
-            if type(value) is not int or value < 1:
-                raise ValueError('User budgets must be positive integers')
-        self.profile, self.key, self.transport = profile, key, transport
-        self.system = persona + '\n\n# 固定任务要求\n\n' + requirements
-        self.initial, self.evidence = initial, evidence
-        self.max_calls, self.max_calls_per_reply, self.max_tokens = max_calls, max_calls_per_reply, max_tokens
-        self.calls, self.replies, self.effort = 0, 0, effort
-        self.usage = []
-        evidence.mkdir(parents=True, exist_ok=False)
+    def __init__(self, profile, persona, requirements, initial, evidence, environment, cli, credentials,
+                 *, max_replies=12, max_turns=8, effort="high", authenticate=True, model_upstream=None):
+        validate_compatibility("claude-code", profile, effort)
+        if any(type(v) is not int or v < 1 for v in (max_replies, max_turns)):
+            raise ValueError("Native user limits must be positive integers")
+        self.profile, self.evidence, self.initial = profile, Path(evidence), Path(initial)
+        self.environment = {**environment, "readonly_workspace": True, "install_argv": [], "workspace_mode": "bind", "workdir": "/testbed"}
+        self.cli = {**cli, "agent": "claude-code"}
+        self.credentials, self.authenticate, self.model_upstream = credentials, authenticate, model_upstream
+        self.max_replies, self.max_turns, self.effort = max_replies, max_turns, effort
+        self.calls, self.session, self.seen_messages = 0, None, 0
+        self.system = persona + "\n\n# 固定任务要求\n" + requirements + (
+            "\n\n你是需求提出者，不是负责实现的开发 Agent。通过 Claude Code 原生结构化输出返回 reply 和 accepted。"
+            "当前公开产物在 /testbed/current，初始源码在 /testbed/initial。它们只读；"
+            "每轮 current 会更新，审阅时读取当前文件，不以旧读到的内容代替。只在需要核查产物时使用工具。")
+
+    def __enter__(self):
+        self.stack = ExitStack()
+        try:
+            self.evidence.mkdir(parents=True, exist_ok=False)
+            freeze_helpers(DEFAULT_EVALUATOR, self.evidence / "helpers")
+            self.work = Path(self.stack.enter_context(tempfile.TemporaryDirectory(prefix="native-user-"))).resolve()
+            snapshot(self.initial, self.work / "initial")
+            (self.work / "current").mkdir()
+            self.binary, self.cwd, _, _ = self.stack.enter_context(execution_environment(
+                {"environment": self.environment}, self.work, self.evidence, self.cli,
+                model_profile=self.profile, credentials=self.credentials, authenticate=self.authenticate,
+                model_upstream=self.model_upstream))
+            # Verify Docker enforces read-only access, independently of tool policy.
+            container = self.binary[self.binary.index("--user") + 2]
+            probe = subprocess.run(["docker", "exec", container, "python3", "-c",
+                "from pathlib import Path; Path('/testbed/write-probe').write_text('unexpected')"], capture_output=True)
+            write_json(self.evidence / "readonly-check.json", {"exit_code": probe.returncode,
+                "stderr": probe.stderr.decode(errors="replace")})
+            if probe.returncode == 0 or b"Read-only file system" not in probe.stderr:
+                raise RuntimeError("User workspace did not enforce a read-only mount")
+            return self
+        except BaseException:
+            self.stack.close()
+            raise
+
+    def __exit__(self, *args):
+        return self.stack.__exit__(*args)
 
     def __call__(self, conversation, current, timeout):
-        self.replies += 1
-        turn = self.evidence / f'reply-{self.replies:03d}'
+        if self.calls >= self.max_replies:
+            raise TimeoutError("Native user reply budget exhausted")
+        for path in Path(current).rglob("*"):
+            if path.is_symlink() and not path.resolve().is_relative_to(Path(current).resolve()):
+                raise ValueError("Public snapshot contains an escaping symlink")
+        shutil.rmtree(self.work / "current")
+        snapshot(current, self.work / "current")
+        before = file_hashes(self.work)
+        self.calls += 1
+        turn = self.evidence / f"reply-{self.calls:03d}"
         turn.mkdir()
-        deadline = time.monotonic() + timeout
-        reader = SnapshotReader(self.initial, current)
-        messages = [{'role': 'system', 'content': self.system}, {'role': 'user', 'content':
-            '以下是你与开发 Agent 的完整公开对话，请回应最后一条消息。\n' + json.dumps(conversation, ensure_ascii=False)}]
-        try:
-            for index in range(self.max_calls_per_reply):
-                if self.calls >= self.max_calls or time.monotonic() >= deadline:
-                    raise TimeoutError('Simulated-user budget exhausted')
-                last_call = index == self.max_calls_per_reply - 1 or self.calls == self.max_calls - 1
-                choice = ({'type': 'function', 'function': {'name': 'respond_to_agent'}}
-                          if last_call else 'required')
-                payload = {'model': self.profile['model'], 'messages': messages,
-                           'tools': [TOOLS[-1]] if last_call else TOOLS,
-                           'stream': False, 'max_tokens': self.max_tokens,
-                           'tool_choice': choice, 'thinking': {'type': 'disabled'}}
-                call = turn / f'call-{index+1:02d}'
-                call.mkdir()
-                write_json(call / 'request.json', payload)
-                self.calls += 1
-                response = self.transport(self.profile, self.key, payload, deadline-time.monotonic())
-                write_json(call / 'response.json', response)
-                if response.get('model') != self.profile['model']:
-                    raise ValueError('Simulated-user response model differs from the frozen profile')
-                self.usage.append(response.get('usage'))
-                choices = response.get('choices')
-                if not isinstance(choices, list) or len(choices) != 1:
-                    raise ValueError('Missing or ambiguous simulated-user choice')
-                choice = choices[0]
-                message = choice['message']
-                if choice['finish_reason'] == 'tool_calls':
-                    calls = message.get('tool_calls', [])
-                    if not calls or len(calls) > 8:
-                        raise ValueError('Invalid simulated-user tool batch')
-                    calls = normalize_calls(calls)
-                    write_json(call / 'normalized-tools.json', calls)
-                    offered = {t['function']['name'] for t in payload['tools']}
-                    if any(c['function']['name'] not in offered for c in calls):
-                        raise ValueError('Simulated user called a tool not offered in this request')
-                    if any(c['function']['name'] == 'respond_to_agent' for c in calls):
-                        if len(calls) != 1:
-                            raise ValueError('Send the final reply after completing file inspection')
-                        reply = json.loads(calls[0]['function']['arguments'])
-                        return self.reply(reply, reader)
-                    messages.append({**{k: v for k, v in message.items() if k in ('role', 'content', 'reasoning_content')}, 'tool_calls': calls})
-                    records = []
-                    for entry in calls:
-                        function = entry['function']
-                        try:
-                            result = reader.call(function['name'], json.loads(function['arguments']))
-                        except (OSError, UnicodeError, ValueError) as exc:
-                            result = {'error': str(exc)}
-                        records.append({'tool': function, 'result': result})
-                        messages.append({'role': 'tool', 'tool_call_id': entry['id'], 'content': json.dumps(result, ensure_ascii=False)})
-                    write_json(call / 'tools.json', records)
-                    continue
-                if choice['finish_reason'] != 'stop':
-                    raise ValueError('Simulated-user response was truncated or interrupted')
-                reply = json.loads(message['content'])
-                return self.reply(reply, reader)
-            raise TimeoutError('Simulated-user tool round limit reached')
-        except Exception as exc:
-            write_json(turn / 'error.json', {'type': type(exc).__name__, 'message': str(exc)})
-            if isinstance(exc, (OSError, ValueError, RuntimeError, TimeoutError)):
-                raise
-            raise ValueError('Malformed simulated-user response; see retained evidence') from exc
-        finally:
-            write_json(self.evidence / 'usage.json', {'calls': self.calls, 'replies': self.replies,
-                                                    'per_call_usage': self.usage})
-
-    @staticmethod
-    def reply(reply, reader):
-        if not isinstance(reply, dict) or set(reply) != {'reply', 'accepted'}:
-            raise ValueError('Expected reply/accepted JSON from simulated user')
-        answer = UserReply(reply['reply'], reply['accepted'])
-        if answer.accepted and reader.read_count == 0:
-            raise ValueError('Final acceptance requires inspecting current artifacts')
-        return answer
+        # The user keeps a native session; send only newly observed public messages.
+        messages = conversation[self.seen_messages:]
+        prompt = turn / "input.jsonl"
+        content = "以下是新增的公开对话，请以需求提出者身份回应最后一条开发 Agent 消息。\n" + json.dumps(messages, ensure_ascii=False)
+        prompt.write_text(json.dumps({"type": "user", "message": {"role": "user", "content": content}}, ensure_ascii=False) + "\n")
+        command = user_command(self.binary, self.cwd, self.profile["model"], self.effort,
+                               self.system, self.max_turns, self.session)
+        capture = load_helper(self.evidence / "helpers/capture.py").capture
+        record = capture(self.work, turn / "capture", command, timeout, prompt)
+        if record["timed_out"]:
+            raise TimeoutError("Native user turn timed out")
+        if record["exit_code"] != 0 or record["launch_error"]:
+            raise RuntimeError("Native user CLI failed; see retained capture")
+        reply, self.session, final = parse_reply((turn / "capture/stdout.log").read_text(), self.profile["model"], self.session)
+        if file_hashes(self.work) != before:
+            raise RuntimeError("Native user modified the read-only public view")
+        self.seen_messages = len(conversation)
+        write_json(turn / "result.json", {"reply": reply.text, "accepted": reply.accepted,
+            "session_id": self.session, "native_usage": final.get("usage"), "model_usage": final.get("modelUsage"),
+            "artifact_readonly": True})
+        return reply

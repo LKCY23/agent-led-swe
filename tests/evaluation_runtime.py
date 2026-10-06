@@ -28,7 +28,7 @@ def adapter_hashes():
         'evaluation_runtime.py', 'run_evaluation.py', 'evaluate_results.py', 'run_smoke.py',
         'task_adapters.py', 'functional_checks.py', 'model_config.py', 'native_skills.py', 'packaging_environment.py', 'worker_network.py', 'model_gateway.py', 'suite_tasks.py', 'swe_pro_verifier.py', 'container_workspace.py',
         'cattrs_task.py', 'collaboration_runtime.py', 'check_collaboration_worker.py',
-        'chat_completion.py', 'simulated_user.py', 'run_collaboration.py']
+        'simulated_user.py', 'run_collaboration.py', 'check_simulated_user.py']
     names += [str(p.relative_to(root)) for p in sorted((root / 'agent_adapters').glob('*.py'))]
     return {name: digest(root / name) for name in names}
 
@@ -191,12 +191,15 @@ def docker_worker(task, workspace, evidence, cli, skill, authenticate,
     environment = task['environment']
     workdir = environment.get('workdir', '/testbed')
     copy_mode = environment.get('workspace_mode') == 'copy'
+    readonly = environment.get('readonly_workspace', False)
+    if readonly and (copy_mode or environment.get('install_argv') != []):
+        raise ValueError('Read-only workers require a bind mount and no project installation')
     from container_workspace import install_workspace, export_workspace, allow_workspace_owner
     name = 'swe-executor-' + uuid.uuid4().hex[:12]
     argv = ['docker', 'run', '-d', '--init', '--name', name, '--cpus', '2', '--memory', '3g',
             '--network', network, '--cap-drop=ALL', '--cap-add=CHOWN', '--security-opt=no-new-privileges',
             *(['--platform', environment['platform']] if environment.get('platform') else []),
-            *([] if copy_mode else ['-v', f'{workspace}:{workdir}']), '-w', workdir]
+            *([] if copy_mode else ['-v', f'{workspace}:{workdir}' + (':ro' if readonly else '')]), '-w', workdir]
     installed = ('/root/.agents/skills/agent-led-swe' if agent == 'codex'
                  else '/tmp/agent-home/.claude/skills/agent-led-swe')
     if skill:
@@ -214,6 +217,8 @@ def docker_worker(task, workspace, evidence, cli, skill, authenticate,
             env = claude_environment(model_profile, 'evaluation-gateway')
             env['ANTHROPIC_BASE_URL'] = gateway
             env.update({'HOME': '/tmp/agent-home', 'CLAUDE_CONFIG_DIR': '/tmp/agent-home/.claude'})
+            if readonly:
+                env.update({'MAX_STRUCTURED_OUTPUT_RETRIES': '1', 'CLAUDE_CODE_MAX_OUTPUT_TOKENS': '4096'})
             env_file = Path(auth_tmp) / 'worker.env'
             if any('\n' in v or '\r' in v for v in env.values()):
                 raise ValueError('Worker environment values must be single-line strings')
@@ -267,6 +272,7 @@ def docker_worker(task, workspace, evidence, cli, skill, authenticate,
         write_json(evidence / 'environment.json', {'image': image, 'cli': actual, 'agent': agent,
                    'boundary': 'Docker container; no evaluator materials or Docker socket mounted',
                    'inner_sandbox': 'danger-full-access', 'skill_mounted': bool(skill),
+                   'readonly_workspace': readonly,
                    'network': 'internal-model-gateway', 'model_gateway': gateway})
         write_json(evidence / 'skill-installation.json', {
             'mode': 'native', 'agent': agent, 'installed': bool(skill),

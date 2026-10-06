@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Two native CLI turns against a fake API; no credentials or real model calls."""
 import argparse
+from contextlib import ExitStack
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
@@ -37,6 +38,10 @@ def main():
                if args.agent == 'claude-code' else None)
     model = profile['model'] if profile else 'gpt-6.1-sol'
     task = {'environment': {'kind': 'docker', 'worker_image': image}}
+    user_cli = {'agent': 'claude-code', 'version': versions['claude-code']['version']}
+    user_image = image
+    if args.with_simulated_user and args.agent != 'claude-code':
+        user_image = build_worker_image({'image': args.base_image}, user_cli['version'], output / 'user-build', 'claude-code')
     reports = []
     for variant in ('baseline', 'skill'):
         evidence = output / variant
@@ -50,31 +55,13 @@ def main():
 
             def do_POST(self):
                 payload = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-                if self.path.endswith('/chat/completions'):
-                    user_requests.append(payload)
-                    write_json(evidence / 'user-requests.json', user_requests)
-                    inspected = any(m['role'] == 'tool' for m in payload['messages'])
-                    finished = 'REPLY_TWO' in json.dumps(payload['messages'])
-                    message = {'role': 'assistant', 'content': None, 'tool_calls': [{
-                        'id': 'reply', 'type': 'function', 'function': {'name': 'respond_to_agent', 'arguments': json.dumps({
-                            'reply': 'Accepted.' if finished else 'USER_FEEDBACK_TOKEN', 'accepted': finished})}}]}
-                    if not inspected:
-                        message.update(content=None, reasoning_content='Inspect public fixture', tool_calls=[{
-                            'id': 'inspect', 'type': 'function', 'function': {
-                                'name': 'read_file', 'arguments': '{"path":"fixture.txt"}'}}])
-                    response = {'model': 'deepseek-flash', 'choices': [{'message': message,
-                        'finish_reason': 'tool_calls'}],
-                        'usage': {'prompt_tokens': 10, 'completion_tokens': 5}}
-                    self.send_response(200)
-                    self.send_header('Content-Type', 'application/json')
-                    self.end_headers()
-                    self.wfile.write(json.dumps(response).encode())
-                    return
-                requests.append(payload)
-                write_json(evidence / 'requests.json', requests)
+                is_user = 'NATIVE_USER_TEST_ROLE' in json.dumps(payload.get('system', ''))
+                target_requests = user_requests if is_user else requests
+                target_requests.append(payload)
+                write_json(evidence / ('user-requests.json' if is_user else 'requests.json'), target_requests)
                 rendered = json.dumps(payload, ensure_ascii=False)
                 text = 'REPLY_TWO' if 'USER_FEEDBACK_TOKEN' in rendered else 'REPLY_ONE'
-                if args.agent == 'codex':
+                if args.agent == 'codex' and not is_user:
                     item = {'id': f'msg_{len(requests)}', 'type': 'message', 'role': 'assistant',
                             'status': 'completed', 'content': [{'type': 'output_text', 'text': text, 'annotations': []}]}
                     response = {'id': f'resp_{len(requests)}', 'object': 'response', 'status': 'completed',
@@ -88,8 +75,25 @@ def main():
                               (None, {'type': 'response.output_item.done', 'output_index': 0, 'item': item}),
                               (None, {'type': 'response.completed', 'response': response})]
                 else:
-                    message = {'id': f'msg_{len(requests)}', 'type': 'message', 'role': 'assistant', 'model': model,
-                               'content': [{'type': 'text', 'text': text}], 'stop_reason': 'end_turn', 'stop_sequence': None,
+                    block = {'type': 'text', 'text': text}
+                    if is_user:
+                        finished = 'REPLY_TWO' in json.dumps(payload['messages'])
+                        suffix = '2' if finished else '1'
+                        blocks = [b for m in payload['messages'] for b in m.get('content', [])
+                                  if isinstance(b, dict)]
+                        done_ids = {b.get('tool_use_id') for b in blocks if b.get('type') == 'tool_result'}
+                        if 'user-read-' + suffix not in done_ids:
+                            block = {'type': 'tool_use', 'id': 'user-read-' + suffix, 'name': 'Read',
+                                     'input': {'file_path': '/testbed/current/fixture.txt'}}
+                        elif 'user-output-' + suffix not in done_ids:
+                            block = {'type': 'tool_use', 'id': 'user-output-' + suffix, 'name': 'StructuredOutput',
+                                     'input': {'reply': 'Accepted.' if finished else 'USER_FEEDBACK_TOKEN', 'accepted': finished}}
+                        else:
+                            block = {'type': 'text', 'text': 'Done.'}
+                    message = {'id': f'msg_{len(target_requests)}', 'type': 'message', 'role': 'assistant',
+                               'model': 'deepseek-flash' if is_user else model,
+                               'content': [block], 'stop_reason': 'tool_use' if block['type'] == 'tool_use' else 'end_turn',
+                               'stop_sequence': None,
                                'usage': {'input_tokens': 10, 'output_tokens': 2, 'cache_read_input_tokens': 0,
                                          'cache_creation_input_tokens': 0}}
                     if not payload.get('stream'):
@@ -100,11 +104,12 @@ def main():
                         return
                     events = [('message_start', {'type': 'message_start', 'message': {**message, 'content': [], 'stop_reason': None}}),
                               ('content_block_start', {'type': 'content_block_start', 'index': 0,
-                                                       'content_block': {'type': 'text', 'text': ''}}),
+                                                       'content_block': {'type': 'text', 'text': ''} if block['type'] == 'text' else {**block, 'input': {}}}),
                               ('content_block_delta', {'type': 'content_block_delta', 'index': 0,
-                                                       'delta': {'type': 'text_delta', 'text': text}}),
+                                                       'delta': {'type': 'text_delta', 'text': block['text']} if block['type'] == 'text' else
+                                                         {'type': 'input_json_delta', 'partial_json': json.dumps(block['input'])}}),
                               ('content_block_stop', {'type': 'content_block_stop', 'index': 0}),
-                              ('message_delta', {'type': 'message_delta', 'delta': {'stop_reason': 'end_turn', 'stop_sequence': None},
+                              ('message_delta', {'type': 'message_delta', 'delta': {'stop_reason': message['stop_reason'], 'stop_sequence': None},
                                                  'usage': message['usage']}),
                               ('message_stop', {'type': 'message_stop'})]
                 self.send_response(200)
@@ -133,15 +138,17 @@ def main():
                     if messages[-1]['content'] == 'REPLY_TWO':
                         return UserReply('Accepted.', accepted=True)
                     raise ValueError('Unexpected mock solver reply')
-                if args.with_simulated_user:
-                    from evaluation_runtime import snapshot
-                    snapshot(work, evidence / 'user-initial')
-                    user_profile = load_profile(CONFIGS / 'models/user-deepseek-flash.json')
-                    user_profile['base_url'] = f'http://127.0.0.1:{server.server_port}'
-                    responder = SimulatedUser(user_profile, 'synthetic-key', 'Test user rules',
-                        'Inspect fixture.txt before accepting.', evidence / 'user-initial', evidence / 'user-model')
-                with execution_environment(task, work, evidence, cli, treatment, authenticate=False,
-                        model_profile=profile, model_upstream=f'http://host.docker.internal:{server.server_port}') as runtime:
+                with ExitStack() as stack:
+                    if args.with_simulated_user:
+                        from evaluation_runtime import snapshot
+                        snapshot(work, evidence / 'user-initial')
+                        user_profile = load_profile(CONFIGS / 'models/user-deepseek-flash.json')
+                        responder = stack.enter_context(SimulatedUser(user_profile, 'NATIVE_USER_TEST_ROLE',
+                            'Inspect fixture.txt before accepting.', evidence / 'user-initial', evidence / 'user-model',
+                            {'kind': 'docker', 'worker_image': user_image}, user_cli, Path('/unused'),
+                            authenticate=False, model_upstream=f'http://host.docker.internal:{server.server_port}'))
+                    runtime = stack.enter_context(execution_environment(task, work, evidence, cli, treatment, authenticate=False,
+                        model_profile=profile, model_upstream=f'http://host.docker.internal:{server.server_port}'))
                     binary, cwd, sandbox, entrypoint = runtime
                     context = adapter.prepare_context(binary, cwd, evidence, model, 'high', sandbox, entrypoint)
                     result = converse(adapter, binary, cwd, sandbox, context, model, 'high', output / 'helpers',
@@ -154,7 +161,7 @@ def main():
                 passed = (result['status'] == 'completed' and len(result['turns']) == 2
                           and history_preserved and activation['status'] == 'verified')
                 if args.with_simulated_user:
-                    passed = passed and len(user_requests) == 4
+                    passed = passed and len(user_requests) >= 4
                 reports.append({'variant': variant, 'passed': passed, 'history_preserved': history_preserved,
                                 'native_activation': activation, 'result': result})
         finally:

@@ -17,7 +17,7 @@
 | D1、D4、D7、D10–D13 | 早期需求、协作与文档场景 | 保留专项回归；限制见 [场景说明](scenarios.md) |
 | smolagents、xarray、NodeBB、Navidrome、packaging | 旧单次请求 SWE 校准任务 | 退出当前推荐组合；适配器、输入和资格记录保留，可按名称显式调用 |
 | Agents SDK、DSPy | 未采用的早期候选 | 不启用；定义和结论保留追溯 |
-| SWE-Interact 适配 | cattrs 优先，TOMLKit、HTTPX 后续候选 | 环境／verifier、双宿主模拟联测通过；Flash 与 Pro 用户协议检查均未通过，尚未进行开发对照。见[Pro 对照结果](reports/simulated-user-pro-comparison-2026-10-06.md) |
+| SWE-Interact 适配 | cattrs 优先，TOMLKit、HTTPX 后续候选 | 环境／verifier、双宿主联测通过；用户已改为原生 CC + Flash，两轮真实检查通过，完整开发对照尚未运行。见[原生接入结果](reports/native-cc-user-2026-10-06.md) |
 
 当前没有默认运行的完整 SWE benchmark 套件。真实模型测试仍需明确任务、版本、模型、比较方式与预算。
 
@@ -25,6 +25,6 @@
 
 保留 Codex／Claude Code、Flash／Pro 配置、原生 skill 安装调用、Docker 与模型网关隔离、完整事件和文件快照、独立 verifier。功能结果与流程分析分开，不自动调用 LLM judge。
 
-既有 `run_evaluation.py` 仍用于单次请求；`run_collaboration.py` 提供独立多轮入口，要求任务和用户模型均取得资格。Flash／Pro 模拟用户真实检查未通过，入口保持阻止运行。实现约定见 [协议](protocol.md)。
+既有 `run_evaluation.py` 仍用于单次请求；`run_collaboration.py` 提供独立多轮入口。当前可用用户资格为 `cattrs-user-cc-flash.json`，旧直连 API 的失败资格只作历史记录。实现约定见 [协议](protocol.md)。
 
-用户选择的 Pro 小样本对照已完成，仍在首轮发生工具协议错误。建议先用单一回复工具做最小协议诊断，再恢复读取和多轮历史。当前没有可据此分析 skill 表现的真实多轮结果。暂不删除旧适配代码或镜像。
+自写用户工具循环已移除。接下来可按已准备的有限配置开展一次开发对照，检查用户回应、solver 推进与最终 verifier 结果；目前没有完整 skill 多轮表现结论。

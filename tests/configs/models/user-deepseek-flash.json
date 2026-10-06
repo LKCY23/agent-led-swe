@@ -1,8 +1,8 @@
 {
   "provider": "deepseek",
   "model": "deepseek-flash",
-  "version_label": "DeepSeek-V4.1-Flash simulated user",
-  "protocol": "chat-completions",
-  "base_url": "https://api.deepseek.com",
+  "version_label": "DeepSeek flash simulated user via Claude Code",
+  "protocol": "anthropic-messages",
+  "base_url": "https://api.deepseek.com/anthropic",
   "api_key_env": "DEEPSEEK_API_KEY"
 }

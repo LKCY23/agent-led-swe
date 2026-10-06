@@ -1,5 +1,7 @@
 # 模拟用户接入与真实 Flash 检查
 
+当前实现已改为[原生 CC 用户](native-cc-user-2026-10-06.md)，本报告描述的是已停用的直连 API 路径。
+
 后续：[Pro 小样本对照](simulated-user-pro-comparison-2026-10-06.md)也未通过。以下保留本轮 Flash 接入的原始结论与过程。
 
 **接入代码已实现，但真实模拟用户尚未取得运行资格，因此没有开始 cattrs 的 skill 开发对照。** 本轮从 `3bab3c1` 继续，在原测试 worktree 内工作；正式 skill 不变。用户选择的模拟用户模型为 DeepSeek Flash。
@@ -10,7 +12,7 @@
 | --- | --- |
 | [初始请求](../cases/collaboration/cattrs/request.md)、[用户规则](../cases/collaboration/cattrs/user.md) | 固定公开目标、授权及私有回应规则；原始功能要求从冻结任务输入读取。不给用户模型 skill、组别或 verifier。 |
 | [simulated_user.py](../simulated_user.py) | 根据公开对话回应；只能列文件、读文件和对比初始快照。审阅未提交产物，不要求 Git 提交；不提供 shell、写入或任意目录访问。 |
-| [chat_completion.py](../chat_completion.py) | 独立的 Chat Completions HTTP 子进程。凭据通过 stdin 传递，不写进 argv 或证据；禁用重定向、限制响应大小、超时终止，不自动重试。 |
+| `chat_completion.py`（历史提交 `8b31874`；现已移除） | 当时使用独立的 Chat Completions HTTP 子进程。凭据通过 stdin 传递，不写进 argv 或证据；禁用重定向、限制响应大小、超时终止，不自动重试。 |
 | [run_collaboration.py](../run_collaboration.py) | 冻结两组条件，运行同一原生会话的多轮协作，再独立验收；要求任务预检和模拟用户资格都通过。当前 Flash 资格为失败，真实配对入口会拒绝执行。 |
 
 每次用户回应有模型调用上限，整组还有总调用上限；每个请求限制生成长度，用户与 solver 均有时间限制。solver 费用没有硬上限，不把时长控制说成费用控制。完整问答、HTTP 请求／响应、工具结果、逐轮产物与错误均保留在 solver 不可见的证据目录。

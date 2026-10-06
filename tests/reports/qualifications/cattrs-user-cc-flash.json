@@ -1,0 +1,34 @@
+{
+  "qualified": true,
+  "scope": "Two-turn native user protocol/read-only smoke; first development pilot only",
+  "model_profile": {
+    "provider": "deepseek",
+    "model": "deepseek-flash",
+    "version_label": "DeepSeek flash simulated user via Claude Code",
+    "protocol": "anthropic-messages",
+    "base_url": "https://api.deepseek.com/anthropic",
+    "api_key_env": "DEEPSEEK_API_KEY"
+  },
+  "cli": {
+    "agent": "claude-code",
+    "version": "2.1.278"
+  },
+  "persona_sha256": "93771118b78d0c37b9c42d33254d959f4f994a2a1f32fce8cbbe643947f76839",
+  "requirements_sha256": "e152e2b2c2c6ba4429694437fe5a645427c1777ebc9fc1fcd96fe0cc3fd59fcc",
+  "tool_files": {
+    "simulated_user.py": "87c1ed3c9af08e63de229221fc0a177a3435ddd7408a771f128303b057854239",
+    "evaluation_runtime.py": "3c4ad00ebb6e24469af1e50c1e691e3545ac1fc6f7defdf4b3d77b10696492f1",
+    "model_config.py": "d4d205ff332ea9e86ac3b6f6123f26a52de30294e77dbaff067c9a564794fd5a",
+    "agent_adapters/claude_code.py": "2da81688ca14545af6d9b4ee9c33c90e42d2607d4a3fc00194402819cb1c43c0"
+  },
+  "evidence": "/Users/liyao/agent-led-swe/tests/runs/native-cc-user-20261006-v3/result.json",
+  "native_session_id": "1beba239-74b2-4929-9a79-3f5540a4aa3a",
+  "checks": {
+    "structured_replies": true,
+    "same_session": true,
+    "successful_draft_read": true,
+    "design_not_final_acceptance": true,
+    "readonly_mount": true
+  },
+  "content_review": "Both conflicts in the supplied draft were identified; requirements were substantially restated. Full-task user behavior remains to be evaluated."
+}
