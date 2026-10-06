@@ -2,7 +2,9 @@
 from collections import Counter
 import json
 import re
-from model_config import claude_model
+from model_config import claude_model, allow_subagents
+
+DELEGATION_TOOLS = {'Task', 'Agent', 'Workflow'}
 
 
 # Bundled commands in the pinned 2.1.278 CLI, present in both comparison arms.
@@ -33,19 +35,23 @@ class ClaudeCodeAdapter:
         return receipt
 
     def command(self, binary, workspace, model, effort, sandbox, context):
-        return list(binary) + ['--print', '--no-session-persistence',
+        command = list(binary) + ['--print', '--no-session-persistence',
             '--input-format', 'stream-json', '--replay-user-messages',
             '--output-format', 'stream-json', '--verbose', '--forward-subagent-text',
             '--model', claude_model(model), '--effort', effort,
             '--strict-mcp-config',
             '--mcp-config', '{"mcpServers":{}}', '--no-chrome',
             '--tools', 'default', '--permission-mode', 'bypassPermissions']
+        if not allow_subagents(context):
+            command += ['--disallowedTools', ','.join(sorted(DELEGATION_TOOLS))]
+        return command
 
     def inspect_trace(self, text, helpers=None):
         counts, malformed, results, models, init = Counter(), [], [], set(), []
         commands = []
         invocations = []
         failures = 0
+        child_events = []
         for number, line in enumerate(text.splitlines(), 1):
             if not line.strip():
                 continue
@@ -54,6 +60,9 @@ class ClaudeCodeAdapter:
                 if not isinstance(event, dict) or not isinstance(event.get('type'), str):
                     raise ValueError('Not an event')
                 kind = event['type']
+                if event.get('parent_tool_use_id') or (kind == 'system' and event.get('subtype') == 'task_started'
+                                                       and event.get('subagent_type')):
+                    child_events.append(number)
                 counts[kind] += 1
                 if kind == 'system' and event.get('subtype') == 'init' and not event.get('parent_tool_use_id'):
                     init.append(event)
@@ -124,6 +133,7 @@ class ClaudeCodeAdapter:
                 'models_observed': sorted({m.removesuffix('[1m]') for m in models}), 'tool_calls': commands,
                 'init_context': init[:1] if len(contexts) == 1 else init,
                 'native_init_events': init,
+                'subagent_event_lines': child_events,
                 'native_skill_invocations': invocations,
                 'isolation_status': 'verified-discovery' if verified else 'unknown',
                 'client_cost_estimate_usd': final.get('total_cost_usd'),

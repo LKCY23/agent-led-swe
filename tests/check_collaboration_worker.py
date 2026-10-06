@@ -171,6 +171,7 @@ def main():
                         model_profile=profile, model_upstream=f'http://host.docker.internal:{server.server_port}'))
                     binary, cwd, sandbox, entrypoint = runtime
                     context = adapter.prepare_context(binary, cwd, evidence, model, 'high', sandbox, entrypoint)
+                    context['allow_subagents'] = args.with_subagent
                     result = converse(adapter, binary, cwd, sandbox, context, model, 'high', output / 'helpers',
                         work, evidence / 'conversation', 'NATIVE_CONVERSATION_PROBE', responder,
                         invocation=adapter.invocation() if treatment else '', timeout=180)
@@ -182,6 +183,16 @@ def main():
                           and history_preserved and activation['status'] == 'verified')
                 project_guidance = bool(requests) and 'PROJECT_GUIDANCE_TOKEN' in json.dumps(requests[0])
                 passed = passed and project_guidance
+                if not args.with_subagent:
+                    if args.agent == 'claude-code':
+                        from agent_adapters.claude_code import DELEGATION_TOOLS
+                        trace = json.loads((evidence / 'conversation/turn-001/capture/trace.json').read_text())
+                        passed = passed and not trace['subagent_event_lines'] and not DELEGATION_TOOLS.intersection(
+                            trace['init_context'][0]['tools'])
+                    else:
+                        namespaces = [n.get('name') for p in requests for i in p.get('input', [])
+                                      if i.get('type') == 'additional_tools' for n in i.get('tools', [])]
+                        passed = passed and 'collaboration' not in namespaces
                 child_forwarded = None
                 if args.with_subagent:
                     rows = [json.loads(line) for line in (evidence / 'conversation/turn-001/capture/stdout.log').read_text().splitlines()]

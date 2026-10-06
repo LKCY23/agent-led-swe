@@ -90,6 +90,18 @@ class AgentAdapterTest(unittest.TestCase):
             self.assertEqual(env[key], 'deepseek-flash[1m]')
         self.assertEqual(claude_model('unknown-model'), 'unknown-model')
 
+    def test_delegation_is_an_explicit_experiment_condition(self):
+        command = self.adapter.conversation_command(['claude'], Path('/testbed'),
+            'deepseek-flash', 'high', 'danger-full-access', {'allow_subagents': False},
+            '00112233-4455-6677-8899-aabbccddeeff')
+        self.assertEqual(command[command.index('--disallowedTools') + 1], 'Agent,Task,Workflow')
+        enabled = self.adapter.command(['claude'], Path('/testbed'), 'deepseek-flash',
+            'high', 'danger-full-access', {'allow_subagents': True})
+        self.assertNotIn('--disallowedTools', enabled)
+        from agent_adapters.codex import codex_command
+        codex = codex_command('codex', Path('/testbed'), 'fixed', 'high', 'danger-full-access')
+        self.assertIn('features.multi_agent=false', codex)
+
     def test_model_and_agent_compatibility(self):
         validate_compatibility('claude-code', self.profile, 'high')
         validate_compatibility('claude-code', {**self.profile, 'model': 'deepseek-v4-pro'}, 'high')

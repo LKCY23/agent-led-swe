@@ -4,10 +4,15 @@ from pathlib import Path
 import re
 import subprocess
 from evaluation_runtime import digest, write_json, load_helper
+from model_config import allow_subagents
 
 CONTEXT_OVERRIDES = [
     'features.plugins=false', 'features.apps=false', 'developer_instructions=""',
 ]
+
+
+def delegation_overrides():
+    return [] if allow_subagents() else ['features.multi_agent=false', 'agents.enabled=false']
 
 
 def skill_paths(items):
@@ -26,7 +31,7 @@ def isolated_context(binary, workspace, evidence, model, effort, sandbox, skill_
     """
     disabled = set()
     for attempt in range(5):
-        overrides = CONTEXT_OVERRIDES + ['skills.config=[' + ','.join(
+        overrides = CONTEXT_OVERRIDES + delegation_overrides() + ['skills.config=[' + ','.join(
             '{path=' + json.dumps(p) + ',enabled=false}' for p in sorted(disabled)) + ']']
         command = ([binary] if isinstance(binary, str) else list(binary)) + ['-C', str(workspace), '-s', sandbox,
                    '-c', 'approval_policy="never"', '-c', 'model=' + json.dumps(model),
@@ -78,7 +83,7 @@ def codex_command(binary, workspace, model, effort, sandbox, overrides=()):
             '-c', 'approval_policy="never"',
             '-c', 'web_search="disabled"', '-c', 'model=' + json.dumps(model),
             '-c', 'model_reasoning_effort=' + json.dumps(effort)]
-    return command + [part for value in [*runtime_overrides, *overrides] for part in ('-c', value)]
+    return command + [part for value in [*runtime_overrides, *overrides, *delegation_overrides()] for part in ('-c', value)]
 
 
 

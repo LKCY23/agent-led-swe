@@ -12,6 +12,13 @@ CONFIGS = Path(__file__).parent / 'configs'
 DEFAULT_CREDENTIALS = CONFIGS / 'credentials.local.json'
 
 
+def allow_subagents(context=None):
+    value = (context or {}).get('allow_subagents', json.loads((CONFIGS / 'runtime.json').read_text())['allow_subagents'])
+    if type(value) is not bool:
+        raise ValueError('allow_subagents must be an explicit boolean')
+    return value
+
+
 def load_profile(path):
     profile = json.loads(Path(path).read_text())
     required = {'provider', 'model', 'version_label', 'protocol'}

@@ -12,7 +12,7 @@ from cattrs_task import BASE_COMMIT, TASK_ID, run_checks, unpack, verify_inputs
 from collaboration_runtime import converse
 from evaluation_runtime import (DEFAULT_EVALUATOR, adapter_hashes, build_worker_image, digest,
                                 execution_environment, file_hashes, freeze_helpers, snapshot, write_json)
-from model_config import CONFIGS, load_profile, validate_compatibility
+from model_config import CONFIGS, load_profile, validate_compatibility, allow_subagents
 from native_skills import verify_activation
 from run_evaluation import COMMON_PROMPT, freeze_skill, skill_source
 from simulated_user import SimulatedUser
@@ -59,6 +59,7 @@ def prepare_pair(inputs, qualification, output, agent, solver, user, effort, ski
             'agent': cli, 'solver_profile': solver, 'user_profile': user, 'effort': effort, 'user_effort': 'high',
             'user_agent': user_cli, 'user_environment': user_environment,
             'limits': limits, 'cost_limit': None,
+            'allow_subagents': allow_subagents(),
             'budget_semantics': 'One shared solver/user conversation deadline; no per-turn, reply-count, output-token or dollar cap imposed by the runner',
             'environment': environment, 'qualification_sha256': digest(qualification),
             'user_qualification_sha256': digest(user_qualification) if user_qualification else None,
@@ -81,6 +82,10 @@ def run_pair(output, plan, credentials):
     persona = (output / 'scenario/user.md').read_text()
     requirements = (inputs / 'user-requirements.md').read_text()
     limits = plan['limits']
+    single_agent = not plan.get('allow_subagents', False)
+    delegation_prompt = ('For this controlled comparison, perform all development in this agent. '
+        'Do not delegate, invoke forked skills, or launch additional agent/model processes. '
+        'The separate user remains available for questions and review.\n\n') if single_agent else ''
     results = []
     for variant in plan['variants']:
         evidence = output / variant
@@ -106,15 +111,26 @@ def run_pair(output, plan, credentials):
                     binary, cwd, sandbox, entrypoint = runtime
                     context = adapter.prepare_context(binary, cwd, evidence, plan['solver_profile']['model'],
                         plan['effort'], sandbox, entrypoint)
+                    context['allow_subagents'] = not single_agent
                     result = converse(adapter, binary, cwd, sandbox, context, plan['solver_profile']['model'],
                         plan['effort'], output / 'helpers', work, evidence / 'conversation',
-                        COMMON_PROMPT + 'You can ask the user questions in your reply; this conversation can continue.\n\n' + request,
+                        COMMON_PROMPT + delegation_prompt + 'You can ask the user questions in your reply; this conversation can continue.\n\n' + request,
                         user, invocation=adapter.invocation() if treatment else '',
                         timeout=limits['total_seconds'])
                 activation = verify_activation(adapter.name, evidence, treatment, entrypoint,
                                                'conversation/turn-001/capture')
                 result['native_activation'] = activation
                 result['comparison_validity'] = 'valid' if activation['status'] == 'verified' else 'invalid'
+                if single_agent and adapter.name == 'claude-code':
+                    from agent_adapters.claude_code import DELEGATION_TOOLS
+                    traces = [json.loads(p.read_text()) for p in evidence.glob('conversation/turn-*/capture/trace.json')]
+                    children = list((evidence / 'native-claude-projects').glob('**/subagents/*.jsonl'))
+                    verified = bool(traces) and not children and all(
+                        not t.get('subagent_event_lines') and not any(DELEGATION_TOOLS.intersection(i.get('tools', []))
+                                                                   for i in t.get('native_init_events', [])) for t in traces)
+                    result['single_agent_verified'] = verified
+                    if not verified:
+                        result['comparison_validity'] = 'invalid'
             except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
                 result.update(status='error', error=str(exc), comparison_validity='invalid')
             finally:
