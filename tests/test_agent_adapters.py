@@ -59,6 +59,16 @@ class AgentAdapterTest(unittest.TestCase):
         self.assertEqual(trace['models_observed'], ['deepseek-flash'])
         self.assertEqual(trace['native_model_labels'], ['deepseek-flash[1m]'])
 
+    def test_background_completion_can_produce_another_main_result(self):
+        rows = [json.loads(line) for line in self.trace().splitlines()]
+        rows[-1].update(uuid='result-1', session_id='same-session')
+        rows += [dict(rows[0]), {**rows[-1], 'uuid': 'result-2'}]
+        parsed = self.adapter.inspect_trace('\n'.join(map(json.dumps, rows)))
+        self.assertTrue(parsed['telemetry_usable'])
+        self.assertEqual(parsed['isolation_status'], 'verified-discovery')
+        self.assertEqual(parsed['usage']['input_tokens'], 10)
+        self.assertEqual(len(parsed['init_context']), 1)
+
     def test_command_preserves_native_tools_project_settings_and_model(self):
         command = self.adapter.command(['docker', 'exec', 'container', 'claude'],
                                        Path('/testbed'), 'deepseek-flash', 'high', 'danger-full-access', {})

@@ -18,6 +18,7 @@ def stop_container(name):
             if state.get('Paused'):
                 docker('unpause', name)
             docker('kill', name)
+            docker('wait', name)
         except subprocess.CalledProcessError:
             # A nested user deadline or natural exit may already have stopped it.
             if json.loads(docker('inspect', '--format', '{{json .State}}', name))['Running']:

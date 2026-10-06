@@ -77,8 +77,14 @@ class ClaudeCodeAdapter:
             except (ValueError, TypeError, AttributeError):
                 malformed.append(number)
         final = results[-1] if results else {}
-        usable = (len(results) == 1 and final.get('subtype') == 'success'
-                  and final.get('is_error') is False and not malformed and not failures)
+        # Background-task notifications can trigger another native result in the
+        # same print process. Keep the final cumulative receipt, not their sum.
+        result_ids = {r.get('uuid') for r in results}
+        single_session = len({r.get('session_id') for r in results}) <= 1
+        distinct = len(results) == 1 or (None not in result_ids and len(result_ids) == len(results))
+        usable = (bool(results) and single_session and distinct
+                  and all(r.get('subtype') == 'success' and r.get('is_error') is False for r in results)
+                  and not malformed and not failures)
         usage = final.get('usage') or {}
         # Native input excludes cache reads/writes; normalized input includes both.
         keys = ('input_tokens', 'cache_read_input_tokens', 'cache_creation_input_tokens')
@@ -89,7 +95,9 @@ class ClaudeCodeAdapter:
         normalized = {'input_tokens': total,
                       'cached_input_tokens': cached if type(cached) is int and cached >= 0 else None,
                       'output_tokens': output if type(output) is int and output >= 0 else None}
-        verified = len(init) == 1 and all(init[0].get(key) == [] for key in ('plugins', 'mcp_servers'))
+        context_keys = ('session_id', 'model', 'skills', 'tools', 'agents', 'plugins', 'mcp_servers')
+        contexts = {json.dumps({key: e.get(key) for key in context_keys}, sort_keys=True) for e in init}
+        verified = len(contexts) == 1 and all(init[0].get(key) == [] for key in ('plugins', 'mcp_servers'))
         # Fresh HOME and the frozen public workspace define discovery scopes.
         # Project skills/agents and native tools are task capabilities, not leaks.
         verified = verified and all(isinstance(init[0].get(key), list)
@@ -100,7 +108,8 @@ class ClaudeCodeAdapter:
                 'native_usage': usage, 'native_model_labels': sorted(models),
                 'native_model_usage': final.get('modelUsage', {}),
                 'models_observed': sorted({m.removesuffix('[1m]') for m in models}), 'tool_calls': commands,
-                'init_context': init,
+                'init_context': init[:1] if len(contexts) == 1 else init,
+                'native_init_events': init,
                 'native_skill_invocations': invocations,
                 'isolation_status': 'verified-discovery' if verified else 'unknown',
                 'client_cost_estimate_usd': final.get('total_cost_usd'),

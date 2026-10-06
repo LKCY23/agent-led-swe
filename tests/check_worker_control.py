@@ -47,6 +47,8 @@ def main():
                 except TimeoutError:
                     timed_out = True
                 state = json.loads(subprocess.check_output(['docker', 'inspect', '--format', '{{json .State}}', binary.container], text=True))
+                write_json(evidence / 'deadline-observation.json', {'timed_out': timed_out,
+                    'command_type': type(binary).__name__, 'state': state})
                 assert not state['Running'], 'Timeout returned before stopping the worker'
             first = file_hashes(work)
             time.sleep(.15)
