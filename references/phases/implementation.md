@@ -2,7 +2,7 @@
 
 ## 开始前
 
-根据当前 [Process 计划](../../assets/templates/process-plan.md)，核对待实现的行为、有效需求与设计、工程基线、交付条件和现有代码。按 [Design 指导](design.md)确认相关实现依据，复用已有成果，保留无关修改。授权范围遵循 [SKILL.md](../../SKILL.md)。
+读取项目当前工作安排，核对待实现的行为、有效需求与设计、工程基线、交付条件和现有代码。按 [Design 指导](design.md)确认相关实现依据，复用已有成果，保留无关修改。授权范围遵循 [SKILL.md](../../SKILL.md)。
 
 检查当前工作需要的依赖产出是否可用。已确定的契约和 fixtures 可以支持本地实现；真实集成仍需接入实际产出。依赖不足时调整当前计划；涉及其他 process 的依赖时，按 [Workflow 指导](../workflow.md#coordinate-required-outputs)协调。
 

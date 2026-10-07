@@ -17,7 +17,7 @@
 
 用具体场景检查歧义和冲突，区分确定要求、偏好、假设和提案。现有实现可以提供事实，不自动等于期望行为。事实问题由 Agent 调查；需要人类选择的目标或取舍按 [人机协作机制](../mechanisms/human-collaboration.md)处理。
 
-将结果写入或引用 [需求文档](../../assets/templates/requirements.md)，标明来源和未决问题影响的工作。需要明确交付承诺时建立 [交付清单](../../assets/templates/delivery-checklist.md)；工程约定的选择与检查方式使用 [工程基线机制](../mechanisms/engineering-baseline.md)。
+在项目需求记录中保存或引用约定，标明来源和未决问题影响的工作；组织新记录时可参考 [需求模板](../../assets/templates/requirements.md)。交付承诺及验收条件在项目记录中明确，需要独立清单时参考 [交付清单模板](../../assets/templates/delivery-checklist.md)。工程约定的选择与检查方式使用 [工程基线机制](../mechanisms/engineering-baseline.md)。
 
 验收条件先明确判断什么，具体测试工具和命令可随设计细化，不能因此改变原定的行为要求。
 

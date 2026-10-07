@@ -6,7 +6,7 @@
 
 开始协调时，明确整体目标、范围和交付要求，检查各 process 的目标、计划及已有成果，确定它们如何共同支持整体结果。
 
-形成或更新 [Workflow 计划](../assets/templates/workflow-plan.md)，关联各 process 的计划，列出共享约定和协调事项。共享要求引用权威文档，文档的维护方式遵循 [文档机制](mechanisms/documentation-and-traceability.md)。
+在项目中形成或更新整体工作安排，关联各 process 的计划，列出共享约定和协调事项；需要组织新记录时参考 [Workflow 计划模板](../assets/templates/workflow-plan.md)。共享要求引用权威文档，文档的维护方式遵循 [文档机制](mechanisms/documentation-and-traceability.md)。
 
 ## Coordinate required outputs
 
@@ -40,4 +40,4 @@
 
 准备整体交付时，对照 workflow 的交付要求，检查各 process 的结果和所需的整体证据：共享契约是否兼容、相关集成是否成立、共同交付的行为是否满足要求。局部检查通过不能代替尚未执行或已经失败的整体检查。
 
-在 Workflow 计划中关联整体 [验证记录](../assets/templates/verification-record.md)和交付结论，明确未满足要求、未验证项及其影响。重要限制是否可以接受，按人机协作机制处理；具体交付检查使用 [Delivery and Maintenance 指导](phases/delivery-and-maintenance.md)。
+在项目的 Workflow 记录中关联实际整体验证结果和交付结论，明确未满足要求、未验证项及其影响。重要限制是否可以接受，按人机协作机制处理；具体交付检查使用 [Delivery and Maintenance 指导](phases/delivery-and-maintenance.md)。
