@@ -8,7 +8,7 @@
 - current：已接受 skill `1c65c00`；candidate：skill 内容 `42fc6f9`。工具提交 `3ecf5cf`，两版实际文件和哈希分别冻结。
 - Claude Code 2.1.278 + DeepSeek Flash high，单开发 Agent，独立原生 Claude Code 模拟用户。两组模型、任务、用户规则与环境一致。
 - 每组共享 1800 秒，双方获知；各一次，current 先运行，无自动重试，本轮没有无 skill 组。
-- 完整输入、对话、文件与验收材料：[运行目录](/Users/liyao/agent-led-swe/tests/runs/cattrs-versions-20261007)。摘录计数与事件位置：[分析摘要](/Users/liyao/agent-led-swe/tests/runs/cattrs-versions-20261007/analysis-summary.json)。
+- 完整输入、对话、文件与验收材料：`/Users/liyao/agent-led-swe/tests/runs/cattrs-versions-20261007`。摘录计数与事件位置：该目录下的 `analysis-summary.json`。原始材料位于包外，不随 skill 分发。
 
 ## 结果
 
