@@ -35,3 +35,6 @@ solver 限时与依赖已修正并完成第二次试跑；发现的用户内部�
 
 
 最新真实对照：单开发 Agent（模拟用户保留），CC＋Flash high，正式 skill 不变；baseline／skill 均完成三轮并被用户接受，独立 verifier 为基础 7/7、功能分别 64/69 与 66/69，均未完全通过。记录器的 Bash 心跳误报在运行结束后独立修正复核，原始记录保留。详见[本轮结果](reports/cattrs-single-agent-2026-10-07.md)。
+
+
+待审阅 skill 候选：`42fc6f9`，调整 Process 适配、指导入口和记录衔接，正式 skill `1c65c00` 未动。结构与引用检查通过，四类情境仅完成静态核对，尚未进行候选模型试跑。见[候选说明](reports/process-adaptation-candidate-2026-10-07.md)。

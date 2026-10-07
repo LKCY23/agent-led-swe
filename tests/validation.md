@@ -337,3 +337,8 @@ Restored the supported DeepSeek context declaration across CC model slots, expli
 ## Single-developer-agent comparison — 2026-10-07
 
 Disabled native development delegation in both arms while retaining the simulated user and existing skill. Both native CLI mock pairs passed; the real CC/Flash cattrs pair completed three user interactions per arm. Verifier: baseline 7/7 base and 64/69 new; skill 7/7 base and 66/69 new. Both were accepted by the user but failed functional acceptance. A Bash-heartbeat false positive in delegation detection was fixed after execution and reviewed in a separate hashed receipt without changing raw results or rerunning the model. All 99 local tests passed. [Report](reports/cattrs-single-agent-2026-10-07.md).
+
+
+## Process adaptation candidate — 2026-10-07
+
+Candidate `42fc6f9` clarifies activity selection/depth, project-record responsibilities, decision-to-implementation ordering, and the distinction between actual records and templates. Package/link checks, skill-creator validation and diff checks passed. Four development situations were reviewed statically; no model behavior test was run and no adherence gain is claimed. Accepted skill and evaluator configuration are unchanged. [Candidate review](reports/process-adaptation-candidate-2026-10-07.md).
