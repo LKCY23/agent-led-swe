@@ -18,7 +18,7 @@ import tempfile
 from evaluation_runtime import (DEFAULT_EVALUATOR, adapter_hashes, digest, execute,
                                 freeze_helpers, positive_seconds, resolve_codex,
                                 snapshot, write_json, file_hashes, execution_environment, build_worker_image)
-from run_smoke import ROOT, case_ids, case_input_hash
+from run_smoke import ROOT, case_ids, case_input_hash, DEFAULT_D_TIMEOUT_SECONDS, budget_notice
 from task_adapters import prepare_task, load_task, SWE_NAMES
 from agent_adapters import get_adapter
 from model_config import CONFIGS, DEFAULT_CREDENTIALS, load_profile, validate_compatibility, credential
@@ -29,6 +29,14 @@ COMMON_PROMPT = (
     'Complete the following task in the supplied workspace, following its project guidance. '
     'The isolated environment provides local development tools and dependencies; external network access is unavailable. '
     'Do not inspect hidden evaluation materials, reference solutions, sibling runs or unrelated projects.\n\n')
+
+
+def resolve_timeout(case_id, explicit_timeout):
+    if explicit_timeout is not None:
+        return positive_seconds(explicit_timeout)
+    if case_id in case_ids():
+        return DEFAULT_D_TIMEOUT_SECONDS
+    raise ValueError('SWE tasks require an explicit --timeout')
 
 
 def freeze_skill(root, destination):
@@ -159,7 +167,7 @@ def run_pair(case, output, cli, model, effort, timeout, repetitions, evaluator,
                     guidance = adapter.invocation() if skill_path else ''
                     prompt = evidence / 'prompt.txt'
                     direct = direct_guidance + '\n\n' if trial['variant'] == 'direct' else ''
-                    prompt.write_text(guidance + direct + COMMON_PROMPT + case['request'])
+                    prompt.write_text(guidance + direct + COMMON_PROMPT + budget_notice(timeout) + case['request'])
                     result['isolation'] = adapter.prepare_context(binary, runtime_cwd, evidence, model, effort, sandbox, skill_path)
                     command = adapter.command(binary, runtime_cwd, model, effort, sandbox, result['isolation'])
                     from worker_control import execution_deadline
@@ -218,7 +226,8 @@ def main():
     parser.add_argument('--model-profile', type=Path)
     parser.add_argument('--credentials', type=Path, default=DEFAULT_CREDENTIALS)
     parser.add_argument('--effort', required=True, choices=['low', 'medium', 'high', 'xhigh', 'max'])
-    parser.add_argument('--timeout', type=positive_seconds, required=True, help='Seconds per executor')
+    parser.add_argument('--timeout', type=positive_seconds,
+                        help='Total seconds per executor; D cases default to 1800 (30 minutes), SWE requires an explicit value')
     parser.add_argument('--repetitions', type=int, default=1)
     parser.add_argument('--skill-path', type=Path, default=ROOT, help='Candidate/target skill source to freeze')
     parser.add_argument('--reference-skill-path', type=Path, help='Add a current-version arm alongside baseline and candidate')
@@ -233,6 +242,7 @@ def main():
     if args.repetitions <= 0:
         parser.error('--repetitions must be positive')
     try:
+        args.timeout = resolve_timeout(args.case, args.timeout)
         case = load_task(args.case, args.swe_inputs)
         if args.model_profile and args.model:
             raise ValueError('Choose --model-profile or --model, not both')

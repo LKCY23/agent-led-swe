@@ -23,6 +23,12 @@ import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 CASE_DIR = ROOT / 'tests/cases/behavior'
+DEFAULT_D_TIMEOUT_SECONDS = 1800
+
+
+def budget_notice(seconds):
+    return (f'Execution budget: {float(seconds):g} seconds total for this run, '
+            'including tool calls, experiments, checks and documentation.\n\n')
 
 
 def case_ids():
@@ -63,12 +69,15 @@ def hashes(root):
 
 
 def main():
+    from evaluation_runtime import positive_seconds
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('case', choices=case_ids())
     parser.add_argument('--codex-bin', type=Path,
                         help='Use this exact CLI entrypoint instead of resolving codex through PATH')
     parser.add_argument('--capture', type=Path,
                         default=Path.home() / '.codex/skills/skill-evaluator/scripts/capture.py')
+    parser.add_argument('--timeout', type=positive_seconds, default=DEFAULT_D_TIMEOUT_SECONDS,
+                        help='Total seconds per run (default: 1800 / 30 minutes)')
     args = parser.parse_args()
     try:
         case = load_case(args.case)
@@ -102,7 +111,7 @@ def main():
               'This is a disposable local task. Work only on the supplied fixture and read-only skill references; '
               'Do not browse, use connectors, inspect evaluation scripts, '
               'case definitions, grader-only material or sibling evidence, '
-              'change global settings, or access unrelated projects.\n\n' + case['request'])
+              'change global settings, or access unrelated projects.\n\n' + budget_notice(args.timeout) + case['request'])
     (evidence / 'prompt.txt').write_text(prompt)
     (evidence / 'case.json').write_text(json.dumps(case, ensure_ascii=False, indent=2) + '\n')
     with tempfile.TemporaryDirectory(prefix='agent-led-swe-case-') as tmp:
@@ -120,12 +129,13 @@ def main():
             argv += ['-c', key + '=' + json.dumps(value)]
         argv += ['-']
         captured = subprocess.run([sys.executable, str(capture), '--cwd', str(fixture),
-                        '--out', str(evidence / 'capture'), '--timeout', '180',
+                        '--out', str(evidence / 'capture'), '--timeout', str(args.timeout),
                         '--stdin-file', str(evidence / 'prompt.txt'), '--'] + argv,
-                       check=False, timeout=195, capture_output=True, text=True)
+                       check=False, timeout=args.timeout + 15, capture_output=True, text=True)
         after = hashes(fixture)
         shutil.copytree(fixture, evidence / 'after')
         manifest = {'case': args.case,
+                    'timeout_seconds': args.timeout,
                     'case_definition': case_definition,
                     'target': str(ROOT), 'target_files': target_hashes,
                     'cli': subprocess.check_output([binary, '--version'], text=True).strip(),

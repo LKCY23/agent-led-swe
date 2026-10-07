@@ -79,6 +79,7 @@ print(json.dumps({'type': 'turn.completed', 'usage': {
             self.assertEqual(result['fixture_before'], {'input.txt': runtime.digest(evidence / 'before/input.txt')})
             prompt = (evidence / 'prompt.txt').read_text()
             self.assertEqual(prompt.startswith('$agent-led-swe\n'), trial['variant'] == 'skill')
+            self.assertIn('Execution budget: 5 seconds total', prompt)
         self.assertNotEqual(*commands)
         (self.target / 'SKILL.md').write_text('Later edit')
         self.assertEqual((self.bundle / 'skill/SKILL.md').read_text(), 'Frozen skill guidance')
@@ -306,6 +307,16 @@ print(json.dumps({'type':'result','subtype':'success','is_error':False,
         for value in ('0', '-1', 'nan', 'inf'):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 runtime.positive_seconds(value)
+
+    def test_d_budget_default_override_and_swe_scope(self):
+        self.assertEqual(run_evaluation.resolve_timeout('D1', None), 1800)
+        self.assertEqual(run_evaluation.resolve_timeout('D17', None), 1800)
+        self.assertEqual(run_evaluation.resolve_timeout('D17', 900), 900)
+        with self.assertRaisesRegex(ValueError, 'explicit --timeout'):
+            run_evaluation.resolve_timeout('packaging', None)
+        for value in (0, -1, float('inf')):
+            with self.assertRaises(ValueError):
+                run_evaluation.resolve_timeout('D17', value)
 
     def enable_fixture_verifier(self):
         path = self.bundle / 'case.json'

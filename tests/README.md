@@ -40,11 +40,13 @@ uv run --locked python tests/run_evaluation.py D14 \
   --credentials '<本地凭据文件>' \
   --skill-path tests/fixtures/instruction-delivery \
   --direct-guidance tests/fixtures/instruction-delivery/guidance.md \
-  --output-root '<独立运行目录>' --effort high --timeout 180
+  --output-root '<独立运行目录>' --effort high --timeout 1800
 uv run --locked python tests/evaluate_results.py '<上一步运行目录>'
 ```
 
 Codex 使用 `--agent codex --model-profile tests/configs/models/codex-gpt-6.1-sol.json`。支持 baseline／skill 两组；加 `--reference-skill-path` 则比较 baseline／current／candidate。每组每轮新建工作区与会话，默认每组一次、不自动重跑；`--repetitions` 和 `--reverse-order` 控制已记录的重复与顺序。
+
+D 系列通过 `run_evaluation.py` 或旧 `run_smoke.py` 执行时，默认每个用例、每个比较组最多 1800 秒（30 分钟），可用 `--timeout` 显式覆盖。实际预算写入计划与 Agent 请求，包含其工具调用、实验、检查和文档；完成即结束。SWE 任务仍须显式指定预算，独立 verifier 的时限单独设置。历史运行的 180／300 秒预算和结果保持原样。
 
 仅比较两个 skill 版本时，同时使用 `--reference-skill-path` 和 `--without-baseline`，执行 current／candidate 两组；计划以 current 为初始文件一致性检查的参照，不运行无 skill 组。
 

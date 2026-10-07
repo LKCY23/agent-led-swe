@@ -347,3 +347,8 @@ Candidate `42fc6f9` clarifies activity selection/depth, project-record responsib
 ## Adaptation scenario trials — 2026-10-07
 
 Ran D15–D18 with the accepted and candidate skills: eight native CC/Flash single-request trials, 300 seconds each, no model retries. Control/reference verifier preflights passed for D15/D16/D18; all six functional trials passed trusted tests. Both D17 exploration trials timed out with partial artifacts and no program score. Candidate artifacts showed premature completion checkboxes and broken references despite guidance reads. No skill or runtime changes during trials; author analysis remains separate from verifier results. [Report](reports/adaptation-scenarios-2026-10-07.md).
+
+
+## D-series execution budget — 2026-10-07
+
+D-case CLI defaults are now 1800 seconds per trial in paired and legacy smoke entrypoints; explicit overrides remain available and SWE still requires an explicit budget. Both entrypoints tell the Agent the actual total execution budget. Local regressions cover default/override/scope, invalid budgets, and prompt disclosure. No model rerun or historical-result rewrite.
