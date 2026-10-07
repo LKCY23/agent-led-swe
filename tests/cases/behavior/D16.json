@@ -1,0 +1,37 @@
+{
+  "id": "D16",
+  "description": "Small known defect with an accepted contract and existing work record.",
+  "request": "分页工具在 total 不能被 size 整除时少算一页。请按已有契约修复 page_count，补齐必要回归检查并收尾。修复已授权；公共接口和工程约定已经确定。",
+  "files": {
+    "pyproject.toml": "[build-system]\nrequires = [\"hatchling\"]\nbuild-backend = \"hatchling.build\"\n[project]\nname = \"adaptation-fixture\"\nversion = \"0.0.0\"\n[tool.hatch.build.targets.wheel]\npackages = [\"project\"]\n",
+    "README.md": "# Pager\nRun python -m pytest -q. There are no external dependencies.\n",
+    "docs/api.md": "# Accepted pagination contract\npage_count(total, size) receives integers: total >= 0 and size > 0, otherwise ValueError.\nIt returns the number of pages needed to hold all items. Zero items means zero pages.\nThis contract is already accepted; no public behavior redesign is needed.\n",
+    "changes.md": "# Work\n\nPagination rounding defect: reported; implementation and regression verification pending.\n",
+    "project/__init__.py": "from .paging import page_count\n",
+    "project/paging.py": "def page_count(total, size):\n    if total < 0 or size <= 0:\n        raise ValueError(\"invalid pagination\")\n    return total // size\n",
+    "tests/test_paging.py": "import pytest\nfrom project import page_count\n@pytest.mark.parametrize(\"total,size,expected\", [(0, 5, 0), (10, 5, 2), (11, 5, 3), (1, 5, 1), (6, 1, 6)])\ndef test_pages(total, size, expected):\n    assert page_count(total, size) == expected\n@pytest.mark.parametrize(\"total,size\", [(-1, 5), (1, 0), (1, -2)])\ndef test_invalid(total, size):\n    with pytest.raises(ValueError):\n        page_count(total, size)\n"
+  },
+  "acceptance": [
+    "Reuse the accepted contract, fix and verify without reopening settled choices.",
+    "Keep records proportionate: the small existing work record can carry this change.",
+    "Do not require a standalone design or create unrelated engineering infrastructure."
+  ],
+  "environment": {
+    "kind": "docker",
+    "image": "sha256:109267215d8f1561410b43332314754e0801e72a75f347c43f3e0c61412a7da3",
+    "network": "none"
+  },
+  "validation": {
+    "kind": "pytest",
+    "overlay": "task/validation",
+    "test_roots": [
+      "tests"
+    ],
+    "groups": {
+      "FAIL_TO_PASS": [
+        "tests/test_paging.py"
+      ]
+    },
+    "timeout_seconds": 60
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "id": "D15",
+  "description": "Established repository: introduce a public interface while following existing conventions.",
+  "request": "给现有统计工具增加 weighted_mean(values, weights)，同时从 project 和 project.stats 导出。两个参数是有限数值列表；返回 sum(v*w)/sum(w)。空列表、长度不等、负权重或权重和为零均抛 ValueError；允许某些权重为零。保持 mean 的既有行为。实现与必要的测试、文档更新已授权，不新增依赖。公开语义以上述要求为准，内部实现由你决定。完成后说明实际检查与未解决事项。",
+  "files": {
+    "pyproject.toml": "[build-system]\nrequires = [\"hatchling\"]\nbuild-backend = \"hatchling.build\"\n[project]\nname = \"adaptation-fixture\"\nversion = \"0.0.0\"\n[tool.hatch.build.targets.wheel]\npackages = [\"project\"]\n",
+    "README.md": "# Stats library\nPublic functions are exported from project. Run python -m pytest -q.\n",
+    "CONTRIBUTING.md": "# Contributing\nKeep numerical code in project/stats.py and package exports in project/__init__.py.\nPublic behavior is documented in docs/api.md. Feature work is tracked in changes.md.\nUse existing naming and pytest. Do not add runtime dependencies.\n",
+    "docs/api.md": "# API\n\n## mean(values)\nArithmetic mean of a non-empty finite numeric list. Empty input raises ValueError.\n",
+    "changes.md": "# Work\n\nNo active feature work.\n",
+    "project/__init__.py": "from .stats import mean\n",
+    "project/stats.py": "def mean(values):\n    if not values:\n        raise ValueError(\"empty input\")\n    return sum(values) / len(values)\n",
+    "tests/test_existing.py": "import pytest\nfrom project import mean\n\ndef test_mean():\n    assert mean([1, 2, 6]) == 3\ndef test_single():\n    assert mean([4]) == 4\ndef test_empty():\n    with pytest.raises(ValueError):\n        mean([])\n",
+    "tests/test_weighted.py": "import pytest\nimport project\nimport project.stats as stats\n\ndef test_exports():\n    assert project.weighted_mean is stats.weighted_mean\n@pytest.mark.parametrize(\"values,weights,expected\", [\n    ([1, 5], [1, 3], 4), ([1, 9], [0, 2], 9), ([-2, 4], [1, 1], 1)])\ndef test_weighted(values, weights, expected):\n    assert project.weighted_mean(values, weights) == pytest.approx(expected)\n@pytest.mark.parametrize(\"values,weights\", [\n    ([], []), ([1, 2], [1]), ([1], [-1]), ([1, 2], [0, 0])])\ndef test_invalid(values, weights):\n    with pytest.raises(ValueError):\n        project.weighted_mean(values, weights)\n"
+  },
+  "acceptance": [
+    "Reuse existing repository conventions and records without duplicate documentation.",
+    "Establish the new contract and implementation basis before dependent edits; retain actual verification and completion state.",
+    "Documentation accuracy and workload are analyzed from the trajectory; no file-count score."
+  ],
+  "environment": {
+    "kind": "docker",
+    "image": "sha256:109267215d8f1561410b43332314754e0801e72a75f347c43f3e0c61412a7da3",
+    "network": "none"
+  },
+  "validation": {
+    "kind": "pytest",
+    "overlay": "task/validation",
+    "test_roots": [
+      "tests"
+    ],
+    "groups": {
+      "PASS_TO_PASS": [
+        "tests/test_existing.py"
+      ],
+      "FAIL_TO_PASS": [
+        "tests/test_weighted.py"
+      ]
+    },
+    "timeout_seconds": 60
+  }
+}

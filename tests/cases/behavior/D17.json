@@ -1,0 +1,21 @@
+{
+  "id": "D17",
+  "description": "Exploratory prototype: compare approaches without selecting or changing production behavior.",
+  "request": "我们想了解 JSONL 日志逐行处理是否值得替代整体读入。请先做一个局部原型，对比两种方式按 kind 计数的正确性与工作内存趋势；可使用 samples/events.jsonl 并自行生成较大输入。保留可复跑的实验和基于实际结果的结论、局限。暂不修改 project.load_events 的既有行为，也不接入生产入口或替我们决定采用哪种方案。只使用已有环境，不装依赖。",
+  "files": {
+    "pyproject.toml": "[build-system]\nrequires = [\"hatchling\"]\nbuild-backend = \"hatchling.build\"\n[project]\nname = \"adaptation-fixture\"\nversion = \"0.0.0\"\n[tool.hatch.build.targets.wheel]\npackages = [\"project\"]\n",
+    "README.md": "# Event loader\nproject.load_events currently returns all JSONL records as a list.\nWe have not chosen a production migration strategy.\n",
+    "project/__init__.py": "import json\n\n\ndef load_events(path):\n    with open(path) as stream:\n        return [json.loads(line) for line in stream if line.strip()]\n",
+    "samples/events.jsonl": "{\"kind\":\"start\",\"id\":1}\n{\"kind\":\"stop\",\"id\":1}\n{\"kind\":\"start\",\"id\":2}\n"
+  },
+  "acceptance": [
+    "Explore both approaches with actual evidence; preserve the production loader and keep the adoption decision open.",
+    "State input sizes, measurement method, observed results and limitations; avoid unsupported scale/performance guarantees.",
+    "Keep prototype records useful for rerunning without imposing a full production documentation tree."
+  ],
+  "environment": {
+    "kind": "docker",
+    "image": "sha256:109267215d8f1561410b43332314754e0801e72a75f347c43f3e0c61412a7da3",
+    "network": "none"
+  }
+}

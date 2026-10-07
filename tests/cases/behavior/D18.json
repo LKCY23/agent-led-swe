@@ -1,0 +1,37 @@
+{
+  "id": "D18",
+  "description": "Resume partially completed work after an accepted decision, with stale design and completion claims.",
+  "request": "继续 limit 解析的收尾工作。上次我已确认：None、空字符串和纯空白字符串都返回调用时提供的 default；\"0\" 是有效值，其余非负整数字符串照常解析，非法或负值抛 ValueError。这些语义无需重新确认。前一轮说实现完成，但还没核对；请根据现有决定、代码和测试把剩余工作完成，并让记录反映实际状态。",
+  "files": {
+    "pyproject.toml": "[build-system]\nrequires = [\"hatchling\"]\nbuild-backend = \"hatchling.build\"\n[project]\nname = \"adaptation-fixture\"\nversion = \"0.0.0\"\n[tool.hatch.build.targets.wheel]\npackages = [\"project\"]\n",
+    "README.md": "# Limit parser\nRun python -m pytest -q. Keep the existing package and docs structure.\n",
+    "docs/contract.md": "# Current contract\nparse_limit(raw, default=20): None returns default; integer strings >= 0 return that integer.\nEmpty strings, whitespace and negative or invalid values raise ValueError.\n",
+    "docs/decisions.md": "# Decisions\n\n## DEC-001\nTime: 2026-10-05T10:00:00+08:00\nDecision-maker: human\nDecision: only None represents a missing limit; empty input is invalid.\nReason: initial caller validation.\n\n## DEC-002\nTime: 2026-10-06T10:00:00+08:00\nDecision-maker: human\nDecision: None, empty and whitespace strings use the supplied default; \"0\" remains valid.\nReason: support blank form inputs. Supersedes DEC-001 for missing-input handling.\n",
+    "docs/work.md": "# Work\nImplementation: marked complete by the previous worker.\nVerification: not yet run after DEC-002.\nRemaining: reconcile contract, implementation and evidence before delivery.\n",
+    "project/__init__.py": "def parse_limit(raw, default=20):\n    if raw is None:\n        return default\n    value = int(raw)\n    if value < 0:\n        raise ValueError(\"negative limit\")\n    return value\n",
+    "tests/test_limit.py": "import pytest\nfrom project import parse_limit\n@pytest.mark.parametrize(\"raw,default,expected\", [(None, 7, 7), (\"0\", 7, 0), (\"12\", 7, 12)])\ndef test_existing(raw, default, expected):\n    assert parse_limit(raw, default) == expected\n@pytest.mark.parametrize(\"raw\", [\"\", \" \", \"\\t\\n\"])\ndef test_missing_uses_supplied_default(raw):\n    assert parse_limit(raw, 7) == 7\n@pytest.mark.parametrize(\"raw\", [\"-1\", \"bad\", \"1.5\"])\ndef test_invalid(raw):\n    with pytest.raises(ValueError):\n        parse_limit(raw)\n"
+  },
+  "acceptance": [
+    "Use DEC-002 as the existing authority without asking again or inventing a new decision.",
+    "Reconcile stale contract before dependent implementation, preserve decision history and correct unsupported completion claims.",
+    "Verify the changed behavior and leave accurate continuation/delivery records."
+  ],
+  "environment": {
+    "kind": "docker",
+    "image": "sha256:109267215d8f1561410b43332314754e0801e72a75f347c43f3e0c61412a7da3",
+    "network": "none"
+  },
+  "validation": {
+    "kind": "pytest",
+    "overlay": "task/validation",
+    "test_roots": [
+      "tests"
+    ],
+    "groups": {
+      "FAIL_TO_PASS": [
+        "tests/test_limit.py"
+      ]
+    },
+    "timeout_seconds": 60
+  }
+}
