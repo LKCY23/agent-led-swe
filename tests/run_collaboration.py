@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run one bounded baseline/skill pair on the qualified cattrs collaboration task."""
+"""Run one bounded baseline/skill or current/candidate cattrs collaboration pair."""
 import argparse
 import json
 from pathlib import Path
@@ -20,7 +20,8 @@ from simulated_user import SimulatedUser
 SCENARIO = Path(__file__).parent / 'cases/collaboration/cattrs'
 
 
-def prepare_pair(inputs, qualification, output, agent, solver, user, effort, skill, limits, user_qualification=None):
+def prepare_pair(inputs, qualification, output, agent, solver, user, effort, skill, limits,
+                 user_qualification=None, reference_skill=None):
     verify_inputs(inputs)
     qualified = json.loads(qualification.read_text())
     if (qualified.get('qualified') is not True or qualified.get('inputs_sha256') != digest(inputs / 'inputs.json')
@@ -36,8 +37,9 @@ def prepare_pair(inputs, qualification, output, agent, solver, user, effort, ski
     for key, value in limits.items():
         if type(value) is not int or value < 1:
             raise ValueError(f'{key} must be a positive integer')
-    if not (skill / 'SKILL.md').is_file():
-        raise ValueError('Explicit accepted skill source is required')
+    for source in (skill, reference_skill):
+        if source is not None and not (source / 'SKILL.md').is_file():
+            raise ValueError('Explicit skill sources must contain SKILL.md')
     output.mkdir(parents=True, exist_ok=False)
     shutil.copytree(inputs, output / 'task-inputs')
     shutil.copyfile(qualification, output / 'qualification.json')
@@ -45,6 +47,10 @@ def prepare_pair(inputs, qualification, output, agent, solver, user, effort, ski
         shutil.copyfile(user_qualification, output / 'user-qualification.json')
     shutil.copytree(SCENARIO, output / 'scenario')
     targets = freeze_skill(skill, output / 'frozen-skill')
+    reference_files = freeze_skill(reference_skill, output / 'reference-skill') if reference_skill else None
+    variants = (['current', 'candidate'] if reference_skill else ['baseline', 'skill'])
+    variant_skills = ({'current': 'reference-skill', 'candidate': 'frozen-skill'} if reference_skill
+                      else {'baseline': None, 'skill': 'frozen-skill'})
     freeze_helpers(DEFAULT_EVALUATOR, output / 'helpers')
     environment = json.loads((inputs / 'environment.json').read_text())
     environment.setdefault('resources', json.loads((CONFIGS / 'runtime.json').read_text())['worker'])
@@ -55,7 +61,7 @@ def prepare_pair(inputs, qualification, output, agent, solver, user, effort, ski
     if agent != 'claude-code':
         user_environment['worker_image'] = build_worker_image(environment, user_cli['version'], output / 'user-worker-build', 'claude-code')
     plan = {'task': TASK_ID, 'adapted': True, 'base_commit': BASE_COMMIT, 'split': 'development',
-            'variants': ['baseline', 'skill'], 'repetitions': 1, 'automatic_retries': 0,
+            'variants': variants, 'variant_skills': variant_skills, 'repetitions': 1, 'automatic_retries': 0,
             'agent': cli, 'solver_profile': solver, 'user_profile': user, 'effort': effort, 'user_effort': 'high',
             'user_agent': user_cli, 'user_environment': user_environment,
             'limits': limits, 'cost_limit': None,
@@ -65,12 +71,20 @@ def prepare_pair(inputs, qualification, output, agent, solver, user, effort, ski
             'user_qualification_sha256': digest(user_qualification) if user_qualification else None,
             'input_sha256': digest(inputs / 'inputs.json'), 'scenario_files': file_hashes(output / 'scenario'),
             'skill_source': skill_source(skill), 'skill_files': targets, 'tool_files': adapter_hashes(),
+            'reference_skill_source': skill_source(reference_skill) if reference_skill else None,
+            'reference_skill_files': reference_files,
             'instruction': 'Native skill invocation only in treatment; no stage scheduling or automatic LLM grading'}
     write_json(output / 'plan.json', plan)
     for variant in plan['variants']:
         (output / variant).mkdir()
         write_json(output / variant / 'result.json', {'status': 'not_started'})
     return plan
+
+
+def conversation_budget_notice(seconds):
+    return (f'The developer and user share {seconds} seconds total for this entire conversation, '
+            'including implementation, tool calls, review, checks and documentation. '
+            'This is not a fresh budget per turn.\n\n')
 
 
 def run_pair(output, plan, credentials):
@@ -82,6 +96,7 @@ def run_pair(output, plan, credentials):
     persona = (output / 'scenario/user.md').read_text()
     requirements = (inputs / 'user-requirements.md').read_text()
     limits = plan['limits']
+    budget = conversation_budget_notice(limits['total_seconds'])
     single_agent = not plan.get('allow_subagents', False)
     delegation_prompt = ('For this controlled comparison, perform all development in this agent. '
         'Do not delegate, invoke forked skills, or launch additional agent/model processes. '
@@ -89,7 +104,8 @@ def run_pair(output, plan, credentials):
     results = []
     for variant in plan['variants']:
         evidence = output / variant
-        treatment = output / 'frozen-skill' if variant == 'skill' else None
+        skill_directory = plan.get('variant_skills', {'baseline': None, 'skill': 'frozen-skill'})[variant]
+        treatment = output / skill_directory if skill_directory else None
         result = {'status': 'error', 'accepted': False, 'task_status': 'unknown'}
         with tempfile.TemporaryDirectory(prefix='cattrs-collaboration-') as tmp:
             work = Path(tmp) / 'workspace'
@@ -102,7 +118,7 @@ def run_pair(output, plan, credentials):
                 '-c', 'user.name=Evaluation', '-c',
                 'user.email=evaluation@local.invalid', 'commit', '-qm', 'Frozen task input'], check=True)
             snapshot(work, evidence / 'before')
-            user = SimulatedUser(plan['user_profile'], persona, requirements, evidence / 'before',
+            user = SimulatedUser(plan['user_profile'], budget + persona, requirements, evidence / 'before',
                 evidence / 'user', plan['user_environment'], plan['user_agent'], credentials,
                 effort=plan['user_effort'])
             try:
@@ -114,7 +130,7 @@ def run_pair(output, plan, credentials):
                     context['allow_subagents'] = not single_agent
                     result = converse(adapter, binary, cwd, sandbox, context, plan['solver_profile']['model'],
                         plan['effort'], output / 'helpers', work, evidence / 'conversation',
-                        COMMON_PROMPT + delegation_prompt + 'You can ask the user questions in your reply; this conversation can continue.\n\n' + request,
+                        COMMON_PROMPT + budget + delegation_prompt + 'You can ask the user questions in your reply; this conversation can continue.\n\n' + request,
                         user, invocation=adapter.invocation() if treatment else '',
                         timeout=limits['total_seconds'])
                 activation = verify_activation(adapter.name, evidence, treatment, entrypoint,
@@ -166,6 +182,8 @@ def main():
     parser.add_argument('--qualification', type=Path, required=True)
     parser.add_argument('--user-qualification', type=Path, help='Optional historical user-probe evidence; not an execution gate')
     parser.add_argument('--skill-path', type=Path, required=True)
+    parser.add_argument('--reference-skill-path', type=Path,
+                        help='Compare this current skill against --skill-path as candidate; omit the no-skill baseline')
     parser.add_argument('--credentials', type=Path, required=True)
     parser.add_argument('--agent', choices=['codex', 'claude-code'], required=True)
     parser.add_argument('--solver-profile', type=Path, required=True)
@@ -178,7 +196,8 @@ def main():
     limits = {'total_seconds': args.total_seconds}
     plan = prepare_pair(args.inputs.resolve(), args.qualification.resolve(), args.output.resolve(), args.agent,
         load_profile(args.solver_profile), load_profile(args.user_profile), args.effort, args.skill_path.resolve(), limits,
-        args.user_qualification.resolve() if args.user_qualification else None)
+        args.user_qualification.resolve() if args.user_qualification else None,
+        args.reference_skill_path.resolve() if args.reference_skill_path else None)
     if not args.prepare_only:
         results = run_pair(args.output.resolve(), plan, args.credentials.resolve())
         return 0 if all(r['status'] == 'completed' and r['task_status'] == 'pass'

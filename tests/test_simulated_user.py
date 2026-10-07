@@ -128,6 +128,19 @@ class NativeUserTest(unittest.TestCase):
                                     'high', root, {'total_seconds': 1200}, user_qualification)
             self.assertEqual(plan['limits'], {'total_seconds': 1200})
             self.assertEqual(plan['user_qualification_sha256'], digest(user_qualification))
+            self.assertEqual(plan['variant_skills'], {'baseline': None, 'skill': 'frozen-skill'})
+            reference = root / 'reference'
+            reference.mkdir()
+            (reference / 'SKILL.md').write_text('Current skill')
+            with patch('run_collaboration.verify_inputs'), patch('run_collaboration.build_worker_image', return_value='fixture'):
+                version_plan = prepare_pair(inputs, qualification, root / 'versions', 'claude-code', profile, profile,
+                    'high', root, {'total_seconds': 1800}, reference_skill=reference)
+            self.assertEqual(version_plan['variants'], ['current', 'candidate'])
+            self.assertEqual(version_plan['variant_skills'], {
+                'current': 'reference-skill', 'candidate': 'frozen-skill'})
+            self.assertEqual((root / 'versions/reference-skill/SKILL.md').read_text(), 'Current skill')
+            self.assertEqual((root / 'versions/frozen-skill/SKILL.md').read_text(), 'Test skill')
+            self.assertNotEqual(version_plan['reference_skill_files']['SKILL.md'], version_plan['skill_files']['SKILL.md'])
 
 
 if __name__ == '__main__':

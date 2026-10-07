@@ -2,7 +2,7 @@
 
 更新：2026-10-07。整体任务选择以 [STATUS](STATUS.md) 为准。
 
-本页管理受控行为用例。真实 SWE 候选及其环境预检状态见 [独立任务目录](cases/swe/README.md)，不混入下方行为测试的通过记录。
+本页保留专项诊断用例，本轮不执行或扩展 D 系列，也不重跑 D17。主实验是 cattrs 的多轮真实开发版本对照。真实 SWE 候选及其环境预检状态见 [独立任务目录](cases/swe/README.md)，不混入下方行为测试的通过记录。
 
 [D14](cases/behavior/D14.json) 保留为小型指令提供方式诊断，有独立程序 verifier；三步短 skill 的成功不代表完整开发 skill 已通过评测，见 [结果](reports/instruction-delivery-probe-2026-10-06.md)。下列早期行为场景维持原记录与局限。
 

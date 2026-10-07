@@ -1,6 +1,6 @@
 # agent-led-swe 测试机制
 
-更新：2026-10-06。测试负责执行、保存完整历史和调用 verifier；后续过程分析独立进行，不决定任务是否通过。先看 [当前状态](STATUS.md)，实现约定见 [协议](protocol.md)，既往实验见 [历史索引](history.md)。
+更新：2026-10-07。测试负责执行、保存完整历史和调用 verifier；后续过程分析独立进行，不决定任务是否通过。先看 [当前状态](STATUS.md)，实现约定见 [协议](protocol.md)，既往实验见 [历史索引](history.md)。
 
 ## 职责与结果
 
@@ -58,7 +58,7 @@ DeepSeek 凭据填在被 Git 忽略的 `tests/configs/credentials.local.json`，
 
 ## 任务与环境
 
-- D14 保留快速诊断。旧 SWE 任务退出当前推荐组合，适配器、输入和资格记录保留供显式回归；见 [状态](STATUS.md)与[旧任务目录](cases/swe/README.md)。cattrs 环境／verifier 与原生两轮协议已预检，已有两轮真实开发试跑，均未形成完整闭环；当前状态见 STATUS。
+- 当前主实验为 cattrs 多轮真实开发的 current / candidate 对照；D 系列只作专项诊断，本轮不运行。旧 SWE 任务保留供显式回归，见 [状态](STATUS.md)与[旧任务目录](cases/swe/README.md)。
 - packaging 的 verifier 镜像保留完整测试依赖，Agent 使用单独精简的 execution image。已知安装／vendored／缓存副本清除后，需要重复起始／参考检查；实际 worker 安装项目后和执行结束时还会审计。
 - 行为场景见 [场景与状态](scenarios.md)。它们可以执行和分析，但没有程序 verifier 的场景，task_status 保持 unknown。
 - 不挂载私有参考补丁、验收材料或宿主 Docker socket。正式 Docker worker 只通过固定模型网关出站；直接外网与非许可代理路径被阻止，本地来源审计继续保留。
@@ -91,6 +91,21 @@ uv run --locked python tests/check_collaboration_worker.py \
 
 协议检查也支持 `--agent codex`；加 `--with-simulated-user` 可同时检查用户的 HTTP／只读工具接口。它运行真实容器 CLI、原生安装／调用和两轮 session 接续，模型与用户响应均为脚本模拟。
 
+本轮版本对照命令：
+
+```sh
+uv run --locked python tests/run_collaboration.py \
+  --inputs '<已冻结任务输入>' --qualification '<匹配的任务预检记录>' \
+  --agent claude-code --effort high \
+  --solver-profile tests/configs/models/deepseek-v4.1-flash.json \
+  --user-profile tests/configs/models/user-deepseek-flash.json \
+  --reference-skill-path '/Users/liyao/agent-led-swe' \
+  --skill-path '<候选 worktree>' --credentials '<本地凭据文件>' \
+  --total-seconds 1800 --output '<新的独立运行目录>'
+```
+
+提供 `--reference-skill-path` 时，仅运行 current / candidate，分别冻结并原生安装各自版本。不提供时保留 baseline / skill 模式。两组的任务、模拟用户与运行配置一致，预算会告知双方。
+
 真实多轮入口为 `run_collaboration.py`，显式提供模型、任务／verifier 预检记录、skill 路径与 `--total-seconds`。使用 `--prepare-only` 可只冻结计划。`--user-qualification` 可选，仅附上历史用户检查记录，不再因代码哈希变化强制付费重验。
 
 `--total-seconds` 是每组 Solver 与模拟用户共享的协作时长。两者每轮使用剩余时间，不额外限制单轮时长、回复次数、内部工具步数、输出 tokens 或结构化输出重试。模型和原生 CLI 自身的限制仍然存在。准备环境与独立 verifier 的超时用于检测基础设施故障，不占用该对话预算。
@@ -114,4 +129,4 @@ Solver 使用原生工具和项目指导；隔离由独立 HOME、容器、隐�
 资源与固定构建镜像见 `configs/runtime.json`；截止停止由 `worker_control.py` 管理。可用 `check_worker_control.py --worker-image <已构建镜像 ID> --output <新目录>` 检查真实容器停止与导出；在 CC 协议检查中增加 `--with-subagent`，可检查原生 Task 回传、上下文和用量。这些检查不调用真实模型。
 
 
-当前主实验在 configs/runtime.json 中设 `allow_subagents=false`：baseline／skill 均使用单个开发 Agent，模拟用户独立保留。CC 禁用 Task／Agent／Workflow，Codex 关闭多 Agent 能力；共同请求也明确不通过 forked skill 或额外 Agent／模型进程绕过实验条件。子 Agent 接入与记录保留，专门的 CC 协议检查仍可用 `--with-subagent` 验证扩展模式。该条件用于归因，不是通用开发规范或防恶意绕过的安全边界。
+当前主实验在 configs/runtime.json 中设 `allow_subagents=false`：所有比较组均使用单个开发 Agent，模拟用户独立保留。CC 禁用 Task／Agent／Workflow，Codex 关闭多 Agent 能力；共同请求也明确不通过 forked skill 或额外 Agent／模型进程绕过实验条件。子 Agent 接入与记录保留，专门的 CC 协议检查仍可用 `--with-subagent` 验证扩展模式。该条件用于归因，不是通用开发规范或防恶意绕过的安全边界。
