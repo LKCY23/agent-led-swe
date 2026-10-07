@@ -1,12 +1,12 @@
 # 测试场景与当前状态
 
-更新：2026-10-06。整体任务选择以 [STATUS](STATUS.md) 为准。
+更新：2026-10-07。整体任务选择以 [STATUS](STATUS.md) 为准。
 
 本页管理受控行为用例。真实 SWE 候选及其环境预检状态见 [独立任务目录](cases/swe/README.md)，不混入下方行为测试的通过记录。
 
 [D14](cases/behavior/D14.json) 保留为小型指令提供方式诊断，有独立程序 verifier；三步短 skill 的成功不代表完整开发 skill 已通过评测，见 [结果](reports/instruction-delivery-probe-2026-10-06.md)。下列早期行为场景维持原记录与局限。
 
-本文件是用例状态入口，区分场景草案、可运行定义和历史执行记录。现有 13 个场景中，7 个已有可运行输入，6 个只有场景草案。当前版本已完成 D1 的真实配对与独立评审；其余历史结果仅适用于各记录中的目标文件哈希，不自动迁移为当前版本的通过结论。
+本文件是用例状态入口，区分场景草案、可运行定义和历史执行记录。早期 D1–D13 中，7 个已有可运行输入，6 个只有场景草案。当前版本已完成 D1 的真实配对与独立评审；其余历史结果仅适用于各记录中的目标文件哈希，不自动迁移为当前版本的通过结论。
 
 ## 当前可运行用例
 
@@ -68,3 +68,10 @@ Run D13, then D11: two fresh target-present CLI trials, one attempt each, at mos
 Run D10 as the initial smoke, then D11, D12 and D4: four fresh target-present CLI trials, one attempt each, at most 180 seconds per trial. D4 covers a human decision changing an existing agreement; D10–D12 cover the revised process/workflow organization. Expectations stay outside the executor's prompt. Use actual traces and fixture snapshots for review; distinguish author assessment from independent grading. Other scenarios remain planned, not implicitly passed by the new version.
 
 Initial smoke budget: at most three fresh target-present CLI cases, one attempt each, 180 seconds per case. Cases D1, D4 and D7 cover discussion scope, historical attribution and honest delivery. Other cases remain planned unless actual evidence is recorded. Use the configured model rather than silently selecting another; record the observed model/runtime and full completion state. Sandbox boundaries and installed competing instructions limit the interpretation of results.
+
+
+## Process 适配候选的小规模情境对照
+
+新增 [D15](cases/behavior/D15.json) 成熟仓库接口、[D16](cases/behavior/D16.json) 小修复、[D17](cases/behavior/D17.json) 探索原型、[D18](cases/behavior/D18.json) 接续工作。均为自建开发用例，采用 Docker 中的 CC／Flash，完整请求与授权，一次请求执行，不含模拟用户。
+
+已接受版与候选各一次，共 8 次：三个功能场景两版均通过冻结测试；探索场景均在 300 秒预算内未收尾，task_status 为 unknown。候选曾提前将尚未完成的计划事项勾为完成，不能以文件生成或指导读取作为规范通过。见[完整结果与证据](reports/adaptation-scenarios-2026-10-07.md)。

@@ -342,3 +342,8 @@ Disabled native development delegation in both arms while retaining the simulate
 ## Process adaptation candidate — 2026-10-07
 
 Candidate `42fc6f9` clarifies activity selection/depth, project-record responsibilities, decision-to-implementation ordering, and the distinction between actual records and templates. Package/link checks, skill-creator validation and diff checks passed. Four development situations were reviewed statically; no model behavior test was run and no adherence gain is claimed. Accepted skill and evaluator configuration are unchanged. [Candidate review](reports/process-adaptation-candidate-2026-10-07.md).
+
+
+## Adaptation scenario trials — 2026-10-07
+
+Ran D15–D18 with the accepted and candidate skills: eight native CC/Flash single-request trials, 300 seconds each, no model retries. Control/reference verifier preflights passed for D15/D16/D18; all six functional trials passed trusted tests. Both D17 exploration trials timed out with partial artifacts and no program score. Candidate artifacts showed premature completion checkboxes and broken references despite guidance reads. No skill or runtime changes during trials; author analysis remains separate from verifier results. [Report](reports/adaptation-scenarios-2026-10-07.md).
