@@ -112,6 +112,8 @@ uv run --locked python tests/run_collaboration.py \
 
 Solver 使用原生工具和项目指导；隔离由独立 HOME、容器、隐藏验证材料与模型专用网络保证。模拟用户保留 Read／Glob／Grep 和只读快照，负责回应与审阅，不执行开发命令。审阅质量留待分析完整轨迹，不以本轮是否读文件作为运行门槛。会话失败或超时后，仍验证已保存产物，分别报告运行状态、用户接受状态和功能结果。
 
+模拟用户的输入与决策边界见 [设计规范](protocol.md#agent-based-模拟用户)。对话由用户 Agent 自主生成；对照固定任务与运行条件，不固定回答或要求两组经历相同轮次。
+
 `check_simulated_user.py --inputs <冻结任务输入> --profile <用户模型配置> --credentials <凭据文件> --output <新目录> --total-seconds <预算>` 运行原生 CC 用户：需求澄清、读取草案后审阅，共两个固定问题，共用显式预算。这是测试样例数量，不是正式协作的轮数限制；会产生真实模型用量。
 
 当前配置依据、修正和检查见[配置修正记录](reports/runtime-correction-2026-10-07.md)。前一轮[限制清理记录](reports/runtime-restrictions-2026-10-07.md)保留为历史，其中长上下文和资源处理已被纠正。

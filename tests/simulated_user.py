@@ -80,9 +80,9 @@ class SimulatedUser:
         self.effort = effort
         self.calls, self.session, self.seen_messages = 0, None, 0
         self.system = persona + "\n\n# 固定任务要求\n" + requirements + (
-            "\n\n你是需求提出者，不是负责实现的开发 Agent。通过 Claude Code 原生结构化输出返回 reply 和 accepted。"
-            "当前公开产物在 /testbed/current，初始源码在 /testbed/initial。它们只读；"
-            "每轮 current 会更新，审阅时读取当前文件，不以旧读到的内容代替。只在需要核查产物时使用工具。")
+            "\n\n# 工作区访问\n"
+            "当前公开产物在 /testbed/current，初始源码在 /testbed/initial，均为只读。"
+            "每轮 current 会替换为最新快照；判断已有观察是否仍适用，需要核实时再查看当前文件。")
 
     def __enter__(self):
         self.stack = ExitStack()
