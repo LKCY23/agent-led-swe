@@ -35,14 +35,14 @@ class ArtifactEvaluationTest(unittest.TestCase):
                 yield ['codex'], work, 'danger-full-access', '/native/SKILL.md'
             user = MagicMock()
             user.calls = 1
-            with patch('run_collaboration.verify_inputs'), patch('run_collaboration.unpack', side_effect=unpack), \
+            with patch('cattrs_task.verify_inputs'), patch('run_collaboration.unpack', side_effect=unpack), \
                     patch('run_collaboration.SimulatedUser', return_value=user) as users, \
                     patch('run_collaboration.execution_environment', side_effect=environment), \
                     patch('run_collaboration.get_adapter') as adapters, \
                     patch('run_collaboration.converse', side_effect=lambda *a, **kw: {
                         'status': 'completed', 'accepted': True}) as conversations, \
                     patch('run_collaboration.verify_activation', return_value={'status': 'verified'}) as activation, \
-                    patch('run_collaboration.run_checks', return_value={'status': 'pass', 'groups': []}):
+                    patch('cattrs_task.run_checks', return_value={'status': 'pass', 'groups': []}):
                 adapters.return_value.name = 'codex'
                 adapters.return_value.prepare_context.return_value = {}
                 adapters.return_value.invocation.return_value = '$agent-led-swe\n\n'
@@ -84,9 +84,9 @@ class ArtifactEvaluationTest(unittest.TestCase):
             user_instance = user()
             user_instance.calls = 0
             checks = {'status': 'pass', 'groups': [{'outcome_sha256': 'verified-tests'}]}
-            with patch('run_collaboration.verify_inputs'), patch('run_collaboration.unpack', side_effect=unpack), \
+            with patch('cattrs_task.verify_inputs'), patch('run_collaboration.unpack', side_effect=unpack), \
                     patch('run_collaboration.SimulatedUser', return_value=user_instance), \
-                    patch('run_collaboration.run_checks', return_value=checks) as verify:
+                    patch('cattrs_task.run_checks', return_value=checks) as verify:
                 rows = run_pair(output, plan, Path('/unused'))
             verify.assert_called_once()
             self.assertEqual(rows[0]['status'], 'error')

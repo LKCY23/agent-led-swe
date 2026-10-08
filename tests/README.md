@@ -108,6 +108,8 @@ uv run --locked python tests/run_collaboration.py \
 
 真实多轮入口为 `run_collaboration.py`，显式提供模型、任务／verifier 预检记录、skill 路径与 `--total-seconds`。使用 `--prepare-only` 可只冻结计划。`--user-qualification` 可选，仅附上历史用户检查记录，不再因代码哈希变化强制付费重验。
 
+`--task ofetch` 选择 B 场景的任务适配、初始请求与用户设定；省略时保留 cattrs。ofetch 的冻结输入与独立资格记录由 `ofetch_task.py prepare / preflight` 创建。其 verifier 使用原 `base` 筛选和新增 54 项测试，结果与补充的完整项目回归、lint 分开。原生协议检查增加 `--task-inputs <目录>` 可使用实际任务输入与依赖环境，仍只调用模拟 API。
+
 `--total-seconds` 是每组 Solver 与模拟用户共享的协作时长。两者每轮使用剩余时间，不额外限制单轮时长、回复次数、内部工具步数、输出 tokens 或结构化输出重试。模型和原生 CLI 自身的限制仍然存在。准备环境与独立 verifier 的超时用于检测基础设施故障，不占用该对话预算。
 
 Solver 使用原生工具和项目指导；隔离由独立 HOME、容器、隐藏验证材料与模型专用网络保证。模拟用户保留 Read／Glob／Grep 和只读快照，负责回应与审阅，不执行开发命令。审阅质量留待分析完整轨迹，不以本轮是否读文件作为运行门槛。会话失败或超时后，仍验证已保存产物，分别报告运行状态、用户接受状态和功能结果。

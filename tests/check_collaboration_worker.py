@@ -22,6 +22,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--agent', choices=['codex', 'claude-code'], required=True)
     parser.add_argument('--base-image', required=True)
+    parser.add_argument('--task-inputs', type=Path, help='Probe the actual frozen task workspace and environment')
     parser.add_argument('--skill-path', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--with-simulated-user', action='store_true', help='Exercise the user HTTP/tool adapter against a fake API too')
@@ -33,14 +34,22 @@ def main():
     output.mkdir(parents=True, exist_ok=False)
     versions = json.loads((CONFIGS / 'agents.json').read_text())
     cli = {'agent': args.agent, 'version': versions[args.agent]['version']}
-    image = build_worker_image({'image': args.base_image}, cli['version'], output / 'build', args.agent)
+    environment = {'kind': 'docker', 'image': args.base_image}
+    if args.task_inputs:
+        from run_collaboration import task_adapter
+        manifest = json.loads((args.task_inputs / 'inputs.json').read_text())
+        task_adapter(manifest.get('adapter', 'cattrs')).verify_inputs(args.task_inputs)
+        environment = json.loads((args.task_inputs / 'environment.json').read_text())
+        if environment['image'] != args.base_image:
+            raise ValueError('Probe image differs from task input')
+    image = build_worker_image(environment, cli['version'], output / 'build', args.agent)
     freeze_helpers(DEFAULT_EVALUATOR, output / 'helpers')
     freeze_skill(args.skill_path.resolve(), output / 'frozen-skill')
     adapter = get_adapter(args.agent)
     profile = (load_profile(CONFIGS / 'models/deepseek-v4.1-flash.json')
                if args.agent == 'claude-code' else None)
     model = profile['model'] if profile else 'gpt-6.1-sol'
-    task = {'environment': {'kind': 'docker', 'worker_image': image}}
+    task = {'environment': {**environment, 'worker_image': image}}
     user_cli = {'agent': 'claude-code', 'version': versions['claude-code']['version']}
     user_image = image
     if args.with_simulated_user and args.agent != 'claude-code':
@@ -138,10 +147,14 @@ def main():
         try:
             with tempfile.TemporaryDirectory(prefix='conversation-probe-') as tmp:
                 work = Path(tmp).resolve()
-                (work / 'pyproject.toml').write_text('[build-system]\nrequires=["hatchling"]\nbuild-backend="hatchling.build"\n'
-                    '[project]\nname="probe"\nversion="0.0.0"\n[tool.hatch.build.targets.wheel]\npackages=["probe"]\n')
-                (work / 'probe').mkdir()
-                (work / 'probe/__init__.py').write_text('')
+                if args.task_inputs:
+                    from cattrs_task import unpack
+                    unpack(args.task_inputs / 'public.tar.gz', work)
+                else:
+                    (work / 'pyproject.toml').write_text('[build-system]\nrequires=["hatchling"]\nbuild-backend="hatchling.build"\n'
+                        '[project]\nname="probe"\nversion="0.0.0"\n[tool.hatch.build.targets.wheel]\npackages=["probe"]\n')
+                    (work / 'probe').mkdir()
+                    (work / 'probe/__init__.py').write_text('')
                 (work / 'fixture.txt').write_text('PUBLIC_FIXTURE')
                 for filename in ('AGENTS.md', 'CLAUDE.md'):
                     (work / filename).write_text('PROJECT_GUIDANCE_TOKEN: follow the local project conventions.\n')

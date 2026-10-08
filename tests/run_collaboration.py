@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run one bounded baseline/skill or current/candidate cattrs collaboration pair."""
+"""Run one bounded baseline/skill or current/candidate collaboration pair."""
 import argparse
 import json
 from pathlib import Path
@@ -8,7 +8,8 @@ import subprocess
 import tempfile
 
 from agent_adapters import get_adapter
-from cattrs_task import BASE_COMMIT, TASK_ID, run_checks, unpack, verify_inputs
+import cattrs_task
+from cattrs_task import unpack
 from collaboration_runtime import converse
 from evaluation_runtime import (DEFAULT_EVALUATOR, adapter_hashes, build_worker_image, digest,
                                 execution_environment, file_hashes, freeze_helpers, snapshot, write_json)
@@ -17,16 +18,24 @@ from native_skills import verify_activation
 from run_evaluation import COMMON_PROMPT, freeze_skill, skill_source
 from simulated_user import SimulatedUser
 
-SCENARIO = Path(__file__).parent / 'cases/collaboration/cattrs'
+
+def task_adapter(name):
+    if name == 'cattrs':
+        return cattrs_task
+    if name == 'ofetch':
+        import ofetch_task
+        return ofetch_task
+    raise ValueError(f'Unknown collaboration task: {name}')
 
 
 def prepare_pair(inputs, qualification, output, agent, solver, user, effort, skill, limits,
-                 user_qualification=None, reference_skill=None):
-    verify_inputs(inputs)
+                 user_qualification=None, reference_skill=None, task_name='cattrs'):
+    task = task_adapter(task_name)
+    task.verify_inputs(inputs)
     qualified = json.loads(qualification.read_text())
     if (qualified.get('qualified') is not True or qualified.get('inputs_sha256') != digest(inputs / 'inputs.json')
-            or qualified.get('verifier_sha256') != digest(Path(__file__).with_name('cattrs_task.py'))):
-        raise ValueError('Matching cattrs environment/verifier qualification is required')
+            or qualified.get('verifier_sha256') != digest(Path(task.__file__))):
+        raise ValueError('Matching task environment/verifier qualification is required')
     validate_compatibility(agent, solver, effort)
     validate_compatibility('claude-code', user, 'high')
     expected_user_cli = {'agent': 'claude-code', 'version': json.loads((CONFIGS / 'agents.json').read_text())['claude-code']['version']}
@@ -45,7 +54,7 @@ def prepare_pair(inputs, qualification, output, agent, solver, user, effort, ski
     shutil.copyfile(qualification, output / 'qualification.json')
     if user_qualification:
         shutil.copyfile(user_qualification, output / 'user-qualification.json')
-    shutil.copytree(SCENARIO, output / 'scenario')
+    shutil.copytree(Path(__file__).parent / 'cases/collaboration' / task_name, output / 'scenario')
     targets = freeze_skill(skill, output / 'frozen-skill')
     reference_files = freeze_skill(reference_skill, output / 'reference-skill') if reference_skill else None
     variants = (['current', 'candidate'] if reference_skill else ['baseline', 'skill'])
@@ -60,7 +69,7 @@ def prepare_pair(inputs, qualification, output, agent, solver, user, effort, ski
     user_environment = dict(environment)
     if agent != 'claude-code':
         user_environment['worker_image'] = build_worker_image(environment, user_cli['version'], output / 'user-worker-build', 'claude-code')
-    plan = {'task': TASK_ID, 'adapted': True, 'base_commit': BASE_COMMIT, 'split': 'development',
+    plan = {'task': task.TASK_ID, 'task_adapter': task_name, 'adapted': True, 'base_commit': task.BASE_COMMIT, 'split': 'development',
             'variants': variants, 'variant_skills': variant_skills, 'repetitions': 1, 'automatic_retries': 0,
             'agent': cli, 'solver_profile': solver, 'user_profile': user, 'effort': effort, 'user_effort': 'high',
             'user_agent': user_cli, 'user_environment': user_environment,
@@ -89,9 +98,10 @@ def conversation_budget_notice(seconds):
 
 def run_pair(output, plan, credentials):
     adapter = get_adapter(plan['agent']['agent'])
+    task = task_adapter(plan.get('task_adapter', 'cattrs'))
     inputs = output / 'task-inputs'
     # Frozen source and validator files are outside every solver workspace.
-    verify_inputs(inputs)
+    task.verify_inputs(inputs)
     request = (output / 'scenario/request.md').read_text()
     persona = (output / 'scenario/user.md').read_text()
     requirements = (inputs / 'user-requirements.md').read_text()
@@ -107,7 +117,7 @@ def run_pair(output, plan, credentials):
         skill_directory = plan.get('variant_skills', {'baseline': None, 'skill': 'frozen-skill'})[variant]
         treatment = output / skill_directory if skill_directory else None
         result = {'status': 'error', 'accepted': False, 'task_status': 'unknown'}
-        with tempfile.TemporaryDirectory(prefix='cattrs-collaboration-') as tmp:
+        with tempfile.TemporaryDirectory(prefix='swe-collaboration-') as tmp:
             work = Path(tmp) / 'workspace'
             unpack(inputs / 'public.tar.gz', work)
             # A local history permits normal diff/commit work without shipping
@@ -158,7 +168,7 @@ def run_pair(output, plan, credentials):
         try:
             if (evidence / 'workspace-export-error.json').exists():
                 raise ValueError('Worker export failed; local files may not represent the executed artifact')
-            checks = run_checks(inputs, evidence / 'after', evidence / 'verifier')
+            checks = task.run_checks(inputs, evidence / 'after', evidence / 'verifier')
             reference = json.loads((output / 'qualification.json').read_text())['runs'][1]['checks']
             if checks['status'] == 'pass' and [g['outcome_sha256'] for g in checks['groups']] != [
                     g['outcome_sha256'] for g in reference['groups']]:
@@ -178,6 +188,7 @@ def run_pair(output, plan, credentials):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--task', choices=['cattrs', 'ofetch'], default='cattrs')
     parser.add_argument('--inputs', type=Path, required=True)
     parser.add_argument('--qualification', type=Path, required=True)
     parser.add_argument('--user-qualification', type=Path, help='Optional historical user-probe evidence; not an execution gate')
@@ -197,7 +208,7 @@ def main():
     plan = prepare_pair(args.inputs.resolve(), args.qualification.resolve(), args.output.resolve(), args.agent,
         load_profile(args.solver_profile), load_profile(args.user_profile), args.effort, args.skill_path.resolve(), limits,
         args.user_qualification.resolve() if args.user_qualification else None,
-        args.reference_skill_path.resolve() if args.reference_skill_path else None)
+        args.reference_skill_path.resolve() if args.reference_skill_path else None, args.task)
     if not args.prepare_only:
         results = run_pair(args.output.resolve(), plan, args.credentials.resolve())
         return 0 if all(r['status'] == 'completed' and r['task_status'] == 'pass'

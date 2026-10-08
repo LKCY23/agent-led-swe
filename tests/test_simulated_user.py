@@ -123,7 +123,7 @@ class NativeUserTest(unittest.TestCase):
             user_qualification = root / 'user.json'
             write_json(user_qualification, {'qualified': False})
             profile = load_profile(CONFIGS / 'models/deepseek-v4.1-flash.json')
-            with patch('run_collaboration.verify_inputs'), patch('run_collaboration.build_worker_image', return_value='fixture'):
+            with patch('cattrs_task.verify_inputs'), patch('run_collaboration.build_worker_image', return_value='fixture'):
                 plan = prepare_pair(inputs, qualification, root / 'pair', 'claude-code', profile, profile,
                                     'high', root, {'total_seconds': 1200}, user_qualification)
             self.assertEqual(plan['limits'], {'total_seconds': 1200})
@@ -132,7 +132,7 @@ class NativeUserTest(unittest.TestCase):
             reference = root / 'reference'
             reference.mkdir()
             (reference / 'SKILL.md').write_text('Current skill')
-            with patch('run_collaboration.verify_inputs'), patch('run_collaboration.build_worker_image', return_value='fixture'):
+            with patch('cattrs_task.verify_inputs'), patch('run_collaboration.build_worker_image', return_value='fixture'):
                 version_plan = prepare_pair(inputs, qualification, root / 'versions', 'claude-code', profile, profile,
                     'high', root, {'total_seconds': 1800}, reference_skill=reference)
             self.assertEqual(version_plan['variants'], ['current', 'candidate'])
