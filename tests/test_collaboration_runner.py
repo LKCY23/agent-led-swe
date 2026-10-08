@@ -3,6 +3,7 @@ from contextlib import contextmanager
 import json
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -11,6 +12,48 @@ from run_collaboration import run_pair
 
 
 class ArtifactEvaluationTest(unittest.TestCase):
+    def test_empty_project_live_check_precedes_shutdown_and_gates_replay_success(self):
+        for live_status in ('pass', 'fail', 'unknown'):
+            with self.subTest(live_status=live_status), tempfile.TemporaryDirectory() as tmp:
+                output = Path(tmp)
+                for name in ('task-inputs', 'scenario', 'baseline'):
+                    (output / name).mkdir()
+                for name in ('request.md', 'user.md'):
+                    (output / 'scenario' / name).write_text('Task')
+                (output / 'task-inputs/user-requirements.md').write_text('Requirements')
+                write_json(output / 'qualification.json', {'runs': [{}, {'checks': {'groups': []}}]})
+                plan = {'agent': {'agent': 'codex'}, 'variants': ['baseline'],
+                    'user_profile': {}, 'user_environment': {}, 'user_agent': {}, 'user_effort': 'high',
+                    'environment': {}, 'solver_profile': {'model': 'fixture'}, 'effort': 'high',
+                    'limits': {'total_seconds': 100}}
+                events = []
+                @contextmanager
+                def environment(*args, **kwargs):
+                    events.append('open')
+                    yield ['codex'], output, 'danger-full-access', None
+                    events.append('closed')
+                def live(*args):
+                    self.assertEqual(events, ['open'])
+                    events.append('probe')
+                    return {'status': live_status}
+                def checks(*args):
+                    self.assertEqual(events, ['open', 'probe', 'closed'])
+                    return {'status': 'pass', 'groups': []}
+                task = SimpleNamespace(verify_inputs=lambda _: None, capture_live=live, run_checks=checks)
+                user = MagicMock()
+                user.calls = 1
+                with patch('run_collaboration.task_adapter', return_value=task), \
+                     patch('run_collaboration.unpack', side_effect=lambda _, work: work.mkdir()), \
+                     patch('run_collaboration.SimulatedUser', return_value=user), \
+                     patch('run_collaboration.execution_environment', side_effect=environment), \
+                     patch('run_collaboration.get_adapter') as adapter, \
+                     patch('run_collaboration.converse', return_value={'status': 'completed', 'accepted': True}), \
+                     patch('run_collaboration.verify_activation', return_value={'status': 'verified'}):
+                    adapter.return_value.name = 'codex'
+                    adapter.return_value.prepare_context.return_value = {}
+                    rows = run_pair(output, plan, Path('/unused'))
+                self.assertEqual(rows[0]['task_status'], live_status)
+
     def test_version_pair_installs_each_frozen_skill_and_discloses_shared_budget(self):
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp)

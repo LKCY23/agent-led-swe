@@ -31,6 +31,9 @@ def task_adapter(name):
     if name == 'cattrs-repair':
         import cattrs_repair_task
         return cattrs_repair_task
+    if name == 'grpc':
+        import grpc_task
+        return grpc_task
     raise ValueError(f'Unknown collaboration task: {name}')
 
 
@@ -133,7 +136,7 @@ def run_pair(output, plan, credentials):
             subprocess.run(['git', '-C', str(work), 'add', '.'], check=True)
             subprocess.run(['git', '-C', str(work), '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false',
                 '-c', 'user.name=Evaluation', '-c',
-                'user.email=evaluation@local.invalid', 'commit', '-qm', 'Frozen task input'], check=True)
+                'user.email=evaluation@local.invalid', 'commit', '--allow-empty', '-qm', 'Frozen task input'], check=True)
             snapshot(work, evidence / 'before', exclude=workspace_excludes)
             user = SimulatedUser(plan['user_profile'], budget + persona, requirements, evidence / 'before',
                 evidence / 'user', plan['user_environment'], plan['user_agent'], credentials,
@@ -150,6 +153,8 @@ def run_pair(output, plan, credentials):
                         COMMON_PROMPT + budget + delegation_prompt + 'You can ask the user questions in your reply; this conversation can continue.\n\n' + request,
                         user, invocation=adapter.invocation() if treatment else '',
                         timeout=limits['total_seconds'], workspace_excludes=workspace_excludes)
+                    if hasattr(task, 'capture_live'):
+                        result['live_service'] = task.capture_live(inputs, binary, evidence / 'live-service')
                 activation = verify_activation(adapter.name, evidence, treatment, entrypoint,
                                                'conversation/turn-001/capture')
                 result['native_activation'] = activation
@@ -184,6 +189,10 @@ def run_pair(output, plan, credentials):
                 checks['reason'] = 'Test identities/outcomes differ from the qualified reference'
         except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
             checks = {'status': 'unknown', 'reason': str(exc)}
+        if hasattr(task, 'capture_live'):
+            checks['live_service'] = result.get('live_service', {'status': 'unknown'})
+            if checks['status'] == 'pass' and checks['live_service']['status'] != 'pass':
+                checks['status'] = checks['live_service']['status']
         result['task_status'] = checks['status']
         write_json(evidence / 'verifier-result.json', checks)
         write_json(evidence / 'result.json', result)
@@ -196,7 +205,7 @@ def run_pair(output, plan, credentials):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--task', choices=['cattrs', 'ofetch', 'tomlkit', 'cattrs-repair'], default='cattrs')
+    parser.add_argument('--task', choices=['cattrs', 'ofetch', 'tomlkit', 'cattrs-repair', 'grpc'], default='cattrs')
     parser.add_argument('--inputs', type=Path, required=True)
     parser.add_argument('--qualification', type=Path, required=True)
     parser.add_argument('--user-qualification', type=Path, help='Optional historical user-probe evidence; not an execution gate')

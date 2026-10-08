@@ -114,6 +114,8 @@ uv run --locked python tests/run_collaboration.py \
 
 `--task cattrs-repair` 选择 D 场景。`cattrs_repair_task.py prepare --upstream-inputs <原冻结输入> --artifacts <既有成果> --output <新目录>` 创建接续输入，随后用 `preflight --inputs <新输入> --output <资格记录目录>` 复现两个旧失败并核查修复样本。原快照保持不变，见 [D 接入计划](reports/cattrs-repair-integration-2026-10-08.md)。
 
+`--task grpc` 选择 C 场景。`grpc_task.py prepare --source <固定来源目录> --image <不可变镜像 ID> --output <输入目录>` 创建空项目与私有验收材料，`preflight --inputs <输入目录> --output <资格记录目录>` 检查空目录、参考实现和服务停止后的表现。真实运行另保存容器停止前的 RPC 证据，见 [C 接入计划](reports/grpc-integration-2026-10-08.md)。
+
 `--total-seconds` 是每组 Solver 与模拟用户共享的协作时长。两者每轮使用剩余时间，不额外限制单轮时长、回复次数、内部工具步数、输出 tokens 或结构化输出重试。模型和原生 CLI 自身的限制仍然存在。准备环境与独立 verifier 的超时用于检测基础设施故障，不占用该对话预算。
 
 Solver 使用原生工具和项目指导；隔离由独立 HOME、容器、隐藏验证材料与模型专用网络保证。模拟用户保留 Read／Glob／Grep 和只读快照，负责回应与审阅，不执行开发命令。审阅质量留待分析完整轨迹，不以本轮是否读文件作为运行门槛。会话失败或超时后，仍验证已保存产物，分别报告运行状态、用户接受状态和功能结果。
