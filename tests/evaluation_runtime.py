@@ -61,9 +61,16 @@ def file_hashes(root):
     return result
 
 
-def snapshot(source, destination):
-    """Preserve all submitted files, including new documents; omit only Git internals."""
-    shutil.copytree(source, destination, symlinks=True, ignore=shutil.ignore_patterns('.git'))
+def snapshot(source, destination, exclude=()):
+    """Preserve project files; omit Git internals and declared environment dependencies."""
+    root = Path(source).resolve()
+    excluded = {'.git', *exclude}
+    if any(Path(p).is_absolute() or '..' in Path(p).parts for p in excluded):
+        raise ValueError('Unsafe snapshot exclusion')
+    def ignore(folder, names):
+        relative = Path(folder).relative_to(root)
+        return [name for name in names if name == '.git' or str(relative / name) in excluded]
+    shutil.copytree(root, destination, symlinks=True, ignore=ignore)
     return file_hashes(destination)
 
 

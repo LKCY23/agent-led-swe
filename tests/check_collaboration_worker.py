@@ -187,7 +187,8 @@ def main():
                     context['allow_subagents'] = args.with_subagent
                     result = converse(adapter, binary, cwd, sandbox, context, model, 'high', output / 'helpers',
                         work, evidence / 'conversation', 'NATIVE_CONVERSATION_PROBE', responder,
-                        invocation=adapter.invocation() if treatment else '', timeout=180)
+                        invocation=adapter.invocation() if treatment else '', timeout=180,
+                        workspace_excludes=environment.get('workspace_excludes', []))
                 activation = verify_activation(args.agent, evidence, treatment, entrypoint,
                                                'conversation/turn-001/capture')
                 second = [p for p in requests if 'USER_FEEDBACK_TOKEN' in json.dumps(p)]

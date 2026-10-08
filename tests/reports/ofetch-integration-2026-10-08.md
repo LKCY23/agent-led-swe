@@ -10,7 +10,11 @@
 - 新镜像与实际验收器预检通过：起始新增测试 7/54、参考 54/54，三组 base 筛选均通过。原项目公网测试与参考格式问题仍按 [前次预检](ofetch-preflight-2026-10-08.md)单列，未修改断言。
 - 105 项本地回归通过。真实 Claude Code CLI 对接模拟 API 的 baseline / skill 两组检查均通过，涵盖两轮接续、原生调用、项目指导与 hooks、只读模拟用户和隔离。此处 baseline 只用于链路检查，不是新增的真实无 skill 对照。
 
-材料：`/Users/liyao/agent-led-swe/tests/runs/ofetch-integration-20261008`。`inputs/` 保存冻结输入，`preflight/` 保存实际 verifier 的资格记录，`native-probe/` 保存无模型调用的协议证据。
+材料：`/Users/liyao/agent-led-swe/tests/runs/ofetch-integration-20261008`。首次 `inputs/`、`preflight/`、`native-probe/` 保留；修正后的输入与检查见 `inputs-v2/`、`preflight-v2/`、`native-probe-v2/`。
+
+首次真实试跑暴露接入缺陷：Agent 将预装依赖链接为项目 node_modules 后，快照规则将依赖链接判为越界，current 在用户审阅前中断，candidate 随后被主动停止。该次记录在 `ofetch-versions-20261008`，另存 `invalid-comparison.json`，不作为 skill 效果证据。
+
+修正后由环境启动阶段提供 node_modules 链接，并在每轮、初始和最终快照中排除明确声明的依赖目录；代码、文档仍保留，其他越界链接仍拒绝。107 项本地回归和两组原生用户协议检查通过，实际 verifier 再次预检通过。执行错误不再仅因原生调用成功而标为有效对照。新真实试跑使用独立目录 `ofetch-versions-20261008-v2`，不修改首次原始结果。
 
 ## 真实对照计划
 

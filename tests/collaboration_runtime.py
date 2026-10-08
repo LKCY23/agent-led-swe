@@ -51,13 +51,14 @@ def completed_turn(agent, raw):
 
 def converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
              helpers, workspace, output, request, responder, *, invocation='',
-             timeout=3600, capture=execute, clock=time.monotonic):
+             timeout=3600, workspace_excludes=(), capture=execute, clock=time.monotonic):
     positive_seconds(timeout)
     try:
         with execution_deadline([binary, getattr(responder, 'binary', None)], timeout) as check:
             return _converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
                 helpers, workspace, output, request, responder, invocation=invocation,
-                timeout=timeout, capture=capture, clock=clock, deadline_check=check)
+                timeout=timeout, workspace_excludes=workspace_excludes,
+                capture=capture, clock=clock, deadline_check=check)
     except (TimeoutError, RuntimeError) as exc:
         path = output / 'result.json'
         result = json.loads(path.read_text()) if path.exists() else {'turns': [], 'task_status': 'unknown'}
@@ -69,7 +70,7 @@ def converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
 
 def _converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
              helpers, workspace, output, request, responder, *, invocation='',
-             timeout=3600,
+             timeout=3600, workspace_excludes=(),
              capture=execute, clock=time.monotonic, deadline_check=lambda: None):
     """A user question/review and a final answer both use normal native turns.
 
@@ -78,6 +79,8 @@ def _converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
     No tool or model call is made by this function except through these drivers.
     """
     positive_seconds(timeout)
+    if any(Path(p).is_absolute() or '..' in Path(p).parts for p in workspace_excludes):
+        raise ValueError('Unsafe workspace exclusion')
     output.mkdir(parents=True, exist_ok=False)
     deadline = clock() + timeout
     messages = [{'role': 'user', 'content': request}]
@@ -111,10 +114,13 @@ def _converse(adapter, binary, runtime_cwd, sandbox, context, model, effort,
             write_json(turn / 'execution.json', execution)
             deadline_check()
             for path in workspace.rglob('*'):
+                relative = path.relative_to(workspace)
+                if any(relative == Path(p) or Path(p) in relative.parents for p in workspace_excludes):
+                    continue
                 if path.is_symlink() and not path.resolve().is_relative_to(workspace.resolve()):
                     raise ValueError('Workspace symlink escapes the public snapshot')
             with stable_workspace(binary):
-                snapshot_hashes = snapshot(workspace, turn / 'workspace')
+                snapshot_hashes = snapshot(workspace, turn / 'workspace', exclude=workspace_excludes)
             if execution['run_status'] != 'completed':
                 result['status'] = execution['run_status']
                 break

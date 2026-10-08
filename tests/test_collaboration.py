@@ -66,6 +66,25 @@ class ConversationTest(unittest.TestCase):
         self.assertEqual(self.timeouts, [1200, 1170])
         self.assertEqual(user_timeouts, [1200, 1170])
 
+    def test_declared_dependencies_are_excluded_but_project_records_survive(self):
+        dependency = self.root / 'image-dependencies'
+        dependency.mkdir()
+        (dependency / 'package.js').write_text('dependency')
+        (self.work / 'node_modules').symlink_to(dependency, target_is_directory=True)
+        (self.work / 'design.md').write_text('Confirmed design')
+        def user(messages, work, timeout):
+            self.assertFalse((work / 'node_modules').exists())
+            self.assertEqual((work / 'design.md').read_text(), 'Confirmed design')
+            return UserReply('Accepted', True)
+        self.assertEqual(self.run_conversation(user, workspace_excludes=['node_modules'])['status'], 'completed')
+
+    def test_other_escaping_links_are_still_rejected(self):
+        (self.work / 'design.md').symlink_to(self.root / 'outside.md')
+        result = self.run_conversation(lambda *args: self.fail('Must not expose escaping link'),
+                                       workspace_excludes=['node_modules'])
+        self.assertEqual(result['status'], 'error')
+        self.assertIn('symlink escapes', result['error'])
+
     def test_no_approval_by_silence_or_invalid_response(self):
         result = self.run_conversation(lambda *args: None)
         self.assertEqual(result['status'], 'error')

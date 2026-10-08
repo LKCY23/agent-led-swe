@@ -55,7 +55,8 @@ def prepare(benchmark, source_archive, image, output):
             else:
                 shutil.copyfile(p, output / 'validator' / name)
     write_json(output / 'environment.json', {'kind': 'docker', 'image': image, 'network': 'none',
-        'install_argv': [], 'workdir': '/testbed',
+        'install_argv': ['sh', '-c', 'ln -s /opt/ofetch-deps/node_modules /testbed/node_modules'],
+        'workspace_excludes': ['node_modules'], 'workdir': '/testbed',
         'dependency_note': 'Pinned image dependencies resolve via /node_modules; no reference implementation in image'})
     write_json(output / 'inputs.json', {'id': TASK_ID, 'adapter': 'ofetch', 'base_commit': BASE_COMMIT,
         'benchmark_commit': BENCH_COMMIT, 'files': file_hashes(output),

@@ -108,6 +108,7 @@ def run_pair(output, plan, credentials):
     limits = plan['limits']
     budget = conversation_budget_notice(limits['total_seconds'])
     single_agent = not plan.get('allow_subagents', False)
+    workspace_excludes = plan['environment'].get('workspace_excludes', [])
     delegation_prompt = ('For this controlled comparison, perform all development in this agent. '
         'Do not delegate, invoke forked skills, or launch additional agent/model processes. '
         'The separate user remains available for questions and review.\n\n') if single_agent else ''
@@ -127,7 +128,7 @@ def run_pair(output, plan, credentials):
             subprocess.run(['git', '-C', str(work), '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false',
                 '-c', 'user.name=Evaluation', '-c',
                 'user.email=evaluation@local.invalid', 'commit', '-qm', 'Frozen task input'], check=True)
-            snapshot(work, evidence / 'before')
+            snapshot(work, evidence / 'before', exclude=workspace_excludes)
             user = SimulatedUser(plan['user_profile'], budget + persona, requirements, evidence / 'before',
                 evidence / 'user', plan['user_environment'], plan['user_agent'], credentials,
                 effort=plan['user_effort'])
@@ -142,11 +143,12 @@ def run_pair(output, plan, credentials):
                         plan['effort'], output / 'helpers', work, evidence / 'conversation',
                         COMMON_PROMPT + budget + delegation_prompt + 'You can ask the user questions in your reply; this conversation can continue.\n\n' + request,
                         user, invocation=adapter.invocation() if treatment else '',
-                        timeout=limits['total_seconds'])
+                        timeout=limits['total_seconds'], workspace_excludes=workspace_excludes)
                 activation = verify_activation(adapter.name, evidence, treatment, entrypoint,
                                                'conversation/turn-001/capture')
                 result['native_activation'] = activation
-                result['comparison_validity'] = 'valid' if activation['status'] == 'verified' else 'invalid'
+                result['comparison_validity'] = ('valid' if activation['status'] == 'verified'
+                    and result['status'] != 'error' else 'invalid')
                 if single_agent and adapter.name == 'claude-code':
                     from agent_adapters.claude_code import DELEGATION_TOOLS
                     traces = [json.loads(p.read_text()) for p in evidence.glob('conversation/turn-*/capture/trace.json')]
@@ -160,7 +162,7 @@ def run_pair(output, plan, credentials):
             except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
                 result.update(status='error', error=str(exc), comparison_validity='invalid')
             finally:
-                snapshot(work, evidence / 'after')
+                snapshot(work, evidence / 'after', exclude=workspace_excludes)
                 result['user_replies'] = user.calls
                 write_json(evidence / 'result.json', result)
         # Grade the frozen artifact even when dialogue failed or timed out.
