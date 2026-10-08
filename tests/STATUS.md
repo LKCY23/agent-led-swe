@@ -19,7 +19,7 @@
 
 ## 保留测试的定位
 
-后续多场景评估遵循 [评估设计规范](evaluation-design.md)。已形成 [四场景任务与用户目标方案](reports/multi-scenario-design-2026-10-08.md)：TOMLKit A/B、空目录 gRPC 服务 C、真实 cattrs 成果接续 D。已静态核查来源、需求与验收代码；尚未接入或完成新环境预检，未修改当前任务请求或启动模型测试。
+后续多场景评估遵循 [评估设计规范](evaluation-design.md)。已形成 [四场景任务与用户目标方案](reports/multi-scenario-design-2026-10-08.md)：TOMLKit A、ofetch B、空目录 gRPC 服务 C、真实 cattrs 成果接续 D。[B 的四题比较](reports/scenario-b-selection-2026-10-08.md)推荐 ofetch 熔断器。已静态核查来源、需求与验收代码；尚未接入或完成新环境预检，未修改当前任务请求或启动模型测试。
 
 模拟用户已按自主协作规范更新并完成真实试跑。用户能够自主审阅和反馈，但 candidate 组仍批准了与既定要求不符的 TypedDict 行为；不能因两组对话不同就认定无效，也不能因原生运行核查通过就认为用户回答均正确。详见 [本轮报告](reports/cattrs-user-revision-2026-10-08.md)与[设计规范](protocol.md#agent-based-模拟用户)。
 
