@@ -1,27 +1,29 @@
 # 当前测试状态
 
-更新：2026-10-08。B 场景 ofetch 的接入与真实版本对照已完成。
+更新：2026-10-08。A、B 场景的接入与真实版本对照已完成，C、D 待运行。
 
-ofetch [有效对照结果](reports/ofetch-versions-2026-10-08.md)：current 四轮、candidate 两轮，均通过新增 54/54 和原 base 筛选；两者均保存开发记录，但形成较晚，候选有一处计数未同步。首次依赖快照故障单列保留；修复后的配置与检查见[接入记录](reports/ofetch-integration-2026-10-08.md)。主 skill 未合并，下表保留上一轮 cattrs 的完成状态。
+TOMLKit [A 运行结果](reports/tomlkit-versions-2026-10-08.md)：两版均两轮完成，用户接受，独立 base 964/964、新增 60/60。原生调用、隔离与单 Agent 核查有效，未追加重试。本轮只保存结果与证据，待剩余场景完成后统一归因和讨论优化。
+
+ofetch [B 有效对照结果](reports/ofetch-versions-2026-10-08.md)：current 四轮、candidate 两轮，均通过新增 54/54 和原 base 筛选。首次依赖快照故障及此前的分析原样保留，见[接入记录](reports/ofetch-integration-2026-10-08.md)。主 skill 未合并。
 
 ## 当前实验
 
 | 项目 | 设置 |
 | --- | --- |
-| 任务 | SWE-Interact 适配的 cattrs partial structuring，多轮需求澄清、开发、审阅与修订 |
+| 任务 | A：SWE-Interact 适配的 TOMLKit table converters，成熟仓库普通功能开发 |
 | 当前版本 | 已接受 skill：1c65c00，主工作区保持不变 |
 | 候选版本 | skill 内容：42fc6f9，独立 worktree 中保留；未合并 |
 | 比较组 | current / candidate，各一次；本轮不运行无 skill baseline |
 | Agent / 模型 | Claude Code + DeepSeek Flash high；单个开发 Agent，独立原生模拟用户 |
-| 预算 | 每组开发 Agent 与模拟用户共享 1800 秒，双方均获知；不另设轮数或单轮时限 |
+| 预算 | 每组开发 Agent 与模拟用户共享 3600 秒，双方均获知；不另设轮数或单轮时限 |
 | 判定 | 独立 verifier 判功能；执行后分析轨迹和文档，不自动调用 LLM judge |
-| 当前进度 | 已完成：current 基础 7/7、新功能 69/69；candidate 基础 7/7、新功能 67/69；未重试 |
+| 当前进度 | 已完成：两版均基础 964/964、新功能 60/60；未重试 |
 
-重点检查：是否按任务需要使用 skill、流程是否顺畅、实现依据是否及时记录、验证与交付记录是否真实、文档是否准确精炼且便于人类审阅。文件数量或读取指导本身不能证明 skill 有效。cattrs 已用于分析和优化，属于开发集；单次对照不能证明普遍效果。
+统一分析时重点检查：是否按任务需要使用 skill、流程是否顺畅、实现依据是否及时记录、验证与交付记录是否真实、文档是否准确精炼且便于人类审阅。文件数量或读取指导本身不能证明 skill 有效。这些任务已用于选题、预检或调优，属于开发集；单次对照不能证明普遍效果。
 
 ## 保留测试的定位
 
-多场景评估遵循 [评估设计规范](evaluation-design.md)。[四场景方案](reports/multi-scenario-design-2026-10-08.md)包含 TOMLKit A、ofetch B、空目录 gRPC 服务 C、真实 cattrs 成果接续 D。B 已接入并完成本轮对照；A、C、D 尚未接入运行。
+多场景评估遵循 [评估设计规范](evaluation-design.md)。[四场景方案](reports/multi-scenario-design-2026-10-08.md)包含 TOMLKit A、ofetch B、空目录 gRPC 服务 C、真实 cattrs 成果接续 D。A、B 已完成本轮对照；C、D 尚未接入运行。A 的环境与原生协议预检见 [接入计划](reports/tomlkit-integration-2026-10-08.md)。
 
 B 的[本机与 Linux 断网容器预检](reports/ofetch-preflight-2026-10-08.md)为起始新增测试 7/54、参考 54/54，构建通过。容器完整原项目测试均为 27/28，同一项公网调用因断网受阻；参考有两处 Prettier 格式问题。该环境基线与后续模型结果分开保留。
 
