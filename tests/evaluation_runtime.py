@@ -29,7 +29,7 @@ def adapter_hashes():
     names = [
         'evaluation_runtime.py', 'run_evaluation.py', 'evaluate_results.py', 'run_smoke.py',
         'task_adapters.py', 'functional_checks.py', 'model_config.py', 'native_skills.py', 'packaging_environment.py', 'worker_network.py', 'model_gateway.py', 'suite_tasks.py', 'swe_pro_verifier.py', 'container_workspace.py',
-        'cattrs_task.py', 'ofetch_task.py', 'tomlkit_task.py', 'collaboration_runtime.py', 'check_collaboration_worker.py',
+        'cattrs_task.py', 'cattrs_repair_task.py', 'ofetch_task.py', 'tomlkit_task.py', 'collaboration_runtime.py', 'check_collaboration_worker.py',
         'simulated_user.py', 'run_collaboration.py', 'check_simulated_user.py',
         'worker_control.py', 'configs/runtime.json']
     names += [str(p.relative_to(root)) for p in sorted((root / 'agent_adapters').glob('*.py'))]

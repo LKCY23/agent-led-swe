@@ -1,0 +1,31 @@
+--- a/src/cattrs/partial.py
++++ b/src/cattrs/partial.py
+@@ -33,6 +33,7 @@
+ from .gen._consts import neutral
+ from .gen._shared import _annotated_override_or_default, find_structure_handler
+ from .gen.typeddicts import _adapted_fields as _typeddict_fields
++from .gen.typeddicts import _required_keys
+ 
+ if TYPE_CHECKING:
+     from .converters import BaseConverter
+@@ -243,6 +244,11 @@
+         )
+     else:
+         errors = extra_errors
++        if converter.detailed_validation and error_map:
++            causes = list(error_map.values())
++            if extra_errors is not None:
++                causes.append(extra_errors)
++            errors = ClassValidationError(f"While structuring {cl!r}", causes, cl)
+ 
+     return PartialResult(
+         value=value,
+@@ -317,7 +323,7 @@
+             errors = ForbiddenExtraKeysError("", cl, unknown)
+ 
+     return PartialResult(
+-        value=res,
++        value=None if failed & _required_keys(base) else res,
+         is_complete=not failed and errors is None,
+         structured_fields=frozenset(structured),
+         failed_fields=frozenset(failed),
