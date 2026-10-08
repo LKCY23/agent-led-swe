@@ -25,6 +25,9 @@ def task_adapter(name):
     if name == 'ofetch':
         import ofetch_task
         return ofetch_task
+    if name == 'tomlkit':
+        import tomlkit_task
+        return tomlkit_task
     raise ValueError(f'Unknown collaboration task: {name}')
 
 
@@ -190,7 +193,7 @@ def run_pair(output, plan, credentials):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--task', choices=['cattrs', 'ofetch'], default='cattrs')
+    parser.add_argument('--task', choices=['cattrs', 'ofetch', 'tomlkit'], default='cattrs')
     parser.add_argument('--inputs', type=Path, required=True)
     parser.add_argument('--qualification', type=Path, required=True)
     parser.add_argument('--user-qualification', type=Path, help='Optional historical user-probe evidence; not an execution gate')
