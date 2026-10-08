@@ -21,7 +21,7 @@
 
 后续多场景评估遵循 [评估设计规范](evaluation-design.md)。已形成 [四场景任务与用户目标方案](reports/multi-scenario-design-2026-10-08.md)：TOMLKit A、ofetch B、空目录 gRPC 服务 C、真实 cattrs 成果接续 D。[B 的四题比较](reports/scenario-b-selection-2026-10-08.md)推荐 ofetch 熔断器。已静态核查来源、需求与验收代码；尚未接入或完成新环境预检，未修改当前任务请求或启动模型测试。
 
-B 已完成[本机接入前检查](reports/ofetch-preflight-2026-10-08.md)：起始新增测试 7/54，参考 54/54；原项目测试均 28/28、构建均通过，参考有两处 Prettier 格式问题。Docker API 无响应，容器资格尚未取得；本轮无模型调用。
+B 已完成[本机与 Linux 断网容器预检](reports/ofetch-preflight-2026-10-08.md)：两种环境均为起始新增测试 7/54、参考 54/54，构建通过。容器完整原项目测试均为 27/28，同一项公网调用因断网受阻；参考有两处 Prettier 格式问题。任务环境与功能验收预检通过，原生 Agent 协作链路尚未接入；本轮无模型调用。
 
 模拟用户已按自主协作规范更新并完成真实试跑。用户能够自主审阅和反馈，但 candidate 组仍批准了与既定要求不符的 TypedDict 行为；不能因两组对话不同就认定无效，也不能因原生运行核查通过就认为用户回答均正确。详见 [本轮报告](reports/cattrs-user-revision-2026-10-08.md)与[设计规范](protocol.md#agent-based-模拟用户)。
 
