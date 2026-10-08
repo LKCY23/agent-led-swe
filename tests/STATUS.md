@@ -1,36 +1,34 @@
 # 当前测试状态
 
-更新：2026-10-08。A、B 场景的接入与真实版本对照已完成，C、D 待运行。
+更新：2026-10-09。A、B、C、D 各一对有效版本对照均已完成。八组都获得用户接受并通过各自独立功能验收；C 另通过交付时运行检查。结果与证据入口已统一整理，流程和文档的跨场景归因尚未完成，skill 未修改或合并。
 
-TOMLKit [A 运行结果](reports/tomlkit-versions-2026-10-08.md)：两版均两轮完成，用户接受，独立 base 964/964、新增 60/60。原生调用、隔离与单 Agent 核查有效，未追加重试。本轮只保存结果与证据，待剩余场景完成后统一归因和讨论优化。
-
-ofetch [B 有效对照结果](reports/ofetch-versions-2026-10-08.md)：current 四轮、candidate 两轮，均通过新增 54/54 和原 base 筛选。首次依赖快照故障及此前的分析原样保留，见[接入记录](reports/ofetch-integration-2026-10-08.md)。主 skill 未合并。
+见 [四场景结果与证据索引](reports/four-scenario-results-2026-10-08.md)。B 首次依赖快照故障及旧分析仍原样保留，不计为有效运行，也不从历史删除。
 
 ## 当前实验
 
 | 项目 | 设置 |
 | --- | --- |
-| 任务 | A：SWE-Interact 适配的 TOMLKit table converters，成熟仓库普通功能开发 |
+| 任务 | A 成熟仓库功能开发；B 持续协作；C 空项目服务；D 既有成果接续修复 |
 | 当前版本 | 已接受 skill：1c65c00，主工作区保持不变 |
 | 候选版本 | skill 内容：42fc6f9，独立 worktree 中保留；未合并 |
-| 比较组 | current / candidate，各一次；本轮不运行无 skill baseline |
+| 比较组 | 每个场景 current / candidate 各一次有效运行；本轮没有无 skill baseline |
 | Agent / 模型 | Claude Code + DeepSeek Flash high；单个开发 Agent，独立原生模拟用户 |
 | 预算 | 每组开发 Agent 与模拟用户共享 3600 秒，双方均获知；不另设轮数或单轮时限 |
 | 判定 | 独立 verifier 判功能；执行后分析轨迹和文档，不自动调用 LLM judge |
-| 当前进度 | 已完成：两版均基础 964/964、新功能 60/60；未重试 |
+| 当前进度 | 四场景执行和证据整理完成，待统一审阅归因，再决定优化 |
 
 统一分析时重点检查：是否按任务需要使用 skill、流程是否顺畅、实现依据是否及时记录、验证与交付记录是否真实、文档是否准确精炼且便于人类审阅。文件数量或读取指导本身不能证明 skill 有效。这些任务已用于选题、预检或调优，属于开发集；单次对照不能证明普遍效果。
 
 ## 保留测试的定位
 
-多场景评估遵循 [评估设计规范](evaluation-design.md)。[四场景方案](reports/multi-scenario-design-2026-10-08.md)包含 TOMLKit A、ofetch B、空目录 gRPC 服务 C、真实 cattrs 成果接续 D。A、B 已完成本轮对照；C、D 尚未接入运行。A 的环境与原生协议预检见 [接入计划](reports/tomlkit-integration-2026-10-08.md)。
+多场景评估遵循 [评估设计规范](evaluation-design.md)。[四场景方案](reports/multi-scenario-design-2026-10-08.md)包含 TOMLKit A、ofetch B、空目录 gRPC 服务 C、真实 cattrs 成果接续 D。四个场景均已完成本轮对照；各自预检和执行记录由[统一索引](reports/four-scenario-results-2026-10-08.md)链接。
 
 B 的[本机与 Linux 断网容器预检](reports/ofetch-preflight-2026-10-08.md)为起始新增测试 7/54、参考 54/54，构建通过。容器完整原项目测试均为 27/28，同一项公网调用因断网受阻；参考有两处 Prettier 格式问题。该环境基线与后续模型结果分开保留。
 
-模拟用户已按自主协作规范更新并完成真实试跑。用户能够自主审阅和反馈，但 candidate 组仍批准了与既定要求不符的 TypedDict 行为；不能因两组对话不同就认定无效，也不能因原生运行核查通过就认为用户回答均正确。详见 [本轮报告](reports/cattrs-user-revision-2026-10-08.md)与[设计规范](protocol.md#agent-based-模拟用户)。
+此前 cattrs 原功能题的模拟用户试跑中，用户能够自主审阅和反馈，但 candidate 组批准了与既定要求不符的 TypedDict 行为；不能因两组对话不同就认定无效，也不能因原生运行核查通过就认为用户回答均正确。详见 [历史报告](reports/cattrs-user-revision-2026-10-08.md)与[设计规范](protocol.md#agent-based-模拟用户)。
 
 - 本地单元测试、原生协议及环境检查：保障评测工具可靠，不作为 skill 效果证据。
-- D 系列：只保留专项诊断与回归能力，本轮不再扩展或重跑，包括 D17。
+- 旧 D 系列：只保留专项诊断与回归能力，本轮未扩展或重跑，包括 D17；与本轮场景 D 不同。
 - 其他旧 SWE 任务：保留输入、适配器及历史材料，不在本轮执行范围。
 
 ## 已有证据

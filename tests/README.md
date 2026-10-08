@@ -58,7 +58,7 @@ DeepSeek 凭据填在被 Git 忽略的 `tests/configs/credentials.local.json`，
 
 ## 任务与环境
 
-- 当前主实验为多场景真实开发的 current / candidate 对照；A、B 已完成，C、D 待运行，完成后统一归因。旧 D 系列只作专项诊断，本轮不运行，与新场景 D 不同。旧 SWE 任务保留供显式回归，见 [状态](STATUS.md)与[旧任务目录](cases/swe/README.md)。
+- 当前主实验为多场景真实开发的 current / candidate 对照；A—D 已完成，证据已汇总，待统一归因。旧 D 系列只作专项诊断，本轮不运行，与新场景 D 不同。旧 SWE 任务保留供显式回归，见 [状态](STATUS.md)与[旧任务目录](cases/swe/README.md)。
 - packaging 的 verifier 镜像保留完整测试依赖，Agent 使用单独精简的 execution image。已知安装／vendored／缓存副本清除后，需要重复起始／参考检查；实际 worker 安装项目后和执行结束时还会审计。
 - 行为场景见 [场景与状态](scenarios.md)。它们可以执行和分析，但没有程序 verifier 的场景，task_status 保持 unknown。
 - 不挂载私有参考补丁、验收材料或宿主 Docker socket。正式 Docker worker 只通过固定模型网关出站；直接外网与非许可代理路径被阻止，本地来源审计继续保留。
