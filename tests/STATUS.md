@@ -1,8 +1,8 @@
 # 当前测试状态
 
-更新：2026-10-08。cattrs 对照已完成；当前推进 B 场景 ofetch 的接入与真实版本对照。
+更新：2026-10-08。B 场景 ofetch 的接入与真实版本对照已完成。
 
-ofetch 已完成[接入与无模型检查](reports/ofetch-integration-2026-10-08.md)，真实对照按该计划执行：相同两版 skill、CC + Flash high，每组共享 60 分钟，各一次。下表保留上一轮 cattrs 的完成状态。
+ofetch [有效对照结果](reports/ofetch-versions-2026-10-08.md)：current 四轮、candidate 两轮，均通过新增 54/54 和原 base 筛选；两者均保存开发记录，但形成较晚，候选有一处计数未同步。首次依赖快照故障单列保留；修复后的配置与检查见[接入记录](reports/ofetch-integration-2026-10-08.md)。主 skill 未合并，下表保留上一轮 cattrs 的完成状态。
 
 ## 当前实验
 
@@ -21,9 +21,9 @@ ofetch 已完成[接入与无模型检查](reports/ofetch-integration-2026-10-08
 
 ## 保留测试的定位
 
-后续多场景评估遵循 [评估设计规范](evaluation-design.md)。已形成 [四场景任务与用户目标方案](reports/multi-scenario-design-2026-10-08.md)：TOMLKit A、ofetch B、空目录 gRPC 服务 C、真实 cattrs 成果接续 D。[B 的四题比较](reports/scenario-b-selection-2026-10-08.md)推荐 ofetch 熔断器。已静态核查来源、需求与验收代码；尚未接入或完成新环境预检，未修改当前任务请求或启动模型测试。
+多场景评估遵循 [评估设计规范](evaluation-design.md)。[四场景方案](reports/multi-scenario-design-2026-10-08.md)包含 TOMLKit A、ofetch B、空目录 gRPC 服务 C、真实 cattrs 成果接续 D。B 已接入并完成本轮对照；A、C、D 尚未接入运行。
 
-B 已完成[本机与 Linux 断网容器预检](reports/ofetch-preflight-2026-10-08.md)：两种环境均为起始新增测试 7/54、参考 54/54，构建通过。容器完整原项目测试均为 27/28，同一项公网调用因断网受阻；参考有两处 Prettier 格式问题。任务环境与功能验收预检通过，原生 Agent 协作链路尚未接入；本轮无模型调用。
+B 的[本机与 Linux 断网容器预检](reports/ofetch-preflight-2026-10-08.md)为起始新增测试 7/54、参考 54/54，构建通过。容器完整原项目测试均为 27/28，同一项公网调用因断网受阻；参考有两处 Prettier 格式问题。该环境基线与后续模型结果分开保留。
 
 模拟用户已按自主协作规范更新并完成真实试跑。用户能够自主审阅和反馈，但 candidate 组仍批准了与既定要求不符的 TypedDict 行为；不能因两组对话不同就认定无效，也不能因原生运行核查通过就认为用户回答均正确。详见 [本轮报告](reports/cattrs-user-revision-2026-10-08.md)与[设计规范](protocol.md#agent-based-模拟用户)。
 
