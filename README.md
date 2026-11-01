@@ -29,7 +29,11 @@ v0.2.0：以 Agent 主导执行、人类把关目标与关键决策的软件工�
 
 ## claudespace 归档与宿主适配
 
-按照 claudespace 自有插件模式，维护独立 Git 源码仓库，未来发布后以固定 commit 的 submodule 接入其主目录。当前是本地待审阅版本；尚未发布远程、注册 marketplace、选择安装或修改 claude-config-data。不会写入一个不存在的远程 URL 或不可移植的本地 submodule URL。
+源码仓库为 [LKCY23/agent-led-swe](https://github.com/LKCY23/agent-led-swe)，默认分支保留 `master`。发布基于已接受的 v0.2.0（`1c65c0016a59cce025e31960cc106ea577a80c02`）；后续实验候选独立维护，未接受的候选不随主线发布。
+
+按 [claudespace 的资源规范](https://github.com/LKCY23/claudespace/blob/main/docs/operations.md)，在 `claudespace-personal` catalog 中以 `kind: skill`、`source.kind: external` 和准确 Git commit 登记，更新检查跟踪 `master`。Codex 与 Claude Code 都使用根目录 `SKILL.md`；Claude Code 原生 marketplace 另以相同固定提交提供已有插件入口。登记通过 PR、固定来源检查及合并后基线发布完成，实际采用版本以 claudespace catalog 为准。
+
+资源登记和发布不自动安装：使用方在 Agent Profile 中明确选择并采用基线，再由 claude-config 预览和部署。
 
 采用现有自有 skill 的单源结构：根目录 `SKILL.md` 与 references/templates 共享；`.claude-plugin/plugin.json` 提供 Claude Code 插件入口；`agents/openai.yaml` 提供 Codex UI 元数据。它们不引入后台 agent、hooks 或 MCP。此版本提供 Codex 标准 skill 发现方式，不声称已接入 Codex 原生 marketplace。
 
